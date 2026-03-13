@@ -1,0 +1,61 @@
+/* ============================================================
+   BASE.CSS — Reset, variables, fonts, body
+   ============================================================ */
+
+@font-face {
+  font-family: 'Apercu Movistar';
+  src: url('../fonts/apercu_light_movistar-web.woff') format('woff');
+  font-weight: 300;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Apercu Movistar';
+  src: url('../fonts/apercu_regular_movistar-web.woff') format('woff');
+  font-weight: 400;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Apercu Movistar';
+  src: url('../fonts/apercu_bold_movistar-web.woff') format('woff');
+  font-weight: 700;
+  font-style: normal;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --sidebar-width:    345px;
+  --header-height:    80px;
+  --topbar-height:    38px;
+  --innerbar-height:  44px;
+  --bottombar-height: 72px;
+
+  --col-bg:           #111111;
+  --col-surface:      #1c1c1c;
+  --col-surface-2:    #181818;
+  --col-border:       #2e2e2e;
+  --col-text:         #ffffff;
+  --col-text-muted:   #888888;
+  --col-yellow:       #f0c020;
+  --col-green:        #50c896;
+  --col-green-dim:    #2a7a58;
+
+  --font: 'Apercu Movistar', 'Segoe UI', system-ui, sans-serif;
+  --font-size-xs: 10px;
+  --font-size-sm: 11px;
+  --font-size-md: 12px;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--col-bg);
+  color: var(--col-text);
+  font-family: var(--font);
+  font-size: var(--font-size-md);
+}

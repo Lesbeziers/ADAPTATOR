@@ -1,0 +1,286 @@
+/* ============================================================
+   PANEL.CSS — Zona de funcionalidades (panel izquierdo)
+   ============================================================ */
+
+/* ── CONTENEDOR INTERIOR DEL PANEL ───────────────────────── */
+#panel-inner {
+  padding: 14px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  height: 100%;
+}
+
+#panel-inner::-webkit-scrollbar { width: 4px; }
+#panel-inner::-webkit-scrollbar-track { background: transparent; }
+#panel-inner::-webkit-scrollbar-thumb {
+  background: #3a3a3a;
+  border-radius: 2px;
+}
+
+/* ── SECCIÓN GENÉRICA ─────────────────────────────────────── */
+.panel-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.panel-section-title {
+  font-size: 20px;
+  font-weight: 300;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--col-yellow);
+}
+
+/* ── DROPDOWN MODALIDADES ─────────────────────────────────── */
+#modality-select {
+  width: 100%;
+  height: 28px;
+  background: #2a2a2a;
+  border: 1px solid #3a3a3a;
+  border-radius: 2px;
+  color: var(--col-text);
+  font-family: var(--font);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0 28px 0 10px;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23888'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-color: #2a2a2a;
+  transition: border-color 0.15s;
+}
+
+#modality-select:focus {
+  outline: none;
+  border-color: #666;
+}
+
+/* ── GRID DE FORMATOS ─────────────────────────────────────── */
+#formats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+}
+
+.btn-format {
+  height: 26px;
+  padding: 0 4px;
+  background: #222222;
+  border: 1px solid #333333;
+  border-radius: 2px;
+  color: #999;
+  font-family: var(--font);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  transition: color 0.12s, border-color 0.12s, background 0.12s;
+}
+
+.btn-format:hover {
+  color: var(--col-text);
+  border-color: #555;
+  background: #2a2a2a;
+}
+
+.btn-format.active {
+  background: var(--col-yellow);
+  border-color: var(--col-yellow);
+  color: #000;
+}
+
+.btn-format.done {
+  background: #1a3d2e;
+  border-color: var(--col-green);
+  color: var(--col-green);
+}
+
+#modality-select option {
+  font-weight: 700;
+  font-family: var(--font);
+}
+
+/* ── DROPDOWN CUSTOM ──────────────────────────────────────── */
+.custom-select {
+  position: relative;
+  width: 100%;
+  user-select: none;
+}
+
+.custom-select-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 28px;
+  padding: 0 10px;
+  background: #2a2a2a;
+  border: 1px solid #3a3a3a;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.custom-select-trigger:hover {
+  border-color: #666;
+}
+
+.custom-select.open .custom-select-trigger {
+  border-color: #666;
+  border-bottom-color: transparent;
+  border-radius: 2px 2px 0 0;
+}
+
+.custom-select-value {
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--col-yellow);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.custom-select-arrow {
+  font-size: 8px;
+  color: var(--col-text-muted);
+  flex-shrink: 0;
+  margin-left: 6px;
+  transition: transform 0.2s;
+}
+
+.custom-select.open .custom-select-arrow {
+  transform: rotate(180deg);
+}
+
+.custom-select-options {
+  display: none;
+  position: absolute;
+  top: 28px;
+  left: 0;
+  right: 0;
+  background: #2a2a2a;
+  border: 1px solid #666;
+  border-top: none;
+  border-radius: 0 0 2px 2px;
+  z-index: 100;
+  overflow: hidden;
+}
+
+.custom-select.open .custom-select-options {
+  display: block;
+}
+
+.custom-select-option {
+  padding: 7px 10px;
+  font-family: var(--font);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--col-text-muted);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+
+.custom-select-option:hover {
+  background: #333;
+  color: var(--col-text);
+}
+
+.custom-select-option.selected {
+  color: var(--col-yellow);
+}
+
+.custom-select-option.placeholder {
+  color: #555;
+  font-weight: 400;
+  pointer-events: none;
+}
+
+/* ── SECCIÓN CAPAS ────────────────────────────────────────── */
+.layers-header {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 5px;
+  background: var(--col-bg);
+  border-radius: 2px;
+  padding: 4px 6px;
+}
+
+.btn-layer-action {
+  width: 24px;
+  height: 24px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.btn-layer-action img {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
+
+/* Swap de imagen en hover */
+.btn-layer-action .icon-down { display: none; }
+.btn-layer-action .icon-up   { display: block; }
+
+.btn-layer-action:hover:not(:disabled) .icon-up   { display: none; }
+.btn-layer-action:hover:not(:disabled) .icon-down { display: block; }
+
+/* Estado desactivado */
+.btn-layer-action:disabled {
+  cursor: not-allowed;
+  opacity: 0.25;
+}
+
+/* ── SECCIÓN EXTRAS ───────────────────────────────────────── */
+#extras-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+}
+
+.btn-extra {
+  height: 26px;
+  padding: 0 8px;
+  background: #222222;
+  border: 1px solid #333333;
+  border-radius: 2px;
+  color: #999;
+  font-family: var(--font);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  text-align: center;
+  cursor: pointer;
+  transition: color 0.12s, border-color 0.12s, background 0.12s;
+}
+
+.btn-extra:hover {
+  color: var(--col-text);
+  border-color: #555;
+  background: #2a2a2a;
+}
