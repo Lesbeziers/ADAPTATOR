@@ -13,8 +13,11 @@ const State = {
   // Formato activo
   activeFormat: null,
 
-  // Capa seleccionada
+  // Capa seleccionada (principal)
   selectedLayerId: null,
+
+  // Capas seleccionadas (selección múltiple con Shift)
+  selectedLayerIds: [],
 
   // Capas del proyecto (compartidas entre todos los formatos)
   layers: [],

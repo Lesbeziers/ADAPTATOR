@@ -90,15 +90,7 @@ const Formats = (() => {
   function setActiveFormat(formatName) {
     State.activeFormat = formatName;
     _renderFormatGrid();
-    _updateLayerButtons();
-  }
-
-  function _updateLayerButtons() {
-    const canEdit = !!(State.activeModality && State.activeFormat);
-    const btnAdd = document.getElementById('btn-add-layer');
-    const btnDel = document.getElementById('btn-del-layer');
-    if (btnAdd) btnAdd.disabled = !canEdit;
-    if (btnDel) btnDel.disabled = !canEdit;
+    if (typeof Canvas !== 'undefined') Canvas.render();
   }
 
   function toggleOk(formatName) {
@@ -120,7 +112,7 @@ const Formats = (() => {
   }
 
   function _defaultParams() {
-    return { scale: 100, rotation: 0, opacity: 100, blur: 0, x: 0, y: 0 };
+    return { scaleX: 100, scaleY: 100, rotation: 0, opacity: 100, blur: 0, x: 0, y: 0 };
   }
 
   return { init, setActiveFormat, toggleOk, getLayerParams, setLayerParam };
