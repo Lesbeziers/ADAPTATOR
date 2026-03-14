@@ -1,0 +1,104 @@
+/* ============================================================
+   BOTTOMBAR.CSS — Sliders de transformación
+   ============================================================ */
+
+#bottombar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#sliders-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 900px;
+}
+
+.slider-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: 130px;
+}
+
+.slider-label-top {
+  font-family: var(--font);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #ffffff;
+  margin-bottom: 4px;
+}
+
+/* Fila del valor editable */
+.slider-group > :last-child,
+.slider-unit {
+  display: inline;
+}
+
+.slider-group > div {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+/* Input numérico editable */
+.slider-label-val {
+  font-family: var(--font);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--col-text-muted);
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid transparent;
+  outline: none;
+  text-align: center;
+  width: 40px;
+  -moz-appearance: textfield;
+  cursor: text;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.slider-label-val:hover {
+  color: var(--col-text);
+  border-bottom-color: #555;
+}
+
+.slider-label-val:focus {
+  color: var(--col-yellow);
+  border-bottom-color: var(--col-yellow);
+}
+
+.slider-label-val::-webkit-outer-spin-button,
+.slider-label-val::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+}
+
+/* Track */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 130px;
+  height: 2px;
+  background: #3a3a3a;
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #ffffff;
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}

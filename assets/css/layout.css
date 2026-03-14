@@ -21,7 +21,7 @@
 }
 
 #header img {
-  height: 50px;
+  height: 40px;
   pointer-events: none;
 }
 
@@ -123,4 +123,22 @@
   height: var(--bottombar-height);
   background: var(--col-bg);
   border-top: 1px solid var(--col-border);
+}
+
+/* ── CAPAS EN EL VIEWPORT ─────────────────────────────────── */
+#canvas-area {
+  position: relative;
+  overflow: hidden;
+}
+
+.canvas-layer {
+  position: absolute;
+  max-width: none;
+  cursor: move;
+  transform-origin: center center;
+  transition: outline 0.1s;
+}
+
+.canvas-layer-active {
+  outline: none;
 }
