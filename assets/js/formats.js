@@ -88,12 +88,30 @@ const Formats = (() => {
   // ── FORMATO ACTIVO ────────────────────────────────────────
 
   function setActiveFormat(formatName) {
+    const previous = State.activeFormat;
     State.activeFormat = formatName;
+
+    if (typeof GradientLayers !== 'undefined') GradientLayers.stopPickMode();
+    if (typeof SystemLayers !== 'undefined') SystemLayers.invalidate();
+
     _renderFormatGrid();
+
+    // Al salir de MUX4 TXT, generar la composición título
+    if (previous === 'MUX4 TXT' && formatName !== 'MUX4 TXT') {
+      if (typeof Composicion !== 'undefined') Composicion.generate();
+    }
+
+    // Al salir de MOVIL TXT, generar la composición móvil
+    if (previous === 'MOVIL TXT' && formatName !== 'MOVIL TXT') {
+      if (typeof ComposicionMovil !== 'undefined') ComposicionMovil.generate();
+    }
+
     if (typeof Canvas !== 'undefined') Canvas.render();
+    if (typeof Layers !== 'undefined') Layers.render();
   }
 
   function toggleOk(formatName) {
+    if (typeof History !== 'undefined') History.push();
     State.formatOk[formatName] = !State.formatOk[formatName];
     _renderFormatGrid();
   }
@@ -109,11 +127,39 @@ const Formats = (() => {
     if (!State.formatParams[formatId][layerId]) State.formatParams[formatId][layerId] = _defaultParams();
     State.formatParams[formatId][layerId][key] = value;
     State.dirty = true;
+
+    // Propagación para capas de título
+    const layer = State.layers.find(l => l.id === layerId);
+    if (layer?.isTitleLayer) {
+      _propagateTitleParam(formatId, layerId, key, value);
+    }
+  }
+
+  function _propagateTitleParam(masterFormat, layerId, key, value) {
+    const allFormats = Object.keys(State.formatSizes || {});
+
+    if (masterFormat === 'MUX4 TXT') {
+      // Propagar a todos excepto MOVIL MUX FONDO y MOVIL TXT
+      allFormats.forEach(fid => {
+        if (fid === masterFormat) return;
+        if (fid === 'MOVIL MUX FONDO') return;
+        if (fid === 'MOVIL TXT') return;
+        if (!State.formatParams[fid]) State.formatParams[fid] = {};
+        if (!State.formatParams[fid][layerId]) State.formatParams[fid][layerId] = _defaultParams();
+        State.formatParams[fid][layerId][key] = value;
+      });
+    } else if (masterFormat === 'MOVIL TXT') {
+      // Propagar solo a MOVIL MUX FONDO
+      const fid = 'MOVIL MUX FONDO';
+      if (!State.formatParams[fid]) State.formatParams[fid] = {};
+      if (!State.formatParams[fid][layerId]) State.formatParams[fid][layerId] = _defaultParams();
+      State.formatParams[fid][layerId][key] = value;
+    }
   }
 
   function _defaultParams() {
-    return { scaleX: 100, scaleY: 100, rotation: 0, opacity: 100, blur: 0, x: 0, y: 0 };
+    return { scaleX: 100, scaleY: 100, rotation: 0, x: 0, y: 0 };
   }
 
-  return { init, setActiveFormat, toggleOk, getLayerParams, setLayerParam };
+  return { init, setActiveFormat, toggleOk, getLayerParams, setLayerParam, refreshGrid: _renderFormatGrid };
 })();
