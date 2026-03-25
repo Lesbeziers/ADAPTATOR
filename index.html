@@ -8,7 +8,6 @@
   <link rel="stylesheet" href="assets/css/layout.css" />
   <link rel="stylesheet" href="assets/css/ui.css" />
   <link rel="stylesheet" href="assets/css/panel.css" />
-  <link rel="stylesheet" href="assets/css/bottombar.css" />
 </head>
 <body>
 
@@ -37,51 +36,124 @@
 
         <!-- MODALIDADES -->
         <section class="panel-section">
-          <div class="panel-section-title">Modalidades</div>
-
-          <!-- Dropdown custom -->
-          <div class="custom-select" id="modality-dropdown">
-            <div class="custom-select-trigger">
-              <span class="custom-select-value" id="modality-value">Selecciona modalidad</span>
-              <span class="custom-select-arrow">&#9660;</span>
+          <div class="panel-section-title collapsible" data-target="section-modalidades-body">Modalidades <span class="section-chevron"><svg width="12" height="8" viewBox="0 0 12 8" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 1L6 7L11 1" stroke="#f0c020" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span></div>
+          <div id="section-modalidades-body">
+            <div class="custom-select" id="modality-dropdown">
+              <div class="custom-select-trigger">
+                <span class="custom-select-value" id="modality-value">Selecciona modalidad</span>
+                <span class="custom-select-arrow">&#9660;</span>
+              </div>
+              <div class="custom-select-options" id="modality-options"></div>
             </div>
-            <div class="custom-select-options" id="modality-options"></div>
+            <div id="formats-grid"></div>
           </div>
-
-          <div id="formats-grid"></div>
         </section>
 
         <!-- CAPAS -->
         <section class="panel-section" id="section-layers">
-          <div class="panel-section-title">Capas</div>
-          <div class="layers-box">
-            <input type="file" id="file-input-layer" accept="image/*" multiple style="display:none" />
-            <div id="layers-list"></div>
-            <div class="layers-header">
-              <button class="btn-layer-action" id="btn-add-layer" title="Añadir capa">
-                <img class="icon-up"   src="assets/img/mas_up.svg"   alt="+" />
-                <img class="icon-down" src="assets/img/mas_down.svg" alt="+" />
-              </button>
-              <button class="btn-layer-action" id="btn-dup-layer" title="Duplicar capa">
-                <img class="icon-up"   src="assets/img/duplicar_up.svg"   alt="duplicar" />
-                <img class="icon-down" src="assets/img/duplicar_down.svg" alt="duplicar" />
-              </button>
-              <button class="btn-layer-action btn-layer-delete" id="btn-del-layer" title="Eliminar capa">
-                <img class="icon-up"   src="assets/img/papelera_up.svg"   alt="eliminar" />
-                <img class="icon-down" src="assets/img/papelera_down.svg" alt="eliminar" />
-              </button>
+          <div class="panel-section-title collapsible" data-target="section-capas-body">Capas <span class="section-chevron"><svg width="12" height="8" viewBox="0 0 12 8" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 1L6 7L11 1" stroke="#f0c020" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span></div>
+          <div id="section-capas-body">
+            <div class="layers-box">
+              <input type="file" id="file-input-layer" accept="image/*" multiple style="display:none" />
+              <div id="layers-list"></div>
+              <div class="layers-header">
+                <div class="layers-header-left">
+                  <button class="btn-layer-action" id="btn-add-layer" data-tooltip="Añadir capa">
+                    <img class="icon-up"   src="assets/img/mas_up.svg"   alt="+" />
+                    <img class="icon-down" src="assets/img/mas_down.svg" alt="+" />
+                  </button>
+                  <button class="btn-layer-action" id="btn-dup-layer" data-tooltip="Duplicar capa">
+                    <img class="icon-up"   src="assets/img/duplicar_up.svg"   alt="duplicar" />
+                    <img class="icon-down" src="assets/img/duplicar_down.svg" alt="duplicar" />
+                  </button>
+                  <button class="btn-layer-action btn-layer-delete" id="btn-del-layer" data-tooltip="Eliminar capa">
+                    <img class="icon-up"   src="assets/img/papelera_up.svg"   alt="eliminar" />
+                    <img class="icon-down" src="assets/img/papelera_down.svg" alt="eliminar" />
+                  </button>
+                </div>
+                <div class="layers-header-right">
+                  <button class="btn-layer-action" id="btn-add-texto" data-tooltip="Añadir texto">
+                    <img class="icon-up"   src="assets/img/ic_texto_up.svg"   alt="texto" />
+                    <img class="icon-down" src="assets/img/ic_texto_down.svg" alt="texto" />
+                  </button>
+                  <button class="btn-layer-action" id="btn-add-solido" data-tooltip="Añadir sólido">
+                    <img class="icon-up"   src="assets/img/ic_solido_up.svg"   alt="sólido" />
+                    <img class="icon-down" src="assets/img/ic_solido_down.svg" alt="sólido" />
+                  </button>
+                  <button class="btn-layer-action" id="btn-add-degradado" data-tooltip="Añadir degradado">
+                    <img class="icon-up"   src="assets/img/ic_degradado_up.svg"   alt="degradado" />
+                    <img class="icon-down" src="assets/img/ic_degradado_down.svg" alt="degradado" />
+                  </button>
+                  <button class="btn-layer-action btn-logos-trigger" id="btn-add-logo" data-tooltip="Añadir logo">
+                    <img class="icon-up"   src="assets/img/ic_logo_up.svg"   alt="logos" />
+                    <img class="icon-down" src="assets/img/ic_logo_down.svg" alt="logos" />
+                  </button>
+                  <button class="btn-layer-action" id="btn-siluetear" data-tooltip="Siluetear capa">
+                    <img class="icon-up"   src="assets/img/ic_silueta_up.svg"   alt="siluetear" />
+                    <img class="icon-down" src="assets/img/ic_silueta_down.svg" alt="siluetear" />
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </section>
 
-        <!-- EXTRAS -->
-        <section class="panel-section" id="section-extras">
-          <div class="panel-section-title">Extras</div>
-          <div id="extras-grid">
-            <button class="btn-extra" id="btn-extra-degradado">Degradado</button>
-            <button class="btn-extra" id="btn-extra-solido">Sólido</button>
-            <button class="btn-extra" id="btn-extra-texto">Texto</button>
-            <button class="btn-extra" id="btn-extra-mux-txt">Texto en MUX_TXT</button>
+        <!-- TRANSFORMAR -->
+        <section class="panel-section" id="section-transform">
+          <div class="panel-section-title collapsible" data-target="section-transform-body">Transformar <span class="section-chevron"><svg width="12" height="8" viewBox="0 0 12 8" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 1L6 7L11 1" stroke="#f0c020" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span></div>
+          <div id="section-transform-body">
+            <div class="layers-box">
+              <div id="transform-panel">
+                <div class="transform-row">
+                  <span class="transform-label">Escala</span>
+                  <input type="range" id="slider-scale" min="1" max="200" value="100" />
+                  <input type="text" class="transform-val" id="label-scale" value="100%" data-unit="%" data-min="1" data-max="200" />
+                </div>
+                <div class="transform-row">
+                  <span class="transform-label">Giro</span>
+                  <input type="range" id="slider-rotation" min="-180" max="180" value="0" />
+                  <input type="text" class="transform-val" id="label-rotation" value="0°" data-unit="°" data-min="-180" data-max="180" />
+                </div>
+                <div class="transform-row">
+                  <span class="transform-label">Transparencia</span>
+                  <input type="range" id="slider-opacity" min="0" max="100" value="100" />
+                  <input type="text" class="transform-val" id="label-opacity" value="100%" data-unit="%" data-min="0" data-max="100" />
+                </div>
+                <div class="transform-row">
+                  <span class="transform-label">Desenfoque</span>
+                  <input type="range" id="slider-blur" min="0" max="120" value="0" />
+                  <input type="text" class="transform-val" id="label-blur" value="0" data-unit="" data-min="0" data-max="120" />
+                </div>
+                <div class="transform-row">
+                  <span class="transform-label">Ruido</span>
+                  <input type="range" id="slider-noise" min="0" max="100" value="0" />
+                  <input type="text" class="transform-val" id="label-noise" value="0" data-unit="" data-min="0" data-max="100" />
+                </div>
+                <div class="transform-row">
+                  <span class="transform-label">Brillo</span>
+                  <input type="range" id="slider-brightness" min="-100" max="100" value="0" />
+                  <input type="text" class="transform-val" id="label-brightness" value="0%" data-unit="%" data-min="-100" data-max="100" />
+                </div>
+                <div class="transform-row">
+                  <span class="transform-label">Contraste</span>
+                  <input type="range" id="slider-contrast" min="-100" max="100" value="0" />
+                  <input type="text" class="transform-val" id="label-contrast" value="0%" data-unit="%" data-min="-100" data-max="100" />
+                </div>
+                <div class="transform-row">
+                  <span class="transform-label">Saturación</span>
+                  <input type="range" id="slider-saturation" min="-100" max="100" value="0" />
+                  <input type="text" class="transform-val" id="label-saturation" value="0%" data-unit="%" data-min="-100" data-max="100" />
+                </div>
+                <div class="transform-separator"></div>
+                <div id="tint-row" class="transform-row transform-effect transform-disabled">
+                  <span class="transform-label">Tintar</span>
+                  <div class="effect-color" id="tint-color-swatch" style="background:#000000;"></div>
+                  <input type="color" id="tint-color-picker" value="#000000" style="position:absolute;opacity:0;width:0;height:0;pointer-events:none;">
+                  <input type="range" id="slider-tint" min="0" max="100" value="0" />
+                  <input type="text" class="transform-val" id="label-tint" value="0%" data-unit="%" data-min="0" data-max="100" />
+                </div>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -91,45 +163,12 @@
     <button id="btn-collapse">&#8249;</button>
 
     <div id="right">
-      <div id="canvas-area"></div>
-      <div id="inner-bar"></div>
-
-      <!-- BOTTOMBAR: sliders -->
-      <div id="bottombar">
-        <div id="sliders-wrap">
-
-          <div class="slider-group">
-            <span class="slider-label-top">Escala</span>
-            <input type="range" id="slider-scale" min="1" max="200" value="100" />
-            <input type="text" class="slider-label-val" id="label-scale" value="100%" data-unit="%" data-min="1" data-max="200" />
-          </div>
-
-          <div class="slider-group">
-            <span class="slider-label-top">Giro</span>
-            <input type="range" id="slider-rotation" min="-180" max="180" value="0" />
-            <input type="text" class="slider-label-val" id="label-rotation" value="0°" data-unit="°" data-min="-180" data-max="180" />
-          </div>
-
-          <div class="slider-group">
-            <span class="slider-label-top">Transparencia</span>
-            <input type="range" id="slider-opacity" min="0" max="100" value="100" />
-            <input type="text" class="slider-label-val" id="label-opacity" value="100%" data-unit="%" data-min="0" data-max="100" />
-          </div>
-
-          <div class="slider-group">
-            <span class="slider-label-top">Desenfoque</span>
-            <input type="range" id="slider-blur" min="0" max="40" value="0" />
-            <input type="text" class="slider-label-val" id="label-blur" value="0" data-unit="" data-min="0" data-max="40" />
-          </div>
-
-          <div class="slider-group">
-            <span class="slider-label-top">Ruido</span>
-            <input type="range" id="slider-noise" min="0" max="20" value="0" />
-            <input type="text" class="slider-label-val" id="label-noise" value="0" data-unit="" data-min="0" data-max="20" />
-          </div>
-
+      <div id="canvas-area">
+        <div id="lienzo">
+          <div id="lienzo-label"></div>
         </div>
       </div>
+      <div id="ver-todas-area"></div>
     </div>
 
   </div>
@@ -137,16 +176,158 @@
 </div>
 
 <script src="assets/js/state.js"></script>
+<script src="assets/js/text-layers.js"></script>
+<script src="assets/js/solid-layers.js"></script>
+<script src="assets/js/gradient-layers.js"></script>
+<script src="assets/js/system-layers.js"></script>
+<script src="assets/js/pastilla.js"></script>
+<script src="assets/js/history.js"></script>
 <script src="assets/js/canvas.js"></script>
 <script src="assets/js/layers.js"></script>
 <script src="assets/js/formats.js"></script>
 <script src="assets/js/ui.js"></script>
 <script src="assets/js/extras.js"></script>
+<script src="assets/js/jszip.min.js"></script>
 <script src="assets/js/project.js"></script>
 <script src="assets/js/export.js"></script>
+<script src="assets/js/silhouette.js"></script>
+<script src="assets/js/composicion.js"></script>
+<script src="assets/js/ver-todas.js"></script>
+<script src="assets/js/logos.js"></script>
 <script src="assets/js/app.js"></script>
 
-<!-- MODAL DE CONFIRMACIÓN -->
+<!-- PANELES FLOTANTES -->
+<div id="text-editor-panel">
+  <div id="text-editor-header">
+    <span id="text-editor-title">Texto</span>
+    <button id="text-editor-close">&#x2715;</button>
+  </div>
+  <div id="text-editor-body">
+    <div class="text-ctrl-row">
+      <span class="text-ctrl-label">Familia</span>
+      <select id="text-family">
+        <option value="Apercu Movistar" selected>Apercu Movistar</option>
+        <option value="Movistar Sans">Movistar Sans</option>
+        <option value="Movistar">Movistar</option>
+        <option disabled>──────────</option>
+        <option value="Arial">Arial</option>
+        <option value="Helvetica Neue, Helvetica, sans-serif">Helvetica</option>
+        <option value="Georgia">Georgia</option>
+        <option value="Times New Roman">Times New Roman</option>
+        <option value="Courier New">Courier New</option>
+      </select>
+    </div>
+    <div class="text-ctrl-row">
+      <span class="text-ctrl-label">Peso</span>
+      <select id="text-weight">
+        <option value="300|normal">Light</option>
+        <option value="300|italic">Light Italic</option>
+        <option value="400|normal" selected>Regular</option>
+        <option value="400|italic">Regular Italic</option>
+        <option value="700|normal">Bold</option>
+        <option value="700|italic">Bold Italic</option>
+        <option value="900|normal">Black</option>
+        <option value="900|italic">Black Italic</option>
+      </select>
+    </div>
+    <div class="text-ctrl-row">
+      <span class="text-ctrl-label">Tamaño</span>
+      <input type="number" id="text-size" value="48" min="6" max="500" />
+      <span style="font-size:10px;color:#666">px</span>
+    </div>
+    <div class="text-ctrl-row">
+      <span class="text-ctrl-label">Alinear</span>
+      <div class="text-align-btns">
+        <button class="btn-text-align active" data-align="left" data-tooltip="Izquierda">
+          <svg width="14" height="10" viewBox="0 0 14 10" fill="currentColor"><rect x="0" y="0" width="14" height="2" rx="1"/><rect x="0" y="4" width="10" height="2" rx="1"/><rect x="0" y="8" width="12" height="2" rx="1"/></svg>
+        </button>
+        <button class="btn-text-align" data-align="center" data-tooltip="Centro">
+          <svg width="14" height="10" viewBox="0 0 14 10" fill="currentColor"><rect x="0" y="0" width="14" height="2" rx="1"/><rect x="2" y="4" width="10" height="2" rx="1"/><rect x="1" y="8" width="12" height="2" rx="1"/></svg>
+        </button>
+        <button class="btn-text-align" data-align="right" data-tooltip="Derecha">
+          <svg width="14" height="10" viewBox="0 0 14 10" fill="currentColor"><rect x="0" y="0" width="14" height="2" rx="1"/><rect x="4" y="4" width="10" height="2" rx="1"/><rect x="2" y="8" width="12" height="2" rx="1"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="text-ctrl-row">
+      <span class="text-ctrl-label">Color</span>
+      <input type="color" id="text-color" value="#ffffff" />
+    </div>
+  </div>
+</div>
+
+<div id="solid-editor-panel">
+  <div id="solid-editor-header">
+    <span id="solid-editor-title">Sólido</span>
+    <button id="solid-editor-close">&#x2715;</button>
+  </div>
+  <div id="solid-editor-body">
+    <div class="text-ctrl-row">
+      <span class="text-ctrl-label">Ancho</span>
+      <input type="number" id="solid-width" min="1" max="9999" value="1920" />
+      <span style="font-size:10px;color:#666">px</span>
+    </div>
+    <div class="text-ctrl-row">
+      <span class="text-ctrl-label">Alto</span>
+      <input type="number" id="solid-height" min="1" max="9999" value="1080" />
+      <span style="font-size:10px;color:#666">px</span>
+    </div>
+    <div class="text-ctrl-row">
+      <span class="text-ctrl-label">Radio</span>
+      <input type="number" id="solid-radius" min="0" max="500" value="0" />
+      <span style="font-size:10px;color:#666">px</span>
+    </div>
+    <div class="text-ctrl-row">
+      <span class="text-ctrl-label">Color</span>
+      <input type="color" id="solid-color" value="#000000" />
+    </div>
+  </div>
+</div>
+
+<div id="gradient-editor-panel">
+  <div id="gradient-editor-header">
+    <span id="gradient-editor-title">Degradado</span>
+    <button id="gradient-editor-close">&#x2715;</button>
+  </div>
+  <div id="gradient-editor-body">
+    <div class="text-ctrl-row">
+      <span class="text-ctrl-label">Tipo</span>
+      <select id="gradient-type">
+        <option value="linear">Lineal</option>
+        <option value="radial">Radial</option>
+      </select>
+    </div>
+    <div class="text-ctrl-row" id="gradient-angle-row">
+      <span class="text-ctrl-label">Ángulo</span>
+      <input type="number" id="gradient-angle" min="0" max="360" value="90" />
+      <span style="font-size:10px;color:#666">°</span>
+    </div>
+    <div class="gradient-divider">Color 1</div>
+    <div class="text-ctrl-row">
+      <span class="text-ctrl-label">Color</span>
+      <input type="color" id="gradient-color1" value="#000000" />
+    </div>
+    <div class="text-ctrl-row">
+      <span class="text-ctrl-label">Opacidad</span>
+      <input type="range" id="gradient-alpha1" min="0" max="100" value="100" />
+      <span class="gradient-alpha-label" id="label-alpha1">100%</span>
+    </div>
+    <div class="gradient-divider">Color 2</div>
+    <div class="text-ctrl-row">
+      <span class="text-ctrl-label">Color</span>
+      <input type="color" id="gradient-color2" value="#000000" />
+    </div>
+    <div class="text-ctrl-row">
+      <span class="text-ctrl-label">Opacidad</span>
+      <input type="range" id="gradient-alpha2" min="0" max="100" value="0" />
+      <span class="gradient-alpha-label" id="label-alpha2">0%</span>
+    </div>
+    <button id="btn-gradient-pick">Definir en pantalla</button>
+  </div>
+</div>
+
+<div id="custom-tooltip"></div>
+
 <div id="confirm-overlay" style="display:none">
   <div id="confirm-box">
     <div id="confirm-message"></div>
