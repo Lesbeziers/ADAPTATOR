@@ -109,20 +109,28 @@
   background: var(--col-bg);
 }
 
-/* ── INNER BAR (MOCKUP, TXT, FOCO...) ────────────────────── */
-#inner-bar {
-  flex-shrink: 0;
-  height: var(--innerbar-height);
-  background: var(--col-surface-2);
-  border-top: 1px solid var(--col-border);
+
+/* ── LIENZO ───────────────────────────────────────────────── */
+#lienzo {
+  position: absolute;
+  background: transparent;
+  overflow: hidden;
+  box-shadow: 0 0 0 1px #444;
+  /* Las capas se posicionan dentro del lienzo */
 }
 
-/* ── BOTTOM BAR (sliders) ────────────────────────────────── */
-#bottombar {
-  flex-shrink: 0;
-  height: var(--bottombar-height);
-  background: var(--col-bg);
-  border-top: 1px solid var(--col-border);
+/* Label con dimensiones reales */
+#lienzo-label {
+  position: absolute;
+  bottom: -20px;
+  left: 0;
+  font-family: var(--font);
+  font-size: 10px;
+  font-weight: 400;
+  color: #555;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  pointer-events: none;
 }
 
 /* ── CAPAS EN EL VIEWPORT ─────────────────────────────────── */
@@ -141,4 +149,711 @@
 
 .canvas-layer-active {
   outline: none;
+}
+
+/* ── PANEL FLOTANTE DE TEXTO ──────────────────────────────── */
+#text-editor-panel {
+  position: fixed;
+  top: 100px;
+  right: 20px;
+  width: 240px;
+  background: #1c1c1c;
+  border: 1px solid #333;
+  border-radius: 4px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  z-index: 8500;
+  display: none;
+  flex-direction: column;
+  gap: 0;
+  overflow: hidden;
+}
+
+#text-editor-panel.visible {
+  display: flex;
+}
+
+#text-editor-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: #161616;
+  border-bottom: 1px solid #333;
+  cursor: move;
+  user-select: none;
+}
+
+#text-editor-title {
+  font-family: var(--font);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--col-yellow);
+}
+
+#text-editor-close {
+  background: transparent;
+  border: none;
+  color: #666;
+  font-size: 14px;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0;
+  transition: color 0.15s;
+}
+
+#text-editor-close:hover {
+  color: #fff;
+}
+
+#text-editor-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+}
+
+/* Textarea */
+#text-editor-content {
+  width: 100%;
+  min-height: 60px;
+  background: #2a2a2a;
+  border: 1px solid #3a3a3a;
+  border-radius: 2px;
+  color: #fff;
+  font-family: var(--font);
+  font-size: 12px;
+  padding: 6px 8px;
+  resize: vertical;
+  outline: none;
+  transition: border-color 0.15s;
+  box-sizing: border-box;
+}
+
+#text-editor-content:focus {
+  border-color: #666;
+}
+
+/* Fila de controles */
+.text-ctrl-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.text-ctrl-label {
+  font-family: var(--font);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--col-text-muted);
+  width: 52px;
+  flex-shrink: 0;
+}
+
+/* Select de familia y peso */
+#text-family,
+#text-weight {
+  appearance: none;
+  -webkit-appearance: none;
+  flex: 1;
+  height: 24px;
+  background: #2a2a2a;
+  border: 1px solid #3a3a3a;
+  border-radius: 2px;
+  color: #fff;
+  font-family: var(--font);
+  font-size: 10px;
+  padding: 0 6px;
+  outline: none;
+  cursor: pointer;
+}
+
+/* Input tamaño */
+#text-size {
+  width: 52px;
+  height: 24px;
+  background: #2a2a2a;
+  border: 1px solid #3a3a3a;
+  border-radius: 2px;
+  color: #fff;
+  font-family: var(--font);
+  font-size: 10px;
+  text-align: center;
+  outline: none;
+  padding: 0 4px;
+}
+
+/* Alineación */
+.text-align-btns {
+  display: flex;
+  gap: 3px;
+}
+
+.btn-text-align {
+  width: 24px;
+  height: 24px;
+  background: #2a2a2a;
+  border: 1px solid #3a3a3a;
+  border-radius: 2px;
+  color: #888;
+  font-size: 11px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.12s;
+}
+
+.btn-text-align:hover {
+  color: #fff;
+  border-color: #666;
+}
+
+.btn-text-align.active {
+  background: var(--col-yellow);
+  border-color: var(--col-yellow);
+  color: #000;
+}
+
+/* Color */
+#text-color {
+  width: 24px;
+  height: 24px;
+  border: 1px solid #3a3a3a;
+  border-radius: 2px;
+  padding: 0;
+  cursor: pointer;
+  background: none;
+}
+
+/* ── CAPA DE TEXTO EN VIEWPORT ────────────────────────────── */
+.canvas-text-layer {
+  position: absolute;
+  cursor: move;
+  min-width: 20px;
+  min-height: 20px;
+  transform-origin: center center;
+}
+
+/* ── PANEL FLOTANTE DE SÓLIDO ─────────────────────────────── */
+#solid-editor-panel {
+  position: fixed;
+  top: 100px;
+  right: 260px;
+  width: 220px;
+  background: #1c1c1c;
+  border: 1px solid #333;
+  border-radius: 4px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  z-index: 8500;
+  display: none;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#solid-editor-panel.visible {
+  display: flex;
+}
+
+#solid-editor-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: #161616;
+  border-bottom: 1px solid #333;
+  cursor: move;
+  user-select: none;
+}
+
+#solid-editor-title {
+  font-family: var(--font);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--col-yellow);
+}
+
+#solid-editor-close {
+  background: transparent;
+  border: none;
+  color: #666;
+  font-size: 14px;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0;
+  transition: color 0.15s;
+}
+
+#solid-editor-close:hover { color: #fff; }
+
+#solid-editor-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+}
+
+/* ── CAPA SÓLIDO EN VIEWPORT ──────────────────────────────── */
+.canvas-solid-layer {
+  position: absolute;
+  cursor: move;
+  transform-origin: center center;
+}
+
+/* ── PANEL FLOTANTE DE SÓLIDO ─────────────────────────────── */
+#solid-editor-panel {
+  position: fixed;
+  top: 100px;
+  right: 260px;
+  width: 200px;
+  background: #1c1c1c;
+  border: 1px solid #333;
+  border-radius: 4px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  z-index: 8500;
+  display: none;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#solid-editor-panel.visible {
+  display: flex;
+}
+
+#solid-editor-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: #161616;
+  border-bottom: 1px solid #333;
+  cursor: move;
+  user-select: none;
+}
+
+#solid-editor-title {
+  font-family: var(--font);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--col-yellow);
+}
+
+#solid-editor-close {
+  background: transparent;
+  border: none;
+  color: #666;
+  font-size: 14px;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0;
+  transition: color 0.15s;
+}
+
+#solid-editor-close:hover { color: #fff; }
+
+#solid-editor-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+}
+
+#solid-width,
+#solid-height,
+#solid-radius,
+#solid-color {
+  width: 70px;
+  height: 24px;
+  background: #2a2a2a;
+  border: 1px solid #3a3a3a;
+  border-radius: 2px;
+  color: #fff;
+  font-family: var(--font);
+  font-size: 11px;
+  text-align: center;
+  outline: none;
+  padding: 0 4px;
+}
+
+#solid-color {
+  width: 24px;
+  height: 24px;
+  border: 1px solid #3a3a3a;
+  border-radius: 2px;
+  padding: 0;
+  cursor: pointer;
+  background: none;
+}
+
+/* ── PANEL FLOTANTE DE DEGRADADO ─────────────────────────── */
+#gradient-editor-panel {
+  position: fixed;
+  top: 100px;
+  right: 500px;
+  width: 240px;
+  background: #1c1c1c;
+  border: 1px solid #333;
+  border-radius: 4px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  z-index: 8500;
+  display: none;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#gradient-editor-panel.visible { display: flex; }
+
+#gradient-editor-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: #161616;
+  border-bottom: 1px solid #333;
+  cursor: move;
+  user-select: none;
+}
+
+#gradient-editor-title {
+  font-family: var(--font);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--col-yellow);
+}
+
+#gradient-editor-close {
+  background: transparent;
+  border: none;
+  color: #666;
+  font-size: 14px;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0;
+}
+#gradient-editor-close:hover { color: #fff; }
+
+#gradient-editor-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+}
+
+.gradient-divider {
+  font-family: var(--font);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #555;
+  border-top: 1px solid #2e2e2e;
+  padding-top: 6px;
+  margin-top: 2px;
+}
+
+.gradient-alpha-label {
+  font-family: var(--font);
+  font-size: 10px;
+  color: var(--col-text-muted);
+  width: 32px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+#gradient-editor-body input[type="range"] {
+  flex: 1;
+  height: 2px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: #3a3a3a;
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+}
+
+#gradient-editor-body input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #fff;
+  cursor: pointer;
+}
+
+#gradient-type,
+#gradient-angle {
+  flex: 1;
+  height: 24px;
+  background: #2a2a2a;
+  border: 1px solid #3a3a3a;
+  border-radius: 2px;
+  color: #fff;
+  font-family: var(--font);
+  font-size: 10px;
+  padding: 0 6px;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+#gradient-angle {
+  width: 60px;
+  flex: none;
+  text-align: center;
+}
+
+#btn-gradient-pick {
+  margin-top: 4px;
+  height: 28px;
+  background: #2a2a2a;
+  border: 1px solid #444;
+  border-radius: 2px;
+  color: var(--col-text-muted);
+  font-family: var(--font);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+#btn-gradient-pick:hover {
+  color: #fff;
+  border-color: #666;
+}
+
+#btn-gradient-pick.active {
+  background: var(--col-yellow);
+  border-color: var(--col-yellow);
+  color: #000;
+}
+
+body.gradient-pick-mode .canvas-layer,
+body.gradient-pick-mode #lienzo,
+body.gradient-pick-mode #canvas-area {
+  cursor: crosshair !important;
+}
+
+/* ── VER TODAS ────────────────────────────────────────────── */
+
+body.view-all #sidebar        { width: 0; border-color: transparent; }
+body.view-all #btn-collapse   { display: none; }
+body.view-all #canvas-area    { display: none; }
+body.view-all #canvas-ok-btn  { display: none !important; }
+
+#ver-todas-area {
+  display: none;
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 24px 32px;
+  background: var(--col-bg);
+  position: relative;
+}
+
+body.view-all #ver-todas-area {
+  display: block;
+}
+
+#ver-todas-area::-webkit-scrollbar { width: 4px; }
+#ver-todas-area::-webkit-scrollbar-track { background: transparent; }
+#ver-todas-area::-webkit-scrollbar-thumb { background: #3a3a3a; border-radius: 2px; }
+
+.vt-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+
+.vt-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font);
+  font-size: 24px;
+  font-weight: 300;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--col-yellow);
+  pointer-events: none;
+}
+
+.vt-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.vt-card:hover .vt-thumb {
+  outline: 1px solid #555;
+}
+
+.vt-card-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.vt-card-name {
+  font-family: var(--font);
+  font-size: 14px;
+  font-weight: 300;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--col-yellow);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.vt-ok-dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 2px;
+  background: #2a2a2a;
+  flex-shrink: 0;
+}
+
+.vt-ok-dot.done {
+  background: var(--col-green);
+}
+
+.vt-thumb {
+  display: block;
+  width: 100%;
+  height: auto;
+  background: #111;
+  outline: 1px solid #2e2e2e;
+  transition: outline 0.15s;
+}
+
+/* ── LIGHTBOX ─────────────────────────────────────────────── */
+#vt-lightbox {
+  position: fixed;
+  inset: 0;
+  background: #0e0e0e;
+  z-index: 9200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.vt-lightbox-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.vt-lightbox-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.vt-lightbox-name {
+  font-family: var(--font);
+  font-size: 20px;
+  font-weight: 300;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--col-yellow);
+}
+
+.vt-edit-btn {
+  height: 28px;
+  padding: 0 16px;
+  background: #2a2a2a;
+  border: none;
+  border-radius: 2px;
+  color: #bbb;
+  font-family: var(--font);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.vt-edit-btn:hover {
+  background: #333;
+  color: #fff;
+}
+
+/* ── PASTILLA DE PUBLICIDAD — Panel flotante ────────────── */
+#pastilla-editor-panel {
+  position: fixed;
+  top: 100px;
+  right: 20px;
+  width: 200px;
+  background: #1c1c1c;
+  border: 1px solid #333;
+  border-radius: 4px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  z-index: 8500;
+  display: none;
+  flex-direction: column;
+  gap: 0;
+  overflow: hidden;
+}
+
+#pastilla-editor-panel.visible {
+  display: flex;
+}
+
+#pastilla-editor-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: #161616;
+  border-bottom: 1px solid #2e2e2e;
+  cursor: move;
+  font-family: var(--font);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--col-yellow);
+  user-select: none;
+}
+
+#pastilla-editor-close {
+  background: none;
+  border: none;
+  color: #666;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+
+#pastilla-editor-close:hover {
+  color: #ccc;
+}
+
+.pastilla-variant-btn {
+  transition: border-color 0.15s;
+}
+
+.pastilla-variant-btn:hover {
+  border-color: #555 !important;
+}
+
+.pastilla-variant-btn.active {
+  border-color: var(--col-yellow) !important;
 }
