@@ -1,0 +1,870 @@
+[
+  {
+    "name": "Accion por M+ Color Negativo",
+    "file": "Accion_porM+_Col_Neg.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Accion_porM+_Col_Neg.svg",
+    "search": "accion por m+ color negativo"
+  },
+  {
+    "name": "Accion por M+ Color Positivo",
+    "file": "Accion_porM+_Col_Pos.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Accion_porM+_Col_Pos.svg",
+    "search": "accion por m+ color positivo"
+  },
+  {
+    "name": "Bar Blanco",
+    "file": "Bar_Blanco.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Bar_Blanco.svg",
+    "search": "bar blanco"
+  },
+  {
+    "name": "Champions Tour Color Negativo",
+    "file": "Champions_Tour_Col_Neg.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Champions_Tour_Col_Neg.svg",
+    "search": "champions tour color negativo"
+  },
+  {
+    "name": "Champions Tour Color Positivo",
+    "file": "Champions_Tour_Col_Pos.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Champions_Tour_Col_Pos.svg",
+    "search": "champions tour color positivo"
+  },
+  {
+    "name": "Champions Tour por M+ Color Positivo",
+    "file": "Champions_Tour_porM+_Col_Pos.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Champions_Tour_porM+_Col_Pos.svg",
+    "search": "champions tour por m+ color positivo"
+  },
+  {
+    "name": "Champions Tour por M+ Color Negativo",
+    "file": "Champions_Tour_porM+_Col_Neg.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Champions_Tour_porM+_Col_Neg.svg",
+    "search": "champions tour por m+ color negativo"
+  },
+  {
+    "name": "Cine Espanol por M+ Color Negativo",
+    "file": "Cine_Espanol_porM+_Col_Neg.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Cine_Espanol_porM+_Col_Neg.svg",
+    "search": "cine espanol por m+ color negativo"
+  },
+  {
+    "name": "Cine Espanol por M+ Color Positivo",
+    "file": "Cine_Espanol_porM+_Col_Pos.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Cine_Espanol_porM+_Col_Pos.svg",
+    "search": "cine espanol por m+ color positivo"
+  },
+  {
+    "name": "Cine por M+ Color Negativo",
+    "file": "Cine_porM+_Col_Neg.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Cine_porM+_Col_Neg.svg",
+    "search": "cine por m+ color negativo"
+  },
+  {
+    "name": "Cine por M+ Color Positivo",
+    "file": "Cine_porM+_Col_Pos.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Cine_porM+_Col_Pos.svg",
+    "search": "cine por m+ color positivo"
+  },
+  {
+    "name": "Clasicos por M+ Color Negativo",
+    "file": "Clasicos_porM+_Col_Neg.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Clasicos_porM+_Col_Neg.svg",
+    "search": "clasicos por m+ color negativo"
+  },
+  {
+    "name": "Clasicos por M+ Color Positivo",
+    "file": "Clasicos_porM+_Col_Pos.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Clasicos_porM+_Col_Pos.svg",
+    "search": "clasicos por m+ color positivo"
+  },
+  {
+    "name": "Comedia por M+ Color Positivo",
+    "file": "Comedia_porM+_Col_Pos.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Comedia_porM+_Col_Pos.svg",
+    "search": "comedia por m+ color positivo"
+  },
+  {
+    "name": "Comedia por M+ Color Negativo",
+    "file": "Comedia_porM+_Col_Neg.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Comedia_porM+_Col_Neg.svg",
+    "search": "comedia por m+ color negativo"
+  },
+  {
+    "name": "Copa Del Rey por M+ Color Negativo",
+    "file": "Copa_Del_Rey_porM+_Col_Neg.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Copa_Del_Rey_porM+_Col_Neg.svg",
+    "search": "copa del rey por m+ color negativo"
+  },
+  {
+    "name": "Copa del Rey por M+ Color Positivo",
+    "file": "Copa_del_Rey_porM+_Col_Pos.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Copa_del_Rey_porM+_Col_Pos.svg",
+    "search": "copa del rey por m+ color positivo"
+  },
+  {
+    "name": "Copa Del Rey UHD por M+ Color Negativo",
+    "file": "Copa_Del_Rey_UHD_porM+_Col_Neg.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Copa_Del_Rey_UHD_porM+_Col_Neg.svg",
+    "search": "copa del rey uhd por m+ color negativo"
+  },
+  {
+    "name": "Copa Del Rey UHD por M+ Color Positivo",
+    "file": "Copa_Del_Rey_UHD_porM+_Col_Pos.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Copa_Del_Rey_UHD_porM+_Col_Pos.svg",
+    "search": "copa del rey uhd por m+ color positivo"
+  },
+  {
+    "name": "Deportes 2 por M+ Color Negativo",
+    "file": "Deportes_2_porM+_Col_Neg.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Deportes_2_porM+_Col_Neg.svg",
+    "search": "deportes 2 por m+ color negativo"
+  },
+  {
+    "name": "Deportes 2 por M+ Color Positivo",
+    "file": "Deportes_2_porM+_Col_Pos.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Deportes_2_porM+_Col_Pos.svg",
+    "search": "deportes 2 por m+ color positivo"
+  },
+  {
+    "name": "Deportes 3 por M+ Color Negativo",
+    "file": "Deportes_3_porM+_Col_Neg.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Deportes_3_porM+_Col_Neg.svg",
+    "search": "deportes 3 por m+ color negativo"
+  },
+  {
+    "name": "Deportes 3 por M+ Color Positivo",
+    "file": "Deportes_3_porM+_Col_Pos.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Deportes_3_porM+_Col_Pos.svg",
+    "search": "deportes 3 por m+ color positivo"
+  },
+  {
+    "name": "Deportes 4 por M+ Color Negativo",
+    "file": "Deportes_4_porM+_Col_Neg.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Deportes_4_porM+_Col_Neg.svg",
+    "search": "deportes 4 por m+ color negativo"
+  },
+  {
+    "name": "Deportes 4 por M+ Color Positivo",
+    "file": "Deportes_4_porM+_Col_Pos.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Deportes_4_porM+_Col_Pos.svg",
+    "search": "deportes 4 por m+ color positivo"
+  },
+  {
+    "name": "Deportes 5 por M+ Color Negativo",
+    "file": "Deportes_5_porM+_Col_Neg.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Deportes_5_porM+_Col_Neg.svg",
+    "search": "deportes 5 por m+ color negativo"
+  },
+  {
+    "name": "Deportes 5 por M+ Color Positivo",
+    "file": "Deportes_5_porM+_Col_Pos.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Deportes_5_porM+_Col_Pos.svg",
+    "search": "deportes 5 por m+ color positivo"
+  },
+  {
+    "name": "Deportes 6 por M+ Color Negativo",
+    "file": "Deportes_6_porM+_Col_Neg.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Deportes_6_porM+_Col_Neg.svg",
+    "search": "deportes 6 por m+ color negativo"
+  },
+  {
+    "name": "Deportes 6 por M+ Color Positivo",
+    "file": "Deportes_6_porM+_Col_Pos.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Deportes_6_porM+_Col_Pos.svg",
+    "search": "deportes 6 por m+ color positivo"
+  },
+  {
+    "name": "Deportes 7 por M+ Color Negativo",
+    "file": "Deportes_7_porM+_Col_Neg.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Deportes_7_porM+_Col_Neg.svg",
+    "search": "deportes 7 por m+ color negativo"
+  },
+  {
+    "name": "Deportes 7 por M+ Color Positivo",
+    "file": "Deportes_7_porM+_Col_Pos.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Deportes_7_porM+_Col_Pos.svg",
+    "search": "deportes 7 por m+ color positivo"
+  },
+  {
+    "name": "Deportes 8 por M+ Color Negativo",
+    "file": "Deportes_8_porM+_Col_Neg.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Deportes_8_porM+_Col_Neg.svg",
+    "search": "deportes 8 por m+ color negativo"
+  },
+  {
+    "name": "Deportes 8 por M+ Color Positivo",
+    "file": "Deportes_8_porM+_Col_Pos.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Deportes_8_porM+_Col_Pos.svg",
+    "search": "deportes 8 por m+ color positivo"
+  },
+  {
+    "name": "Deportes 9 por M+ Color Negativo",
+    "file": "Deportes_9_porM+_Col_Neg.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Deportes_9_porM+_Col_Neg.svg",
+    "search": "deportes 9 por m+ color negativo"
+  },
+  {
+    "name": "Deportes 9 por M+ Color Positivo",
+    "file": "Deportes_9_porM+_Col_Pos.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Deportes_9_porM+_Col_Pos.svg",
+    "search": "deportes 9 por m+ color positivo"
+  },
+  {
+    "name": "Deportes por M+ Color Negativo",
+    "file": "Deportes_porM+_Col_Neg.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Deportes_porM+_Col_Neg.svg",
+    "search": "deportes por m+ color negativo"
+  },
+  {
+    "name": "Deportes por M+ Color Positivo",
+    "file": "Deportes_porM+_Col_Pos.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Deportes_porM+_Col_Pos.svg",
+    "search": "deportes por m+ color positivo"
+  },
+  {
+    "name": "Documentales por M+ Color Negativo",
+    "file": "Documentales_porM+_Col_Neg.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Documentales_porM+_Col_Neg.svg",
+    "search": "documentales por m+ color negativo"
+  },
+  {
+    "name": "Documentales por M+ Color Positivo",
+    "file": "Documentales_porM+_Col_Pos.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Documentales_porM+_Col_Pos.svg",
+    "search": "documentales por m+ color positivo"
+  },
+  {
+    "name": "Drama por M+ Color Negativo",
+    "file": "Drama_porM+_Col_Neg.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Drama_porM+_Col_Neg.svg",
+    "search": "drama por m+ color negativo"
+  },
+  {
+    "name": "Drama por M+ Color Positivo",
+    "file": "Drama_porM+_Col_Pos.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Drama_porM+_Col_Pos.svg",
+    "search": "drama por m+ color positivo"
+  },
+  {
+    "name": "Ellas Vamos por M+ Color Negativo",
+    "file": "Ellas_Vamos_porM+_Col_Neg.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Ellas_Vamos_porM+_Col_Neg.svg",
+    "search": "ellas vamos por m+ color negativo"
+  },
+  {
+    "name": "Ellas Vamos por M+ Color Positivo",
+    "file": "Ellas_Vamos_porM+_Col_Pos.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Ellas_Vamos_porM+_Col_Pos.svg",
+    "search": "ellas vamos por m+ color positivo"
+  },
+  {
+    "name": "Estrenos por M+ Color Negativo",
+    "file": "Estrenos_porM+_Col_Neg.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Estrenos_porM+_Col_Neg.svg",
+    "search": "estrenos por m+ color negativo"
+  },
+  {
+    "name": "Estrenos por M+ Color Positivo",
+    "file": "Estrenos_porM+_Col_Pos.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Estrenos_porM+_Col_Pos.svg",
+    "search": "estrenos por m+ color positivo"
+  },
+  {
+    "name": "Golf 2 por M+ Color Negativo",
+    "file": "Golf_2_porM+_Col_Neg.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Golf_2_porM+_Col_Neg.svg",
+    "search": "golf 2 por m+ color negativo"
+  },
+  {
+    "name": "Golf 2 por M+ Color Positivo",
+    "file": "Golf_2_porM+_Col_Pos.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Golf_2_porM+_Col_Pos.svg",
+    "search": "golf 2 por m+ color positivo"
+  },
+  {
+    "name": "Golf por M+ Color Negativo",
+    "file": "Golf_porM+_Col_Neg.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Golf_porM+_Col_Neg.svg",
+    "search": "golf por m+ color negativo"
+  },
+  {
+    "name": "Golf por M+ Color Positivo",
+    "file": "Golf_porM+_Col_Pos.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Golf_porM+_Col_Pos.svg",
+    "search": "golf por m+ color positivo"
+  },
+  {
+    "name": "Hits por M+ Color Negativo",
+    "file": "Hits_porM+_Col_Neg.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Hits_porM+_Col_Neg.svg",
+    "search": "hits por m+ color negativo"
+  },
+  {
+    "name": "Hits por M+ Color Positivo",
+    "file": "Hits_porM+_Col_Pos.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Hits_porM+_Col_Pos.svg",
+    "search": "hits por m+ color positivo"
+  },
+  {
+    "name": "Indie por M+ Color Negativo",
+    "file": "Indie_por_M+_Col_Neg.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Indie_por_M+_Col_Neg.svg",
+    "search": "indie por m+ color negativo"
+  },
+  {
+    "name": "Indie por M+ Color Positivo",
+    "file": "Indie_por_M+_Col_Pos.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Indie_por_M+_Col_Pos.svg",
+    "search": "indie por m+ color positivo"
+  },
+  {
+    "name": "Info Blanco",
+    "file": "Info_Blanco.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Info_Blanco.svg",
+    "search": "info blanco"
+  },
+  {
+    "name": "Info Negro",
+    "file": "Info_Negro.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Info_Negro.svg",
+    "search": "info negro"
+  },
+  {
+    "name": "LaLiga 2 HDR por M+ Color Negativo",
+    "file": "LaLiga_2_HDR_porM+_Col_Neg.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/LaLiga_2_HDR_porM+_Col_Neg.svg",
+    "search": "laliga 2 hdr por m+ color negativo"
+  },
+  {
+    "name": "LaLiga 2 HDR por M+ Color Positivo",
+    "file": "LaLiga_2_HDR_porM+_Col_Pos.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/LaLiga_2_HDR_porM+_Col_Pos.svg",
+    "search": "laliga 2 hdr por m+ color positivo"
+  },
+  {
+    "name": "LaLiga 2 por M+ Color Negativo",
+    "file": "LaLiga_2_porM+_Col_Neg.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/LaLiga_2_porM+_Col_Neg.svg",
+    "search": "laliga 2 por m+ color negativo"
+  },
+  {
+    "name": "LaLiga 2 por M+ Color Positivo",
+    "file": "LaLiga_2_porM+_Col_Pos.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/LaLiga_2_porM+_Col_Pos.svg",
+    "search": "laliga 2 por m+ color positivo"
+  },
+  {
+    "name": "LaLiga 3 por M+ Color Negativo",
+    "file": "LaLiga_3_porM+_Col_Neg.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/LaLiga_3_porM+_Col_Neg.svg",
+    "search": "laliga 3 por m+ color negativo"
+  },
+  {
+    "name": "LaLiga 3 por M+ Color Positivo",
+    "file": "LaLiga_3_porM+_Col_Pos.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/LaLiga_3_porM+_Col_Pos.svg",
+    "search": "laliga 3 por m+ color positivo"
+  },
+  {
+    "name": "LaLiga 4 por M+ Color Negativo",
+    "file": "LaLiga_4_porM+_Col_Neg.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/LaLiga_4_porM+_Col_Neg.svg",
+    "search": "laliga 4 por m+ color negativo"
+  },
+  {
+    "name": "LaLiga 4 por M+ Color Positivo",
+    "file": "LaLiga_4_porM+_Col_Pos.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/LaLiga_4_porM+_Col_Pos.svg",
+    "search": "laliga 4 por m+ color positivo"
+  },
+  {
+    "name": "LaLiga HDR por M+ Color Negativo",
+    "file": "LaLiga_HDR_porM+_Col_Neg.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/LaLiga_HDR_porM+_Col_Neg.svg",
+    "search": "laliga hdr por m+ color negativo"
+  },
+  {
+    "name": "LaLiga HDR por M+ Color Positivo",
+    "file": "LaLiga_HDR_porM+_Col_Pos.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/LaLiga_HDR_porM+_Col_Pos.svg",
+    "search": "laliga hdr por m+ color positivo"
+  },
+  {
+    "name": "LaLiga por M+ Color Negativo",
+    "file": "LaLiga_porM+_Col_Neg.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/LaLiga_porM+_Col_Neg.svg",
+    "search": "laliga por m+ color negativo"
+  },
+  {
+    "name": "LaLiga por M+ Color Positivo",
+    "file": "LaLiga_porM+_Col_Pos.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/LaLiga_porM+_Col_Pos.svg",
+    "search": "laliga por m+ color positivo"
+  },
+  {
+    "name": "Liga de Campeones por M+ Color Negativo",
+    "file": "Liga_de_Campeones_porM+_Col_Neg.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Liga_de_Campeones_porM+_Col_Neg.svg",
+    "search": "liga de campeones por m+ color negativo"
+  },
+  {
+    "name": "Liga de Campeones por M+ Color Positivo",
+    "file": "Liga_de_Campeones_porM+_Col_Pos.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Liga_de_Campeones_porM+_Col_Pos.svg",
+    "search": "liga de campeones por m+ color positivo"
+  },
+  {
+    "name": "Liga de Campeones UHD por M+ Color Negativo",
+    "file": "Liga_de_Campeones_UHD_porM+_Col_Neg.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Liga_de_Campeones_UHD_porM+_Col_Neg.svg",
+    "search": "liga de campeones uhd por m+ color negativo"
+  },
+  {
+    "name": "Liga de Campeones UHD por M+ Color Positivo",
+    "file": "Liga_de_Campeones_UHD_porM+_Col_Pos.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Liga_de_Campeones_UHD_porM+_Col_Pos.svg",
+    "search": "liga de campeones uhd por m+ color positivo"
+  },
+  {
+    "name": "M+ Blanco",
+    "file": "M+_Blanco.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/M+_Blanco.svg",
+    "search": "m+ blanco"
+  },
+  {
+    "name": "M+ Negro",
+    "file": "M+_Negro.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/M+_Negro.svg",
+    "search": "m+ negro"
+  },
+  {
+    "name": "M+ 2 Blanco",
+    "file": "M+_2_Blanco.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/M+_2_Blanco.svg",
+    "search": "m+ 2 blanco"
+  },
+  {
+    "name": "M+ 2 Negro",
+    "file": "M+_2_Negro.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/M+_2_Negro.svg",
+    "search": "m+ 2 negro"
+  },
+  {
+    "name": "M+ UHD Blanco",
+    "file": "M+_UHD_Blanco.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/M+_UHD_Blanco.svg",
+    "search": "m+ uhd blanco"
+  },
+  {
+    "name": "M+ UHD Negro",
+    "file": "M+_UHD_Negro.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/M+_UHD_Negro.svg",
+    "search": "m+ uhd negro"
+  },
+  {
+    "name": "Mix 2 por M+ Color Negativo",
+    "file": "Mix_2_porM+_Col_Neg.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Mix_2_porM+_Col_Neg.svg",
+    "search": "mix 2 por m+ color negativo"
+  },
+  {
+    "name": "Mix 2 por M+ Color Positivo",
+    "file": "Mix_2_porM+_Col_Pos.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Mix_2_porM+_Col_Pos.svg",
+    "search": "mix 2 por m+ color positivo"
+  },
+  {
+    "name": "Mix por M+ Color Negativo",
+    "file": "Mix_porM+_Col_Neg.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Mix_porM+_Col_Neg.svg",
+    "search": "mix por m+ color negativo"
+  },
+  {
+    "name": "Mix por M+ Color Positivo",
+    "file": "Mix_porM+_Col_Pos.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Mix_porM+_Col_Pos.svg",
+    "search": "mix por m+ color positivo"
+  },
+  {
+    "name": "Multi Cine Blanco",
+    "file": "Multi_Cine_Blanco.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Multi_Cine_Blanco.svg",
+    "search": "multi cine blanco"
+  },
+  {
+    "name": "Multi Cine Negro",
+    "file": "Multi_Cine_Negro.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Multi_Cine_Negro.svg",
+    "search": "multi cine negro"
+  },
+  {
+    "name": "Multi Deporte Blanco",
+    "file": "Multi_Deporte_Blanco.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Multi_Deporte_Blanco.svg",
+    "search": "multi deporte blanco"
+  },
+  {
+    "name": "Multi Deporte Negro",
+    "file": "Multi_Deporte_Negro.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Multi_Deporte_Negro.svg",
+    "search": "multi deporte negro"
+  },
+  {
+    "name": "Musica por M+ Color Negativo",
+    "file": "Musica_porM+_Col_Neg.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Musica_porM+_Col_Neg.svg",
+    "search": "musica por m+ color negativo"
+  },
+  {
+    "name": "Musica por M+ Color Positivo",
+    "file": "Musica_porM+_Col_Pos.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Musica_porM+_Col_Pos.svg",
+    "search": "musica por m+ color positivo"
+  },
+  {
+    "name": "Originales por M+ Color Negativo",
+    "file": "Originales_porM+_Col_Neg.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Originales_porM+_Col_Neg.svg",
+    "search": "originales por m+ color negativo"
+  },
+  {
+    "name": "Originales por M+ Color Positivo",
+    "file": "Originales_porM+_Col_Pos.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Originales_porM+_Col_Pos.svg",
+    "search": "originales por m+ color positivo"
+  },
+  {
+    "name": "Portada Blanco",
+    "file": "Portada_Blanco.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Portada_Blanco.svg",
+    "search": "portada blanco"
+  },
+  {
+    "name": "Portada Negro",
+    "file": "Portada_Negro.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Portada_Negro.svg",
+    "search": "portada negro"
+  },
+  {
+    "name": "Series por M+ Color Negativo",
+    "file": "Series_porM+_Col_Neg.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Series_porM+_Col_Neg.svg",
+    "search": "series por m+ color negativo"
+  },
+  {
+    "name": "Series por M+ Color Positivo",
+    "file": "Series_porM+_Col_Pos.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Series_porM+_Col_Pos.svg",
+    "search": "series por m+ color positivo"
+  },
+  {
+    "name": "Suspense por M+ Color Negativo",
+    "file": "Suspense_porM+_Col_Neg.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Suspense_porM+_Col_Neg.svg",
+    "search": "suspense por m+ color negativo"
+  },
+  {
+    "name": "Suspense por M+ Color Positivo",
+    "file": "Suspense_porM+_Col_Pos.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Suspense_porM+_Col_Pos.svg",
+    "search": "suspense por m+ color positivo"
+  },
+  {
+    "name": "PopUp Vacaciones por M+ Color Negativo",
+    "file": "PopUp_Vacaciones_porM+_Col_Neg.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/PopUp_Vacaciones_porM+_Col_Neg.svg",
+    "search": "popup vacaciones por m+ color negativo"
+  },
+  {
+    "name": "PopUp Vacaciones por M+ Color Positivo",
+    "file": "PopUp_Vacaciones_porM+_Col_Pos.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/PopUp_Vacaciones_porM+_Col_Pos.svg",
+    "search": "popup vacaciones por m+ color positivo"
+  },
+  {
+    "name": "Vamos 2 por M+ Color Negativo",
+    "file": "Vamos_2_porM+_Col_Neg.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Vamos_2_porM+_Col_Neg.svg",
+    "search": "vamos 2 por m+ color negativo"
+  },
+  {
+    "name": "Vamos 2 por M+ Color Positivo",
+    "file": "Vamos_2_porM+_Col_Pos.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Vamos_2_porM+_Col_Pos.svg",
+    "search": "vamos 2 por m+ color positivo"
+  },
+  {
+    "name": "Vamos Bar 2 por M+ Color Negativo",
+    "file": "Vamos_Bar_2_porM+_Col_Neg.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Vamos_Bar_2_porM+_Col_Neg.svg",
+    "search": "vamos bar 2 por m+ color negativo"
+  },
+  {
+    "name": "Vamos Bar 2 por M+ Color Positivo",
+    "file": "Vamos_Bar_2_porM+_Col_Pos.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Vamos_Bar_2_porM+_Col_Pos.svg",
+    "search": "vamos bar 2 por m+ color positivo"
+  },
+  {
+    "name": "Vamos Bar 3 por M+ Color Negativo",
+    "file": "Vamos_Bar_3_porM+_Col_Neg.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Vamos_Bar_3_porM+_Col_Neg.svg",
+    "search": "vamos bar 3 por m+ color negativo"
+  },
+  {
+    "name": "Vamos Bar 3 por M+ Color Positivo",
+    "file": "Vamos_Bar_3_porM+_Col_Pos.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Vamos_Bar_3_porM+_Col_Pos.svg",
+    "search": "vamos bar 3 por m+ color positivo"
+  },
+  {
+    "name": "Vamos Bar por M+ Color Negativo",
+    "file": "Vamos_Bar_porM+_Col_Neg.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Vamos_Bar_porM+_Col_Neg.svg",
+    "search": "vamos bar por m+ color negativo"
+  },
+  {
+    "name": "Vamos Bar por M+ Color Positivo",
+    "file": "Vamos_Bar_porM+_Col_Pos.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Vamos_Bar_porM+_Col_Pos.svg",
+    "search": "vamos bar por m+ color positivo"
+  },
+  {
+    "name": "Vamos por M+ Color Negativo",
+    "file": "Vamos_porM+_Col_Neg.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Vamos_porM+_Col_Neg.svg",
+    "search": "vamos por m+ color negativo"
+  },
+  {
+    "name": "Vamos por M+ Color Positivo",
+    "file": "Vamos_porM+_Col_Pos.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Vamos_porM+_Col_Pos.svg",
+    "search": "vamos por m+ color positivo"
+  },
+  {
+    "name": "Wimbledon UHD por M+ Color Negativo",
+    "file": "Wimbledon_UHD_porM+_Col_Neg.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Wimbledon_UHD_porM+_Col_Neg.svg",
+    "search": "wimbledon uhd por m+ color negativo"
+  },
+  {
+    "name": "Wimbledon UHD por M+ Color Positivo",
+    "file": "Wimbledon_UHD_porM+_Col_Pos.svg",
+    "category": "CANALES",
+    "path": "assets/img/logos/CANALES/Wimbledon_UHD_porM+_Col_Pos.svg",
+    "search": "wimbledon uhd por m+ color positivo"
+  },
+  {
+    "name": "Champions League Negativo",
+    "file": "Champions_League_Neg.svg",
+    "category": "DEPORTES",
+    "path": "assets/img/logos/DEPORTES/Champions_League_Neg.svg",
+    "search": "champions league negativo"
+  },
+  {
+    "name": "Champions League Positivo",
+    "file": "Champions_League_Pos.svg",
+    "category": "DEPORTES",
+    "path": "assets/img/logos/DEPORTES/Champions_League_Pos.svg",
+    "search": "champions league positivo"
+  },
+  {
+    "name": "M+ Logotipo Negativo",
+    "file": "M+_Logotipo_Neg.svg",
+    "category": "MOVISTAR+",
+    "path": "assets/img/logos/MOVISTAR+/M+_Logotipo_Neg.svg",
+    "search": "m+ logotipo negativo"
+  },
+  {
+    "name": "M+ Logotipo Positivo",
+    "file": "M+_Logotipo_Pos.svg",
+    "category": "MOVISTAR+",
+    "path": "assets/img/logos/MOVISTAR+/M+_Logotipo_Pos.svg",
+    "search": "m+ logotipo positivo"
+  },
+  {
+    "name": "Apple TV",
+    "file": "Apple_TV.svg",
+    "category": "PARTNERS",
+    "path": "assets/img/logos/PARTNERS/Apple_TV.svg",
+    "search": "apple tv"
+  },
+  {
+    "name": "ATRESMEDIA Color Negativo",
+    "file": "ATRESMEDIA_Col_Neg.svg",
+    "category": "PARTNERS",
+    "path": "assets/img/logos/PARTNERS/ATRESMEDIA_Col_Neg.svg",
+    "search": "atresmedia color negativo"
+  },
+  {
+    "name": "ATRESMEDIA Color Positivo",
+    "file": "ATRESMEDIA_Col_Pos.svg",
+    "category": "PARTNERS",
+    "path": "assets/img/logos/PARTNERS/ATRESMEDIA_Col_Pos.svg",
+    "search": "atresmedia color positivo"
+  },
+  {
+    "name": "ATRESMEDIA Trazo Negativo",
+    "file": "ATRESMEDIA_Trazo_Neg.svg",
+    "category": "PARTNERS",
+    "path": "assets/img/logos/PARTNERS/ATRESMEDIA_Trazo_Neg.svg",
+    "search": "atresmedia trazo negativo"
+  },
+  {
+    "name": "ATRESMEDIA Trazo Positivo",
+    "file": "ATRESMEDIA_Trazo_Pos.svg",
+    "category": "PARTNERS",
+    "path": "assets/img/logos/PARTNERS/ATRESMEDIA_Trazo_Pos.svg",
+    "search": "atresmedia trazo positivo"
+  },
+  {
+    "name": "ATRESMEDIA Trazo Vertical Negativo",
+    "file": "ATRESMEDIA_Trazo_Ver_Neg.svg",
+    "category": "PARTNERS",
+    "path": "assets/img/logos/PARTNERS/ATRESMEDIA_Trazo_Ver_Neg.svg",
+    "search": "atresmedia trazo vertical negativo"
+  },
+  {
+    "name": "ATRESMEDIA Trazo Vertical Positivo",
+    "file": "ATRESMEDIA_Trazo_Ver_Pos.svg",
+    "category": "PARTNERS",
+    "path": "assets/img/logos/PARTNERS/ATRESMEDIA_Trazo_Ver_Pos.svg",
+    "search": "atresmedia trazo vertical positivo"
+  },
+  {
+    "name": "ATRESMEDIA Vertical Color Negativo",
+    "file": "ATRESMEDIA_Ver_Col_Neg.svg",
+    "category": "PARTNERS",
+    "path": "assets/img/logos/PARTNERS/ATRESMEDIA_Ver_Col_Neg.svg",
+    "search": "atresmedia vertical color negativo"
+  },
+  {
+    "name": "ATRESMEDIA Vertical Color Positivo",
+    "file": "ATRESMEDIA_Ver_Col_Pos.svg",
+    "category": "PARTNERS",
+    "path": "assets/img/logos/PARTNERS/ATRESMEDIA_Ver_Col_Pos.svg",
+    "search": "atresmedia vertical color positivo"
+  },
+  {
+    "name": "DAZN Positivo",
+    "file": "DAZN_Pos.svg",
+    "category": "PARTNERS",
+    "path": "assets/img/logos/PARTNERS/DAZN_Pos.svg",
+    "search": "dazn positivo"
+  },
+  {
+    "name": "DAZN Negativo",
+    "file": "DAZN_Neg.svg",
+    "category": "PARTNERS",
+    "path": "assets/img/logos/PARTNERS/DAZN_Neg.svg",
+    "search": "dazn negativo"
+  }
+]
