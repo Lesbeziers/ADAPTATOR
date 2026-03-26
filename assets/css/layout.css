@@ -21,7 +21,7 @@
 }
 
 #header img {
-  height: 40px;
+  height: 50px;
   pointer-events: none;
 }
 
@@ -673,6 +673,19 @@ body.view-all #ver-todas-area {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 24px;
+}
+
+.vt-modality-heading {
+  font-family: var(--font);
+  font-size: 40px;
+  font-weight: 300;
+  letter-spacing: 0.18em;
+  text-align: center;
+  text-transform: uppercase;
+  color: var(--col-yellow);
+  padding: 24px 0 10px;
+  border-bottom: 1px solid #2a2a2a;
+  margin-bottom: 4px;
 }
 
 .vt-empty {
