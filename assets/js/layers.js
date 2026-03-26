@@ -538,8 +538,9 @@ const Layers = (() => {
     // ── THUMBNAIL ──
     const thumb = document.createElement('div');
     thumb.className = 'layer-thumb';
+    thumb.style.position = 'relative';
     if (layer.type === 'text') {
-      thumb.style.cssText = 'display:flex;align-items:center;justify-content:center;background:#2a2a2a;';
+      thumb.style.cssText = 'display:flex;align-items:center;justify-content:center;background:#2a2a2a;position:relative;';
       const tIcon = document.createElement('span');
       tIcon.textContent = 'T';
       tIcon.style.cssText = 'font-family:Georgia,serif;font-size:18px;font-weight:bold;color:#f0c020;line-height:1;';
@@ -558,10 +559,47 @@ const Layers = (() => {
       thumb.appendChild(thumbImg);
     }
 
+    // ── ICONO DE MÁSCARA (solo en formatos SIL) ──
+    const hasMaskRect = !!State.formatSizes[State.activeFormat]?.maskRect;
+    if (hasMaskRect) {
+      const isMasked = !!State.formatMaskEnabled?.[State.activeFormat]?.[layer.id];
+      const maskOverlay = document.createElement('div');
+      maskOverlay.style.cssText = `
+        position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+        cursor:pointer;border-radius:2px;
+        background:${isMasked ? 'rgba(0,0,0,0.55)' : 'transparent'};
+        transition:background 0.15s;
+      `;
+      const maskImg = document.createElement('img');
+      maskImg.src = isMasked ? 'assets/img/ic_mask_down.svg' : 'assets/img/ic_mask_up.svg';
+      maskImg.style.cssText = 'width:14px;height:14px;display:block;pointer-events:none;';
+      maskOverlay.appendChild(maskImg);
+      maskOverlay.style.opacity = isMasked ? '1' : '0';
+      maskOverlay.addEventListener('mouseenter', () => { maskOverlay.style.opacity = '1'; });
+      maskOverlay.addEventListener('mouseleave', () => {
+        const still = !!State.formatMaskEnabled?.[State.activeFormat]?.[layer.id];
+        maskOverlay.style.opacity = still ? '1' : '0';
+      });
+      maskOverlay.addEventListener('click', e => {
+        e.stopPropagation();
+        if (typeof History !== 'undefined') History.push();
+        if (!State.formatMaskEnabled[State.activeFormat]) State.formatMaskEnabled[State.activeFormat] = {};
+        const current = !!State.formatMaskEnabled[State.activeFormat][layer.id];
+        State.formatMaskEnabled[State.activeFormat][layer.id] = !current;
+        if (typeof Canvas !== 'undefined') Canvas.render();
+        _render();
+      });
+      thumb.appendChild(maskOverlay);
+    }
+
     // ── NOMBRE ──
     const nameSpan = document.createElement('span');
     nameSpan.className = 'layer-name';
     nameSpan.textContent = layer.name;
+    if (layer.linkGroupId) {
+      nameSpan.style.color = 'var(--col-yellow)';
+      nameSpan.title = 'Capa enlazada';
+    }
 
     // ── INPUT EDICIÓN (oculto) ──
     const nameInput = document.createElement('input');
@@ -633,13 +671,20 @@ const Layers = (() => {
       if (typeof History !== 'undefined') History.push();
       _setLocked(layer.id, !_locked());
       _updateLockBtn();
-      if (_locked() && State.selectedLayerIds.includes(layer.id)) {
-        State.selectedLayerId  = null;
-        State.selectedLayerIds = [];
-        if (typeof Canvas !== 'undefined') Canvas.render();
-        if (typeof UI     !== 'undefined') UI.updateSliders();
+      if (_locked()) {
+        // Al bloquear: deseleccionar si estaba seleccionada
+        if (State.selectedLayerIds.includes(layer.id)) {
+          State.selectedLayerId  = null;
+          State.selectedLayerIds = [];
+        }
+      } else {
+        // Al desbloquear: seleccionar esta capa ANTES de cualquier render
+        State.selectedLayerId  = layer.id;
+        State.selectedLayerIds = [layer.id];
       }
       _render();
+      if (typeof Canvas !== 'undefined') Canvas.render();
+      if (typeof UI     !== 'undefined') UI.updateSliders();
     });
     actionsWrap.appendChild(lockBtn);
 
@@ -666,6 +711,38 @@ const Layers = (() => {
       _updatePinBtn();
     });
     actionsWrap.appendChild(pinBtn);
+
+    // ── CADENA (enlace entre capas) ──
+    const chainBtn = document.createElement('div');
+    chainBtn.className = 'layer-chain-btn';
+    chainBtn.addEventListener('mouseenter', () => { if (!layer.linkGroupId) chainBtn.style.color = ''; });
+    chainBtn.addEventListener('mouseleave', () => { if (!layer.linkGroupId) chainBtn.style.color = ''; });
+    const _svgChainOn  = '<svg width="13" height="14" viewBox="0 0 13 14" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4.5 9L8.5 5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M5.5 6.5L4 8a2.121 2.121 0 0 0 3 3l1.5-1.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M7.5 7.5L9 6a2.121 2.121 0 0 0-3-3L4.5 4.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>';
+    const _svgChainOff = '<svg width="13" height="14" viewBox="0 0 13 14" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4.5 9L8.5 5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" opacity="0.35"/><path d="M5.5 6.5L4 8a2.121 2.121 0 0 0 3 3l1.5-1.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" opacity="0.35"/><path d="M7.5 7.5L9 6a2.121 2.121 0 0 0-3-3L4.5 4.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" opacity="0.35"/></svg>';
+    const _updateChainBtn = () => {
+      const linked = !!layer.linkGroupId;
+      chainBtn.classList.toggle('linked', linked);
+      chainBtn.dataset.tooltip = linked ? 'Desenlazar capa' : 'Enlazar con seleccionadas';
+      chainBtn.innerHTML = linked ? _svgChainOn : _svgChainOff;
+    };
+    _updateChainBtn();
+    chainBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      if (typeof History !== 'undefined') History.push();
+      if (layer.linkGroupId) {
+        // Desenlazar esta capa
+        Formats.unlinkLayer(layer.id);
+      } else {
+        // Enlazar con todas las capas seleccionadas
+        const ids = State.selectedLayerIds.length > 1
+          ? State.selectedLayerIds
+          : [layer.id];
+        Formats.linkLayers(ids);
+      }
+      _render();
+      if (typeof Canvas !== 'undefined') Canvas.render();
+    });
+    actionsWrap.appendChild(chainBtn);
 
     item.appendChild(actionsWrap);
 
@@ -901,6 +978,7 @@ const Layers = (() => {
       if (e.target.closest('.layer-lock-btn')) return;
       if (e.target.closest('.layer-pin-btn')) return;
       if (e.target.closest('.layer-edit-btn')) return;
+      if (e.target.closest('.layer-chain-btn')) return;
 
       startX = e.clientX;
       startY = e.clientY;

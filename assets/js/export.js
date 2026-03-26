@@ -7,23 +7,43 @@ const Export = (() => {
   // ── CONFIGURACIÓN DE FORMATOS ─────────────────────────────
 
   const FORMAT_CONFIG = {
-    '199 PUBLI':       { suffix: '199_PUBLI',                  type: 'jpg', maxMB: 4    },
-    'AD PAUSE':        { suffix: 'AD_PAUSE',                   type: 'jpg', maxMB: 0.1  },
-    'APPLE TV':        { suffix: 'APPLETV',                    type: 'jpg', maxMB: 1    },
-    'FANART DEST':     { suffix: 'FANART_DESTACADO',           type: 'jpg', maxMB: 1.5  },
-    'IPLUS PUBLI':     { suffix: 'IPLUS_PUBLI',                type: 'jpg', maxMB: 0.15 },
-    'MOD DEST 1':      { suffix: 'MOD_DESTACADO1',             type: 'jpg', maxMB: 1    },
-    'MOD DEST 1 SIL':  { suffix: 'MOD_DESTACADO1_SIL',         type: 'png', maxMB: 1    },
-    'MOD DEST 2':      { suffix: 'MOD_DESTACADOS2',            type: 'jpg', maxMB: 1    },
-    'MOD DEST 2 SIL':  { suffix: 'MOD_DESTACADOS2_SIL',        type: 'png', maxMB: 1    },
-    'MOD DEST 3':      { suffix: 'MOD_DESTACADO3',             type: 'jpg', maxMB: 1    },
-    'MOD DEST 3 SIL':  { suffix: 'MOD_DESTACADO3_SIL',         type: 'png', maxMB: 1    },
-    'MUX4 FONDO':      { suffix: 'MUX4_FONDO_PUBLI',           type: 'jpg', maxMB: 1.5  },
-    'MUX4 TXT':        { suffix: 'MUX4_TXT_PUBLI',             type: 'png', maxMB: 0.6  },
-    'MOVIL MUX FONDO': { suffix: 'SMARTPHONE_MUX_FONDO_PUBLI', type: 'jpg', maxMB: 1.5  },
-    'MOVIL TXT':       { suffix: 'SMARTPHONE_MUX_TXT_PUBLI',   type: 'png', maxMB: 0.6  },
-    'WEB PUBLI':       { suffix: 'WEB_PUBLI',                  type: 'jpg', maxMB: 1    },
-    'WOW PUBLI':       { suffix: 'WOW_PUBLI',                  type: 'jpg', maxMB: 0.25 },
+    '199 PUBLI':          { suffix: '199_PUBLI',                    type: 'jpg', maxMB: 4     },
+    'AD PAUSE':           { suffix: 'AD_PAUSE',                     type: 'jpg', maxMB: 0.1   },
+    'APPLE TV':           { suffix: 'APPLETV',                      type: 'jpg', maxMB: 1     },
+    'FANART DEST.':       { suffix: 'FANART_DESTACADO',             type: 'jpg', maxMB: 1.5   },
+    'IPLUS PUBLI':        { suffix: 'IPLUS_PUBLI',                  type: 'jpg', maxMB: 0.15  },
+    'MOD DEST 1':         { suffix: 'MOD_DESTACADO1',               type: 'jpg', maxMB: 1     },
+    'MOD DEST 1 SIL':     { suffix: 'MOD_DESTACADO1_SIL',           type: 'png', maxMB: 1     },
+    'MOD DEST 2':         { suffix: 'MOD_DESTACADOS2',              type: 'jpg', maxMB: 1     },
+    'MOD DEST 2 SIL':     { suffix: 'MOD_DESTACADOS2_SIL',          type: 'png', maxMB: 1     },
+    'MOD DEST 3':         { suffix: 'MOD_DESTACADO3',               type: 'jpg', maxMB: 1     },
+    'MOD DEST 3 SIL':     { suffix: 'MOD_DESTACADO3_SIL',           type: 'png', maxMB: 1     },
+    'MUX4 FONDO':         { suffix: 'MUX4_FONDO_PUBLI',             type: 'jpg', maxMB: 1.5   },
+    'MUX4 TXT':           { suffix: 'MUX4_TXT_PUBLI',               type: 'png', maxMB: 0.6   },
+    'MOVIL MUX FONDO':    { suffix: 'SMARTPHONE_MUX_FONDO_PUBLI',   type: 'jpg', maxMB: 1.5   },
+    'MOVIL TXT':          { suffix: 'SMARTPHONE_MUX_TXT_PUBLI',     type: 'png', maxMB: 0.6   },
+    'WEB PUBLI':          { suffix: 'WEB_PUBLI',                    type: 'jpg', maxMB: 1     },
+    'WOW PUBLI':          { suffix: 'WOW_PUBLI',                    type: 'jpg', maxMB: 0.25  },
+    'TÍTULO FICHA':       { suffix: 'TITULO_FICHA',                 type: 'png', maxMB: 0.6   },
+    'CARÁTULA H':         { suffix: 'CARATULA_H',                   type: 'jpg', maxMB: 100   },
+    'CARÁTULA V':         { suffix: 'CARATULA_V',                   type: 'jpg', maxMB: 100   },
+    'CARTEL COM. H':      { suffix: 'CC_H',                         type: 'jpg', maxMB: 100   },
+    'CARTEL COM. V':      { suffix: 'CC_V',                         type: 'jpg', maxMB: 100   },
+    'FANART':             { suffix: 'FANART',                       type: 'jpg', maxMB: 3     },
+    'FANART MÓVIL':       { suffix: 'FANART_MOVIL',                 type: 'jpg', maxMB: 3     },
+    'DEST. DOBLE 1':      { suffix: 'MOD_DESTACADO_DOBLE1',         type: 'jpg', maxMB: 0.6   },
+    'DEST. DOBLE 1 SIL':  { suffix: 'MOD_DESTACADO_DOBLE1_SIL',     type: 'png', maxMB: 1     },
+    'DEST. DOBLE 2':      { suffix: 'MOD_DESTACADO_DOBLE2',         type: 'jpg', maxMB: 1     },
+    'DEST. DOBLE 2 SIL':  { suffix: 'MOD_DESTACADO_DOBLE2_SIL',     type: 'png', maxMB: 1     },
+    'DEST. DOBLE 4':      { suffix: 'MOD_DESTACADO_DOBLE4',         type: 'jpg', maxMB: 1     },
+    'DEST. DOBLE 4 SIL':  { suffix: 'MOD_DESTACADO_DOBLE4_SIL',     type: 'png', maxMB: 1     },
+    'MOD N':              { suffix: 'MOD_N',                        type: 'jpg', maxMB: 0.6   },
+    'MOD N SIL':          { suffix: 'MOD_N_SIL',                    type: 'png', maxMB: 0.6   },
+    'AMAZON BG':          { suffix: 'AMAZON_BG',                    type: 'jpg', maxMB: 0.45  },
+    'AMAZON LOGO':        { suffix: 'AMAZON_LOGO',                  type: 'png', maxMB: 0.45  },
+    'PERFIL':             { suffix: 'PERFIL',                       type: 'png', maxMB: 10    },
+    'SONY':               { suffix: 'SONY',                         type: 'png', maxMB: 10    },
+    'XIAOMI BANNER':      { suffix: 'XIAOMI_BANNER_MES',            type: 'jpg', maxMB: 10    },
   };
 
   // ── INIT ──────────────────────────────────────────────────
@@ -277,17 +297,25 @@ const Export = (() => {
 
   async function _jpgWithMaxSize(cv, maxMB) {
     const maxBytes = maxMB * 1024 * 1024;
-    let blob = await new Promise(res => cv.toBlob(res, 'image/jpeg', 0.92));
+
+    // Probar calidad máxima primero — si cabe, perfecto
+    let blob = await new Promise(res => cv.toBlob(res, 'image/jpeg', 1));
     if (blob && blob.size <= maxBytes) return blob;
-    let lo = 0.1, hi = 0.92, best = blob;
-    for (let i = 0; i < 8; i++) {
+
+    // Búsqueda binaria ascendente: la calidad MÁS ALTA que cabe
+    let lo = 0.1, hi = 1, best = null;
+    const minBlob = await new Promise(res => cv.toBlob(res, 'image/jpeg', lo));
+    if (minBlob && minBlob.size > maxBytes) return minBlob; // ni a mínima calidad cabe
+
+    for (let i = 0; i < 10; i++) {
       const mid = (lo + hi) / 2;
       const b   = await new Promise(res => cv.toBlob(res, 'image/jpeg', mid));
       if (!b) break;
       if (b.size <= maxBytes) { best = b; lo = mid; }
       else                    { hi = mid; }
+      if (hi - lo < 0.01) break;
     }
-    return best;
+    return best || minBlob;
   }
 
   // ── PROGRESO ──────────────────────────────────────────────
@@ -357,6 +385,14 @@ const Export = (() => {
     const sy  = (p.scaleY  ?? 100) / 100;
     const rot = ((p.rotation ?? 0) * Math.PI) / 180;
     const op  = (layer.params?.opacity ?? 100) / 100;
+
+    // ── MÁSCARA SIL ───────────────────────────────────────
+    const maskRect = State.formatSizes[formatName]?.maskRect;
+    const isMasked = maskRect && State.formatMaskEnabled?.[formatName]?.[layer.id];
+    if (isMasked) {
+      ctx.save();
+      _clipMaskRect(ctx, maskRect, W, H);
+    }
 
     if (layer.isComposicion && layer.src) {
       const nw = layer.naturalWidth  || W;
@@ -468,9 +504,26 @@ const Export = (() => {
     }
 
     ctx.restore();
+    if (isMasked) ctx.restore(); // cerrar el clip de máscara SIL
   }
 
   // ── HELPERS ───────────────────────────────────────────────
+
+  function _clipMaskRect(ctx, m, W, H) {
+    const ax = W / 2 + m.x - m.w / 2;
+    const ay = H / 2 + m.y - m.h / 2;
+    const r  = m.r || 0;
+    ctx.beginPath();
+    ctx.moveTo(ax + r, ay);
+    ctx.lineTo(ax + m.w - r, ay);
+    ctx.arcTo(ax + m.w, ay,       ax + m.w, ay + r,       r);
+    ctx.lineTo(ax + m.w, ay + m.h);
+    ctx.lineTo(ax,       ay + m.h);
+    ctx.lineTo(ax,       ay + r);
+    ctx.arcTo(ax,        ay,       ax + r,   ay,           r);
+    ctx.closePath();
+    ctx.clip();
+  }
 
   function _drawImage(ctx, src, x, y, w, h) {
     return new Promise(res => {

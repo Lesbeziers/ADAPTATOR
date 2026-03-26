@@ -376,6 +376,10 @@ const Canvas = (() => {
         }
       } else if (layer.exclusiveFormat) {
         isVisible = layer.exclusiveFormat === State.activeFormat;
+        if (isVisible) {
+          const fmtVisible = State.formatParams?.[State.activeFormat]?.[layer.id]?.visible;
+          isVisible = fmtVisible !== undefined ? fmtVisible : layer.visible;
+        }
       } else {
         if (State.activeFormat === 'MUX4 TXT' || State.activeFormat === 'MOVIL TXT') {
           isVisible = false;
@@ -387,7 +391,7 @@ const Canvas = (() => {
 
       el.style.display = isVisible ? 'block' : 'none';
       const isLocked = typeof Layers !== 'undefined' && Layers.getLocked(layer.id);
-      el.style.pointerEvents = (layer.isMarcaIplus) ? 'none' : (isLocked ? 'none' : '');
+      el.style.pointerEvents = (layer.isMarcaIplus || layer.isComposicionMovil || isLocked) ? 'none' : '';
 
       if (layer.isComposicion && State.activeFormat === 'MUX4 FONDO') {
         el.classList.remove('canvas-layer-active');
@@ -401,6 +405,46 @@ const Canvas = (() => {
 
       if (!(layer.type === 'text' && el.contentEditable === 'true')) {
         _applyParams(el, layer);
+      }
+
+      // ── MÁSCARA SIL — aplicar DESPUÉS de _applyParams ────
+      const maskRect = State.formatSizes[State.activeFormat]?.maskRect;
+      const isMasked = maskRect && State.formatMaskEnabled?.[State.activeFormat]?.[layer.id];
+
+      // Usar un overlay de recorte encima del elemento, sin tocar el DOM interno
+      let maskOverlay = el.querySelector('.sil-clip-overlay');
+      if (isMasked) {
+        const maskCX = _contentCenterX + maskRect.x * _scale * _contentScaleX;
+        const maskCY = _contentCenterY + maskRect.y * _scale * _contentScaleY;
+        const maskHW = maskRect.w / 2 * _scale * _contentScaleX;
+        const maskHH = maskRect.h / 2 * _scale * _contentScaleY;
+        const mx1 = maskCX - maskHW;
+        const my1 = maskCY - maskHH;
+        const mx2 = maskCX + maskHW;
+        const my2 = maskCY + maskHH;
+        const cx  = parseFloat(el.style.left);
+        const cy  = parseFloat(el.style.top);
+        const ew  = parseFloat(el.style.width)  || 0;
+        const eh  = parseFloat(el.style.height) || 0;
+        const ex1 = cx - ew / 2;
+        const ey1 = cy - eh / 2;
+        const ex2 = cx + ew / 2;
+        const ey2 = cy + eh / 2;
+        const top    = Math.max(0, my1 - ey1);
+        const right  = Math.max(0, ex2 - mx2);
+        const bottom = Math.max(0, ey2 - my2);
+        const left   = Math.max(0, mx1 - ex1);
+        const rPx    = (maskRect.r * _scale).toFixed(2);
+        el.style.clipPath = `inset(${top.toFixed(2)}px ${right.toFixed(2)}px ${bottom.toFixed(2)}px ${left.toFixed(2)}px round ${rPx}px ${rPx}px 0px 0px)`;
+        el.style.pointerEvents = 'auto';
+      } else {
+        el.style.clipPath = '';
+        // Limpiar wrapper antiguo si existía (compatibilidad)
+        const oldWrapper = el.querySelector('.sil-mask-wrapper');
+        if (oldWrapper) {
+          while (oldWrapper.firstChild) el.insertBefore(oldWrapper.firstChild, oldWrapper);
+          oldWrapper.remove();
+        }
       }
     });
 
@@ -829,28 +873,6 @@ const Canvas = (() => {
       if (layer?.isComposicion && State.activeFormat === 'MUX4 FONDO') return;
       if (layer?.isComposicionMovil && State.activeFormat === 'MOVIL MUX FONDO') return;
       if (layer?.isMarcaIplus && State.activeFormat === 'IPLUS PUBLI') return;
-
-      // ── Capa bloqueada: click-through a la capa inferior ──
-      if (layer && typeof Layers !== 'undefined' && Layers.getLocked(layer.id)) {
-        const visibleIndex = State.layers.findIndex(l => l.id === layerId);
-        const below = State.layers.slice(visibleIndex + 1).find(l => {
-          if (Layers.getLocked(l.id)) return false;
-          if (l.isTitleLayer) return State.activeFormat === 'MUX4 TXT' || State.activeFormat === 'MOVIL TXT';
-          if (l.isComposicion) return State.activeFormat !== 'MUX4 TXT' && State.activeFormat !== 'MOVIL TXT';
-          if (l.exclusiveFormat) return l.exclusiveFormat === State.activeFormat;
-          if (State.activeFormat === 'MUX4 TXT' || State.activeFormat === 'MOVIL TXT') return false;
-          const fv = State.formatParams?.[State.activeFormat]?.[l.id]?.visible;
-          return (fv !== undefined ? fv : l.visible) !== false;
-        });
-        if (below) {
-          State.selectedLayerId  = below.id;
-          State.selectedLayerIds = [below.id];
-          if (typeof Layers !== 'undefined') Layers.render();
-          if (typeof UI     !== 'undefined') UI.updateSliders();
-          render();
-        }
-        return;
-      }
 
       e.preventDefault();
 

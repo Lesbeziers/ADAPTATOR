@@ -125,6 +125,11 @@ const Formats = (() => {
   function setLayerParam(formatId, layerId, key, value) {
     if (!State.formatParams[formatId]) State.formatParams[formatId] = {};
     if (!State.formatParams[formatId][layerId]) State.formatParams[formatId][layerId] = _defaultParams();
+
+    // Calcular delta antes de aplicar (para propagación a capas enlazadas)
+    const prevValue = State.formatParams[formatId][layerId][key] ?? _defaultParams()[key] ?? 0;
+    const delta = value - prevValue;
+
     State.formatParams[formatId][layerId][key] = value;
     State.dirty = true;
 
@@ -133,6 +138,47 @@ const Formats = (() => {
     if (layer?.isTitleLayer) {
       _propagateTitleParam(formatId, layerId, key, value);
     }
+
+    // Propagación para capas enlazadas (solo x, y, scaleX, scaleY, rotation)
+    if (layer?.linkGroupId && ['x', 'y', 'scaleX', 'scaleY', 'rotation'].includes(key) && delta !== 0) {
+      _propagateLinkGroup(formatId, layerId, layer.linkGroupId, key, delta);
+    }
+  }
+
+  function _propagateLinkGroup(formatId, sourceLayerId, groupId, key, delta) {
+    State.layers
+      .filter(l => l.linkGroupId === groupId && l.id !== sourceLayerId)
+      .forEach(l => {
+        if (!State.formatParams[formatId]) State.formatParams[formatId] = {};
+        if (!State.formatParams[formatId][l.id]) State.formatParams[formatId][l.id] = _defaultParams();
+        const current = State.formatParams[formatId][l.id][key] ?? _defaultParams()[key] ?? 0;
+        State.formatParams[formatId][l.id][key] = current + delta;
+      });
+  }
+
+  // ── GESTIÓN DE GRUPOS DE ENLACE ───────────────────────────
+
+  function linkLayers(layerIds) {
+    if (!layerIds || layerIds.length < 2) return;
+    // Buscar si alguna ya tiene grupo
+    const existingGroup = layerIds
+      .map(id => State.layers.find(l => l.id === id)?.linkGroupId)
+      .find(g => g);
+    const groupId = existingGroup || ('link_' + Date.now());
+    layerIds.forEach(id => {
+      const layer = State.layers.find(l => l.id === id);
+      if (layer) layer.linkGroupId = groupId;
+    });
+  }
+
+  function unlinkLayer(layerId) {
+    const layer = State.layers.find(l => l.id === layerId);
+    if (!layer?.linkGroupId) return;
+    const groupId = layer.linkGroupId;
+    delete layer.linkGroupId;
+    // Si solo queda una capa en el grupo, disolver el grupo
+    const remaining = State.layers.filter(l => l.linkGroupId === groupId);
+    if (remaining.length === 1) delete remaining[0].linkGroupId;
   }
 
   function _propagateTitleParam(masterFormat, layerId, key, value) {
@@ -161,5 +207,5 @@ const Formats = (() => {
     return { scaleX: 100, scaleY: 100, rotation: 0, x: 0, y: 0 };
   }
 
-  return { init, setActiveFormat, toggleOk, getLayerParams, setLayerParam, refreshGrid: _renderFormatGrid };
+  return { init, setActiveFormat, toggleOk, getLayerParams, setLayerParam, linkLayers, unlinkLayer, refreshGrid: _renderFormatGrid };
 })();

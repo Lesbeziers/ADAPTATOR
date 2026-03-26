@@ -112,9 +112,9 @@ const Project = (() => {
     const compLayer = State.layers.find(l => l.isComposicion);
     const composicionParams = compLayer ? _extractCompParams(compLayer.id) : null;
 
-    // Preservar orden exacto, excluir composicion
+    // Preservar orden exacto, excluir composicion, composicionMovil y marcaIplus
     const layers = State.layers
-      .filter(l => !l.isComposicion)
+      .filter(l => !l.isComposicion && !l.isComposicionMovil && !l.isMarcaIplus)
       .map(layer => {
         const l = { ...layer, params: { ...layer.params } };
         if (!l.src) return l;
@@ -147,8 +147,9 @@ const Project = (() => {
       projectName:       State.projectName || 'Sin título',
       activeModality:    State.activeModality,
       activeFormat:      State.activeFormat,
-      formatOk:          State.formatOk     || {},
-      formatParams:      State.formatParams || {},
+      formatOk:          State.formatOk          || {},
+      formatParams:      State.formatParams       || {},
+      formatMaskEnabled: State.formatMaskEnabled  || {},
       composicionParams,
       composicionId:     compLayer?.id || null,
       pastilla:          typeof Pastilla !== 'undefined' ? Pastilla.serialize() : null,
@@ -268,13 +269,14 @@ const Project = (() => {
     State.activeFormat   = data.activeFormat   ?? null;
     State.formatOk       = data.formatOk       ?? {};
     State.formatParams   = data.formatParams   ?? {};
+    State.formatMaskEnabled = data.formatMaskEnabled ?? {};
     State.dirty          = false;
 
     // Restaurar pastilla
     if (typeof Pastilla !== 'undefined') Pastilla.restore(data.pastilla);
 
-    // Cargar capas en orden exacto guardado, sin composicion
-    State.layers = (data.layers ?? []).filter(l => !l.isComposicion);
+    // Cargar capas en orden exacto guardado, sin composicion ni capas auto-generadas
+    State.layers = (data.layers ?? []).filter(l => !l.isComposicion && !l.isComposicionMovil && !l.isMarcaIplus);
 
     // Logos: reconvertir a dataURL para que el tint (mask-image) funcione
     const logoPromises = State.layers.filter(l => l.isLogo && l.logoPath).map(layer => {

@@ -41,11 +41,11 @@ const State = {
     'FANART DEST.':     { w: 1920, h: 1080, maxMB: 1.5  },
     'IPLUS PUBLI':      { w: 1280, h: 620,  maxMB: 0.15 },
     'MOD DEST 1':       { w: 1636, h: 296,  maxMB: 1    },
-    'MOD DEST 1 SIL':   { w: 1920, h: 400,  maxMB: 1    },
+    'MOD DEST 1 SIL':   { w: 1920, h: 400,  maxMB: 1,   maskRect: { x: 0, y: 53,  w: 1636, h: 296, r: 4 } },
     'MOD DEST 2':       { w: 803,  h: 296,  maxMB: 1    },
-    'MOD DEST 2 SIL':   { w: 863,  h: 400,  maxMB: 1    },
+    'MOD DEST 2 SIL':   { w: 863,  h: 400,  maxMB: 1,   maskRect: { x: 0, y: 51,  w: 803,  h: 296, r: 4 } },
     'MOD DEST 3':       { w: 526,  h: 296,  maxMB: 1    },
-    'MOD DEST 3 SIL':   { w: 584,  h: 400,  maxMB: 1    },
+    'MOD DEST 3 SIL':   { w: 584,  h: 400,  maxMB: 1,   maskRect: { x: 0, y: 52,  w: 526,  h: 296, r: 4 } },
     'MUX4 FONDO':       { w: 1920, h: 1080, maxMB: 1.5  },
     'MUX4 TXT':         { w: 784,  h: 318,  maxMB: 0.6  },
     'MOVIL MUX FONDO':  { w: 1440, h: 2986, maxMB: 1.5  },
@@ -60,12 +60,13 @@ const State = {
     'FANART':           { w: 3840, h: 2160, maxMB: 3    },
     'FANART MÓVIL':     { w: 1440, h: 2986, maxMB: 3    },
     'DEST. DOBLE 1':    { w: 1636, h: 548,  maxMB: 0.6  },
-    'DEST. DOBLE 1 SIL':{ w: 1636, h: 630,  maxMB: 1    },
+    'DEST. DOBLE 1 SIL':{ w: 1636, h: 630,  maxMB: 1,   maskRect: { x: 0, y: 41,  w: 1636, h: 548, r: 4 } },
     'DEST. DOBLE 2':    { w: 803,  h: 548,  maxMB: 1    },
-    'DEST. DOBLE 2 SIL':{ w: 803,  h: 630,  maxMB: 1    },
+    'DEST. DOBLE 2 SIL':{ w: 803,  h: 630,  maxMB: 1,   maskRect: { x: 0, y: 41,  w: 803,  h: 548, r: 4 } },
     'DEST. DOBLE 4':    { w: 386,  h: 548,  maxMB: 1    },
-    'DEST. DOBLE 4 SIL':{ w: 386,  h: 630,  maxMB: 1    },
+    'DEST. DOBLE 4 SIL':{ w: 386,  h: 630,  maxMB: 1,   maskRect: { x: 0, y: 41,  w: 385,  h: 548, r: 4 } },
     'MOD N':            { w: 386,  h: 217,  maxMB: 0.6  },
+    'MOD N SIL':        { w: 449,  h: 300,  maxMB: 0.6, maskRect: { x: 0, y: 42,  w: 385,  h: 217, r: 4 } },
     'AMAZON BG':        { w: 1920, h: 720,  maxMB: 0.45 },
     'AMAZON LOGO':      { w: 640,  h: 260,  maxMB: 0.45 },
     'PERFIL':           { w: 425,  h: 479,  maxMB: 10   },
@@ -76,6 +77,9 @@ const State = {
   // ── CAPAS DE SISTEMA ─────────────────────────────────────
   // Visibilidad por formato: { formatId: { layerKey: bool } }
   systemVisibility: {},
+
+  // Máscara SIL por formato y capa: { formatId: { layerId: bool } }
+  formatMaskEnabled: {},
 
   // Configuración de capas de sistema por formato
   systemLayers: {
@@ -132,6 +136,7 @@ const State = {
     'DEST. DOBLE 4':     [ { key: 'mockup', label: 'ZONA DE SEGURIDAD', src: 'assets/img/checkers/MOD_DES_DOBLE_4_Checker.png' } ],
     'DEST. DOBLE 4 SIL': [ { key: 'mockup', label: 'ZONA DE SEGURIDAD', src: 'assets/img/checkers/MOD_DES_DOBLE_SIL_4_Checker.png' } ],
     'MOD N':             [ { key: 'mockup', label: 'ZONA DE SEGURIDAD', src: 'assets/img/checkers/MOD_N_Checker.png' } ],
+    'MOD N SIL':         [ { key: 'mockup', label: 'ZONA DE SEGURIDAD', src: 'assets/img/checkers/MOD_N_SIL_Checker.png' } ],
     'AMAZON BG': [
       { key: 'mockup',    label: 'MOCKUP',    src: 'assets/img/checkers/AMAZON_MOCKUP_Check.png' },
       { key: 'seguridad', label: 'ZONA DE SEGURIDAD', src: 'assets/img/checkers/AMAZON_SEGURIDAD_Check.png' },
@@ -170,7 +175,7 @@ const State = {
       formats: [
         'DEST. DOBLE 1', 'DEST. DOBLE 1 SIL', 'DEST. DOBLE 2',
         'DEST. DOBLE 2 SIL', 'DEST. DOBLE 4', 'DEST. DOBLE 4 SIL',
-        'MOD N', 'MOD N'
+        'MOD N', 'MOD N SIL'
       ]
     },
     {

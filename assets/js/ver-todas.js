@@ -31,30 +31,39 @@ const VerTodas = (() => {
   function _render(area) {
     area.innerHTML = '';
 
-    if (!State.activeModality) {
-      area.innerHTML = '<div class="vt-empty">Selecciona una modalidad</div>';
-      return;
-    }
+    // Recoger todas las modalidades (salvo 'selecciona') con formatos OK
+    const modalitiesWithFormats = State.modalities
+      .filter(m => m.id !== 'selecciona' && m.formats.some(f => State.formatOk?.[f]));
 
-    const modality = State.modalities.find(m => m.id === State.activeModality);
-    if (!modality) return;
-
-    const formats = modality.formats.filter(f => State.formatOk?.[f]);
-    _lightboxFormats = formats;
-
-    if (formats.length === 0) {
+    if (modalitiesWithFormats.length === 0) {
       area.innerHTML = '<div class="vt-empty">No hay formatos terminados</div>';
       return;
     }
 
-    const grid = document.createElement('div');
-    grid.className = 'vt-grid';
-    area.appendChild(grid);
+    // Lista global para el lightbox (todos los formatos OK en orden)
+    _lightboxFormats = modalitiesWithFormats.flatMap(m => m.formats.filter(f => State.formatOk?.[f]));
 
-    formats.forEach((formatName, i) => {
-      const card = _buildCard(formatName);
-      grid.appendChild(card);
-      setTimeout(() => _renderThumb(formatName, card.querySelector('canvas')), i * 40);
+    let thumbIndex = 0;
+    modalitiesWithFormats.forEach(modality => {
+      const formats = modality.formats.filter(f => State.formatOk?.[f]);
+      if (formats.length === 0) return;
+
+      // Encabezado de modalidad
+      const heading = document.createElement('div');
+      heading.className = 'vt-modality-heading';
+      heading.textContent = modality.label.toUpperCase();
+      area.appendChild(heading);
+
+      const grid = document.createElement('div');
+      grid.className = 'vt-grid';
+      area.appendChild(grid);
+
+      formats.forEach(formatName => {
+        const card = _buildCard(formatName);
+        grid.appendChild(card);
+        setTimeout(() => _renderThumb(formatName, card.querySelector('canvas')), thumbIndex * 40);
+        thumbIndex++;
+      });
     });
   }
 
@@ -66,18 +75,14 @@ const VerTodas = (() => {
     card.className = 'vt-card';
     card.dataset.format = formatName;
 
-    // Header: dot OK + nombre
+    // Header: solo nombre
     const header = document.createElement('div');
     header.className = 'vt-card-header';
-
-    const dot = document.createElement('div');
-    dot.className = 'vt-ok-dot' + (isDone ? ' done' : '');
 
     const name = document.createElement('span');
     name.className = 'vt-card-name';
     name.textContent = formatName;
 
-    header.appendChild(dot);
     header.appendChild(name);
 
     // Canvas thumbnail
@@ -185,6 +190,14 @@ const VerTodas = (() => {
     const sy  = (p.scaleY  ?? 100) / 100;
     const rot = ((p.rotation ?? 0) * Math.PI) / 180;
     const op  = (layer.params?.opacity ?? 100) / 100;
+
+    // ── MÁSCARA SIL ───────────────────────────────────────
+    const maskRect = State.formatSizes[formatName]?.maskRect;
+    const isMasked = maskRect && State.formatMaskEnabled?.[formatName]?.[layer.id];
+    if (isMasked) {
+      ctx.save();
+      _clipMaskRect(ctx, maskRect, W, H);
+    }
 
     // Posición especial: COMPOSICIÓN TÍTULO en MUX4 FONDO
     if (layer.isComposicion && layer.src) {
@@ -317,6 +330,24 @@ const VerTodas = (() => {
     }
 
     ctx.restore();
+    if (isMasked) ctx.restore(); // cerrar el clip de máscara SIL
+  }
+
+  function _clipMaskRect(ctx, m, W, H) {
+    // m.x/y son offsets desde el centro del formato, igual que params de capa
+    const ax = W / 2 + m.x - m.w / 2;
+    const ay = H / 2 + m.y - m.h / 2;
+    const r  = m.r || 0;
+    ctx.beginPath();
+    ctx.moveTo(ax + r, ay);
+    ctx.lineTo(ax + m.w - r, ay);
+    ctx.arcTo(ax + m.w, ay,       ax + m.w, ay + r,       r);
+    ctx.lineTo(ax + m.w, ay + m.h);
+    ctx.lineTo(ax,       ay + m.h);
+    ctx.lineTo(ax,       ay + r);
+    ctx.arcTo(ax,        ay,       ax + r,   ay,           r);
+    ctx.closePath();
+    ctx.clip();
   }
 
   function _drawImage(ctx, src, x, y, w, h) {
@@ -351,14 +382,10 @@ const VerTodas = (() => {
     const header = document.createElement('div');
     header.className = 'vt-lightbox-header';
 
-    const dot = document.createElement('div');
-    dot.className = 'vt-ok-dot' + (State.formatOk?.[formatName] ? ' done' : '');
-
     const name = document.createElement('span');
     name.className = 'vt-lightbox-name';
     name.textContent = formatName;
 
-    header.appendChild(dot);
     header.appendChild(name);
 
     // Canvas escalado al máximo disponible
