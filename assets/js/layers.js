@@ -61,10 +61,14 @@ const Layers = (() => {
           _importTitleLayer(layer);
         } else {
           // Si se importa estando en MUX4 TXT o MOVIL TXT, la capa es exclusiva de ese formato
-          if (formatAtImport === 'MUX4 TXT' || formatAtImport === 'MOVIL TXT') {
+          if (formatAtImport === 'MUX4 TXT' || formatAtImport === 'MOVIL TXT' || formatAtImport === 'AMAZON LOGO') {
             layer.exclusiveFormat = formatAtImport;
           }
-          const _ci = State.layers[0]?.isComposicion ? 1 : 0;
+          // Calcular índice de inserción: después de capas auto-generadas y de isTitleLayer
+          let _ci = 0;
+          while (_ci < State.layers.length && (State.layers[_ci].isComposicion || State.layers[_ci].isComposicionMovil || State.layers[_ci].isComposicionAmazon || State.layers[_ci].isMarcaIplus || State.layers[_ci].isMarcaSony || State.layers[_ci].isTitleLayer)) {
+            _ci++;
+          }
           if (typeof History !== 'undefined') History.push();
           State.layers.splice(_ci, 0, layer);
           State.selectedLayerId  = layer.id;
@@ -80,7 +84,11 @@ const Layers = (() => {
   }
 
   function _importTitleLayer(layer) {
-    const _ci = State.layers[0]?.isComposicion ? 1 : 0;
+    // Insertar después de todas las capas auto-generadas (isComposicion, isComposicionMovil, isMarcaIplus)
+    let _ci = 0;
+    while (_ci < State.layers.length && (State.layers[_ci].isComposicion || State.layers[_ci].isComposicionMovil || State.layers[_ci].isComposicionAmazon || State.layers[_ci].isMarcaIplus || State.layers[_ci].isMarcaSony)) {
+      _ci++;
+    }
     if (typeof History !== 'undefined') History.push();
     State.layers.splice(_ci, 0, layer);
 
@@ -281,7 +289,18 @@ const Layers = (() => {
       }
     }
 
-    // Pastilla de publicidad (arriba del todo, solo en formatos compatibles)
+    // En AMAZON BG: COMPOSICIÓN AMAZON LOGO va primero
+    if (State.activeFormat === 'AMAZON BG') {
+      const compAmazon = State.layers.find(l => l.isComposicionAmazon);
+      if (compAmazon) {
+        const compAmazonItem = _buildComposicionAmazonItem(compAmazon);
+        if (compAmazonItem) list.appendChild(compAmazonItem);
+        const sep = document.createElement('div');
+        sep.className = 'layers-separator';
+        list.appendChild(sep);
+      }
+    }
+
     if (State.activeFormat && typeof Pastilla !== 'undefined' && Pastilla.hasFormat(State.activeFormat)) {
       list.appendChild(_buildPastillaItem());
       const sep = document.createElement('div');
@@ -315,11 +334,24 @@ const Layers = (() => {
         }
       }
 
+      // MARCA SONY: igual que MARCA IPLUS pero para SONY
+      if (State.activeFormat === 'SONY') {
+        const marcaSony = State.layers.find(l => l.isMarcaSony);
+        if (marcaSony) {
+          list.appendChild(_buildMarcaIplusItem(marcaSony));
+          const sep = document.createElement('div');
+          sep.className = 'layers-separator';
+          list.appendChild(sep);
+        }
+      }
+
       // Capas normales — en MUX4 FONDO y MOVIL MUX FONDO saltamos isComposicion porque ya la pintamos arriba
       State.layers.forEach((layer, index) => {
-        if (layer.isComposicion && (State.activeFormat === 'MUX4 FONDO' || State.activeFormat === 'MOVIL MUX FONDO')) return;
+        if (layer.isComposicion && (State.activeFormat === 'MUX4 FONDO' || State.activeFormat === 'MOVIL MUX FONDO' || State.activeFormat === 'AMAZON BG')) return;
         if (layer.isComposicionMovil) return;
+        if (layer.isComposicionAmazon) return;
         if (layer.isMarcaIplus) return;
+        if (layer.isMarcaSony) return;
         const item = _buildItem(layer, index);
         if (item) list.appendChild(item);
       });
@@ -343,10 +375,22 @@ const Layers = (() => {
           list.appendChild(sep);
         }
       }
+      // MARCA SONY
+      if (State.activeFormat === 'SONY') {
+        const marcaSony = State.layers.find(l => l.isMarcaSony);
+        if (marcaSony) {
+          list.appendChild(_buildMarcaIplusItem(marcaSony));
+          const sep = document.createElement('div');
+          sep.className = 'layers-separator';
+          list.appendChild(sep);
+        }
+      }
       State.layers.forEach((layer, index) => {
-        if (layer.isComposicion && (State.activeFormat === 'MUX4 FONDO' || State.activeFormat === 'MOVIL MUX FONDO')) return;
+        if (layer.isComposicion && (State.activeFormat === 'MUX4 FONDO' || State.activeFormat === 'MOVIL MUX FONDO' || State.activeFormat === 'AMAZON BG')) return;
         if (layer.isComposicionMovil) return;
+        if (layer.isComposicionAmazon) return;
         if (layer.isMarcaIplus) return;
+        if (layer.isMarcaSony) return;
         const item = _buildItem(layer, index);
         if (item) list.appendChild(item);
       });
@@ -491,22 +535,26 @@ const Layers = (() => {
   }
 
   function _buildItem(layer, index) {
-    // Capas title: solo en MUX4 TXT y MOVIL TXT
-    if (layer.isTitleLayer && State.activeFormat !== 'MUX4 TXT' && State.activeFormat !== 'MOVIL TXT') return null;
+    // Capas title: solo en MUX4 TXT, MOVIL TXT, TÍTULO FICHA y formatos de gráfica oficial
+    if (layer.isTitleLayer && State.activeFormat !== 'MUX4 TXT' && State.activeFormat !== 'MOVIL TXT' && State.activeFormat !== 'TÍTULO FICHA' && State.activeFormat !== 'CARÁTULA H' && State.activeFormat !== 'CARÁTULA V' && State.activeFormat !== 'CARTEL COM. H' && State.activeFormat !== 'CARTEL COM. V' && State.activeFormat !== 'AMAZON LOGO' && State.activeFormat !== 'SONY') return null;
+    if (layer.isTitleLayer && (State.activeFormat === 'FANART' || State.activeFormat === 'FANART MÓVIL')) return null;
 
-    // Composición título: en todos los formatos excepto MUX4 TXT y MOVIL TXT
-    if (layer.isComposicion && (State.activeFormat === 'MUX4 TXT' || State.activeFormat === 'MOVIL TXT')) return null;
+    // Composición título: oculta en MUX4 TXT, MOVIL TXT, TÍTULO FICHA y formatos de gráfica oficial
+    if (layer.isComposicion && (State.activeFormat === 'MUX4 TXT' || State.activeFormat === 'MOVIL TXT' || State.activeFormat === 'TÍTULO FICHA' || State.activeFormat === 'CARÁTULA H' || State.activeFormat === 'CARÁTULA V' || State.activeFormat === 'CARTEL COM. H' || State.activeFormat === 'CARTEL COM. V' || State.activeFormat === 'FANART' || State.activeFormat === 'FANART MÓVIL' || State.activeFormat === 'AMAZON LOGO' || State.activeFormat === 'SONY')) return null;
 
     // Capas con exclusiveFormat: solo en su formato
     if (layer.exclusiveFormat && layer.exclusiveFormat !== State.activeFormat) return null;
 
-    // Capas normales importadas: ocultas en MUX4 TXT y MOVIL TXT
+    // Capas normales importadas: ocultas en MUX4 TXT, MOVIL TXT y TÍTULO FICHA
     if (!layer.isTitleLayer && !layer.isComposicion && !layer.exclusiveFormat) {
-      if (State.activeFormat === 'MUX4 TXT' || State.activeFormat === 'MOVIL TXT') return null;
+      if (State.activeFormat === 'MUX4 TXT' || State.activeFormat === 'MOVIL TXT' || State.activeFormat === 'TÍTULO FICHA' || State.activeFormat === 'AMAZON LOGO') return null;
     }
 
     const item = document.createElement('div');
-    item.className = 'layer-item' + (State.selectedLayerIds.includes(layer.id) ? ' active' : '');
+    const isKey = (typeof Canvas !== 'undefined') && Canvas.getKeyLayerId() === layer.id;
+    item.className = 'layer-item'
+      + (State.selectedLayerIds.includes(layer.id) ? ' active' : '')
+      + (isKey ? ' key-layer' : '');
     item.dataset.id    = layer.id;
     item.dataset.index = index;
 
@@ -559,10 +607,100 @@ const Layers = (() => {
       thumb.appendChild(thumbImg);
     }
 
-    // ── ICONO DE MÁSCARA (solo en formatos SIL) ──
-    const hasMaskRect = !!State.formatSizes[State.activeFormat]?.maskRect;
-    if (hasMaskRect) {
+    // ── MÁSCARA: sistema por formato ──
+    const fmtSize      = State.formatSizes[State.activeFormat];
+    const hasMaskRect  = !!fmtSize?.maskRect;
+    const hasMaskDual  = !!fmtSize?.maskCircle; // PERFIL: circular + rectangular
+
+    if (hasMaskDual) {
+      // ── Hover menu: sin máscara / circular / rectangular ──
+      const currentMask = State.formatMaskEnabled?.[State.activeFormat]?.[layer.id] ?? null;
+      const maskOverlay = document.createElement('div');
+      maskOverlay.style.cssText = `
+        position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+        cursor:pointer;border-radius:2px;
+        background:${currentMask ? 'rgba(0,0,0,0.55)' : 'transparent'};
+        transition:background 0.15s;
+      `;
+
+      // Icono indicador del estado actual
+      const maskIndicator = document.createElement('div');
+      const _getMaskIcon = (type) => {
+        if (type === 'circle') return `<svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="7" cy="7" r="5.5" stroke="var(--col-yellow)" stroke-width="1.3"/></svg>`;
+        if (type === 'rect')   return `<svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="1.5" y="1.5" width="11" height="11" rx="1" stroke="var(--col-yellow)" stroke-width="1.3"/></svg>`;
+        return `<svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="7" cy="7" r="5.5" stroke="#666" stroke-width="1.3"/></svg>`;
+      };
+      maskIndicator.innerHTML = _getMaskIcon(currentMask);
+      maskIndicator.style.cssText = 'pointer-events:none;';
+      maskOverlay.appendChild(maskIndicator);
+      maskOverlay.style.opacity = currentMask ? '1' : '0';
+
+      // Menú flotante
+      const maskMenu = document.createElement('div');
+      maskMenu.style.cssText = `
+        position:absolute;bottom:calc(100% + 4px);left:50%;transform:translateX(-50%);
+        background:#1a1a1a;border:1px solid #333;border-radius:4px;
+        display:none;flex-direction:column;overflow:hidden;z-index:1000;min-width:110px;
+      `;
+
+      const _menuOptions = [
+        { type: null,     label: 'Sin máscara' },
+        { type: 'circle', label: 'Circular' },
+        { type: 'rect',   label: 'Rectangular' },
+      ];
+
+      _menuOptions.forEach(opt => {
+        const btn = document.createElement('div');
+        const isActive = (State.formatMaskEnabled?.[State.activeFormat]?.[layer.id] ?? null) === opt.type;
+        btn.style.cssText = `
+          padding:6px 10px;font-size:10px;font-family:var(--font);letter-spacing:0.06em;
+          text-transform:uppercase;cursor:pointer;white-space:nowrap;
+          color:${isActive ? 'var(--col-yellow)' : 'var(--col-text)'};
+          background:${isActive ? 'rgba(240,165,0,0.08)' : 'transparent'};
+        `;
+        btn.textContent = opt.label;
+        btn.addEventListener('mouseenter', () => { btn.style.background = 'rgba(255,255,255,0.07)'; });
+        btn.addEventListener('mouseleave', () => { btn.style.background = isActive ? 'rgba(240,165,0,0.08)' : 'transparent'; });
+        btn.addEventListener('click', e => {
+          e.stopPropagation();
+          if (typeof History !== 'undefined') History.push();
+          if (!State.formatMaskEnabled[State.activeFormat]) State.formatMaskEnabled[State.activeFormat] = {};
+          State.formatMaskEnabled[State.activeFormat][layer.id] = opt.type;
+          if (typeof Canvas !== 'undefined') Canvas.render();
+          _render();
+        });
+        maskMenu.appendChild(btn);
+      });
+
+      thumb.style.overflow = 'visible';
+      thumb.appendChild(maskMenu);
+      thumb.appendChild(maskOverlay);
+
+      let _hideTimer = null;
+      const _scheduleHide = () => {
+        _hideTimer = setTimeout(() => {
+          const still = !!(State.formatMaskEnabled?.[State.activeFormat]?.[layer.id] ?? null);
+          maskOverlay.style.opacity = still ? '1' : '0';
+          maskMenu.style.display = 'none';
+        }, 120);
+      };
+      const _cancelHide = () => {
+        if (_hideTimer) { clearTimeout(_hideTimer); _hideTimer = null; }
+      };
+
+      maskOverlay.addEventListener('mouseenter', () => {
+        _cancelHide();
+        maskOverlay.style.opacity = '1';
+        maskMenu.style.display = 'flex';
+      });
+      maskOverlay.addEventListener('mouseleave', _scheduleHide);
+      maskMenu.addEventListener('mouseenter', _cancelHide);
+      maskMenu.addEventListener('mouseleave', _scheduleHide);
+
+    } else if (hasMaskRect) {
+      // ── Hover menu SIL: igual que PERFIL pero con 2 opciones ──
       const isMasked = !!State.formatMaskEnabled?.[State.activeFormat]?.[layer.id];
+
       const maskOverlay = document.createElement('div');
       maskOverlay.style.cssText = `
         position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
@@ -570,26 +708,61 @@ const Layers = (() => {
         background:${isMasked ? 'rgba(0,0,0,0.55)' : 'transparent'};
         transition:background 0.15s;
       `;
-      const maskImg = document.createElement('img');
-      maskImg.src = isMasked ? 'assets/img/ic_mask_down.svg' : 'assets/img/ic_mask_up.svg';
-      maskImg.style.cssText = 'width:14px;height:14px;display:block;pointer-events:none;';
-      maskOverlay.appendChild(maskImg);
+
+      const maskIndicator = document.createElement('div');
+      maskIndicator.innerHTML = `<svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="1.5" y="1.5" width="11" height="11" rx="1" stroke="${isMasked ? 'var(--col-yellow)' : '#666'}" stroke-width="1.3"/></svg>`;
+      maskIndicator.style.cssText = 'pointer-events:none;';
+      maskOverlay.appendChild(maskIndicator);
       maskOverlay.style.opacity = isMasked ? '1' : '0';
-      maskOverlay.addEventListener('mouseenter', () => { maskOverlay.style.opacity = '1'; });
-      maskOverlay.addEventListener('mouseleave', () => {
-        const still = !!State.formatMaskEnabled?.[State.activeFormat]?.[layer.id];
-        maskOverlay.style.opacity = still ? '1' : '0';
+
+      const maskMenu = document.createElement('div');
+      maskMenu.style.cssText = `
+        position:absolute;bottom:calc(100% + 4px);left:50%;transform:translateX(-50%);
+        background:#1a1a1a;border:1px solid #333;border-radius:4px;
+        display:none;flex-direction:column;overflow:hidden;z-index:1000;min-width:110px;
+      `;
+
+      [{ type: null, label: 'Sin máscara' }, { type: true, label: 'Enmascarar' }].forEach(opt => {
+        const btn = document.createElement('div');
+        const isActive = opt.type === null ? !isMasked : isMasked;
+        btn.style.cssText = `
+          padding:6px 10px;font-size:10px;font-family:var(--font);letter-spacing:0.06em;
+          text-transform:uppercase;cursor:pointer;white-space:nowrap;
+          color:${isActive ? 'var(--col-yellow)' : 'var(--col-text)'};
+          background:${isActive ? 'rgba(240,165,0,0.08)' : 'transparent'};
+        `;
+        btn.textContent = opt.label;
+        btn.addEventListener('mouseenter', () => { btn.style.background = 'rgba(255,255,255,0.07)'; });
+        btn.addEventListener('mouseleave', () => { btn.style.background = isActive ? 'rgba(240,165,0,0.08)' : 'transparent'; });
+        btn.addEventListener('click', e => {
+          e.stopPropagation();
+          if (typeof History !== 'undefined') History.push();
+          if (!State.formatMaskEnabled[State.activeFormat]) State.formatMaskEnabled[State.activeFormat] = {};
+          State.formatMaskEnabled[State.activeFormat][layer.id] = opt.type === null ? null : true;
+          if (typeof Canvas !== 'undefined') Canvas.render();
+          _render();
+        });
+        maskMenu.appendChild(btn);
       });
-      maskOverlay.addEventListener('click', e => {
-        e.stopPropagation();
-        if (typeof History !== 'undefined') History.push();
-        if (!State.formatMaskEnabled[State.activeFormat]) State.formatMaskEnabled[State.activeFormat] = {};
-        const current = !!State.formatMaskEnabled[State.activeFormat][layer.id];
-        State.formatMaskEnabled[State.activeFormat][layer.id] = !current;
-        if (typeof Canvas !== 'undefined') Canvas.render();
-        _render();
-      });
+
+      thumb.style.overflow = 'visible';
+      thumb.appendChild(maskMenu);
       thumb.appendChild(maskOverlay);
+
+      let _hideTimerSIL = null;
+      const _scheduleHideSIL = () => {
+        _hideTimerSIL = setTimeout(() => {
+          const still = !!State.formatMaskEnabled?.[State.activeFormat]?.[layer.id];
+          maskOverlay.style.opacity = still ? '1' : '0';
+          maskMenu.style.display = 'none';
+        }, 120);
+      };
+      const _cancelHideSIL = () => { if (_hideTimerSIL) { clearTimeout(_hideTimerSIL); _hideTimerSIL = null; } };
+
+      maskOverlay.addEventListener('mouseenter', () => { _cancelHideSIL(); maskOverlay.style.opacity = '1'; maskMenu.style.display = 'flex'; });
+      maskOverlay.addEventListener('mouseleave', _scheduleHideSIL);
+      maskMenu.addEventListener('mouseenter', _cancelHideSIL);
+      maskMenu.addEventListener('mouseleave', _scheduleHideSIL);
     }
 
     // ── NOMBRE ──
@@ -918,6 +1091,79 @@ const Layers = (() => {
 
   // ── ITEM ESPECIAL: MARCA IPLUS en IPLUS PUBLI ────────────
 
+  // ── ITEM ESPECIAL: COMPOSICIÓN AMAZON LOGO en AMAZON BG ──
+
+  function _buildComposicionAmazonItem(layer) {
+    const item = document.createElement('div');
+    item.className = 'layer-item layer-item-system';
+    item.dataset.id = layer.id;
+
+    const eye = document.createElement('div');
+    eye.className = 'layer-eye';
+    const eyeImg = document.createElement('img');
+    const _getVis = () => {
+      const fv = State.formatParams?.['AMAZON BG']?.[layer.id]?.visible;
+      return fv !== undefined ? fv : true;
+    };
+    eyeImg.src = _getVis() ? 'assets/img/ojo_on.svg' : 'assets/img/ojo_off.svg';
+    eye.appendChild(eyeImg);
+    eye.addEventListener('click', e => {
+      e.stopPropagation();
+      if (typeof History !== 'undefined') History.push();
+      const newVis = !_getVis();
+      if (!State.formatParams['AMAZON BG']) State.formatParams['AMAZON BG'] = {};
+      if (!State.formatParams['AMAZON BG'][layer.id]) State.formatParams['AMAZON BG'][layer.id] = {};
+      State.formatParams['AMAZON BG'][layer.id].visible = newVis;
+      eyeImg.src = newVis ? 'assets/img/ojo_on.svg' : 'assets/img/ojo_off.svg';
+      if (typeof Canvas !== 'undefined') Canvas.render();
+    });
+
+    const thumb = document.createElement('div');
+    thumb.className = 'layer-thumb';
+    if (layer.src) {
+      const thumbImg = document.createElement('img');
+      thumbImg.src = layer.src;
+      thumbImg.alt = layer.name;
+      thumb.appendChild(thumbImg);
+    }
+
+    const name = document.createElement('span');
+    name.className = 'layer-name';
+    name.textContent = layer.name;
+
+    const lockBtn = document.createElement('div');
+    const _locked2 = () => _getLocked(layer.id);
+    const _svgLocked2   = '<svg width="12" height="14" viewBox="0 0 12 14" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="6" width="10" height="8" rx="1.5" fill="currentColor" opacity="0.9"/><path d="M3 6V4a3 3 0 0 1 6 0v2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
+    const _svgUnlocked2 = '<svg width="12" height="14" viewBox="0 0 12 14" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="6" width="10" height="8" rx="1.5" fill="currentColor" opacity="0.3"/><path d="M3 6V4a3 3 0 0 1 6 0" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.3"/></svg>';
+    const _updateLockBtn2 = () => {
+      const l = _locked2();
+      lockBtn.className = 'layer-lock-btn' + (l ? ' locked' : '');
+      lockBtn.dataset.tooltip = l ? 'Desbloquear capa' : 'Bloquear capa';
+      lockBtn.innerHTML = l ? _svgLocked2 : _svgUnlocked2;
+    };
+    _updateLockBtn2();
+    lockBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      if (typeof History !== 'undefined') History.push();
+      _setLocked(layer.id, !_locked2());
+      _updateLockBtn2();
+      if (_locked2() && State.selectedLayerIds.includes(layer.id)) {
+        State.selectedLayerId  = null;
+        State.selectedLayerIds = [];
+        if (typeof Canvas !== 'undefined') Canvas.render();
+        if (typeof UI     !== 'undefined') UI.updateSliders();
+      }
+      if (typeof Layers !== 'undefined') Layers.render();
+    });
+
+    item.appendChild(eye);
+    item.appendChild(thumb);
+    item.appendChild(name);
+    item.appendChild(lockBtn);
+
+    return item;
+  }
+
   function _buildMarcaIplusItem(layer) {
     const item = document.createElement('div');
     item.className = 'layer-item layer-item-system';
@@ -1043,12 +1289,27 @@ const Layers = (() => {
         State.selectedLayerIds.push(layer.id);
       } else if (State.selectedLayerIds.length > 1) {
         State.selectedLayerIds.splice(idx, 1);
+        // Si se deselecciona la capa clave, limpiarla
+        if (typeof Canvas !== 'undefined' && Canvas.getKeyLayerId() === layer.id) {
+          Canvas.setKeyLayer(layer.id); // toggle → null
+        }
       }
       State.selectedLayerId = State.selectedLayerIds[State.selectedLayerIds.length - 1];
     } else {
-      if (State.selectedLayerId === layer.id && State.selectedLayerIds.length === 1) {
+      // Click sin shift en capa ya seleccionada (con otras también seleccionadas) → capa clave
+      if (State.selectedLayerIds.includes(layer.id) && State.selectedLayerIds.length > 1) {
+        if (typeof Canvas !== 'undefined') Canvas.setKeyLayer(layer.id);
+        State.selectedLayerId = layer.id; // mantener como capa primaria para los handles
+        if (typeof Canvas !== 'undefined') Canvas.render();
         return;
       }
+      // Click en capa ya única seleccionada → limpiar capa clave
+      if (State.selectedLayerId === layer.id && State.selectedLayerIds.length === 1) {
+        if (typeof Canvas !== 'undefined' && Canvas.getKeyLayerId()) Canvas.setKeyLayer(null);
+        return;
+      }
+      // Limpiar capa clave al cambiar selección
+      if (typeof Canvas !== 'undefined') Canvas.setKeyLayer(null);
       State.selectedLayerId = layer.id;
       State.selectedLayerIds = [layer.id];
     }

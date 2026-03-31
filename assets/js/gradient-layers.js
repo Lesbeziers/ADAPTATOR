@@ -3,7 +3,7 @@
 // ============================================================
 
 const GradientLayers = (() => {
-  const SPECIAL_FORMATS = ['MUX4 TXT', 'MOVIL TXT'];
+  const SPECIAL_FORMATS = ['MUX4 TXT', 'MOVIL TXT', 'AMAZON LOGO'];
 
   let _activeLayerId = null;
   let _draggingPanel = false;
@@ -49,7 +49,10 @@ const GradientLayers = (() => {
       },
     };
 
-    const _ci = State.layers[0]?.isComposicion ? 1 : 0;
+    let _ci = 0;
+    while (_ci < State.layers.length && (State.layers[_ci].isComposicion || State.layers[_ci].isComposicionMovil || State.layers[_ci].isMarcaIplus || State.layers[_ci].isTitleLayer)) {
+      _ci++;
+    }
     if (typeof History !== 'undefined') History.push();
     State.layers.splice(_ci, 0, layer);
     State.selectedLayerId  = layer.id;

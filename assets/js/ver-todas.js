@@ -4,8 +4,9 @@
 
 const VerTodas = (() => {
 
-  const THUMB_MAX_W = 960;
-  const THUMB_MAX_H = 2000;
+  // Mini-viewport 16:9 — renderizar a doble resolución para evitar pixelado
+  const CELL_W = 960;
+  const CELL_H = 540;
 
   let _lightbox = null;
   let _lightboxFormats = [];
@@ -68,40 +69,28 @@ const VerTodas = (() => {
   }
 
   function _buildCard(formatName) {
-    const size  = State.formatSizes[formatName];
-    const isDone = !!State.formatOk?.[formatName];
-
     const card = document.createElement('div');
     card.className = 'vt-card';
     card.dataset.format = formatName;
 
-    // Header: solo nombre
-    const header = document.createElement('div');
-    header.className = 'vt-card-header';
+    // Mini-viewport canvas — siempre 16:9 CELL_W × CELL_H
+    const cv = document.createElement('canvas');
+    cv.className = 'vt-thumb';
+    cv.width  = CELL_W;
+    cv.height = CELL_H;
 
-    const name = document.createElement('span');
+    // Fondo del mini-viewport (gris ligeramente más claro que la app)
+    const ctx = cv.getContext('2d');
+    ctx.fillStyle = '#242424';
+    ctx.fillRect(0, 0, CELL_W, CELL_H);
+
+    // Nombre del formato debajo
+    const name = document.createElement('div');
     name.className = 'vt-card-name';
     name.textContent = formatName;
 
-    header.appendChild(name);
-
-    // Canvas thumbnail
-    const cv = document.createElement('canvas');
-    cv.className = 'vt-thumb';
-
-    if (size) {
-      const sx = THUMB_MAX_W / size.w;
-      const sy = THUMB_MAX_H / size.h;
-      const s  = Math.min(sx, sy, 1);
-      cv.width  = Math.round(size.w * s);
-      cv.height = Math.round(size.h * s);
-    } else {
-      cv.width  = THUMB_MAX_W;
-      cv.height = THUMB_MAX_H;
-    }
-
-    card.appendChild(header);
     card.appendChild(cv);
+    card.appendChild(name);
     card.addEventListener('click', () => _openLightbox(formatName));
 
     return card;
@@ -112,10 +101,32 @@ const VerTodas = (() => {
     const size = State.formatSizes[formatName];
     if (!size) return;
 
-    const scale = cv.width / size.w;
-    const ctx   = cv.getContext('2d');
-    ctx.clearRect(0, 0, cv.width, cv.height);
+    const ctx = cv.getContext('2d');
+
+    // Fondo del mini-viewport
+    ctx.fillStyle = '#242424';
+    ctx.fillRect(0, 0, CELL_W, CELL_H);
+
+    // Calcular escala: fit dentro del cell con margen, nunca por encima de 1:1
+    const MARGIN = 12; // px de margen interior
+    const maxW = CELL_W - MARGIN * 2;
+    const maxH = CELL_H - MARGIN * 2;
+    const scale = Math.min(maxW / size.w, maxH / size.h, 1);
+
+    // Tamaño real del render dentro del cell
+    const rw = Math.round(size.w * scale);
+    const rh = Math.round(size.h * scale);
+
+    // Centrar dentro del cell
+    const ox = Math.round((CELL_W - rw) / 2);
+    const oy = Math.round((CELL_H - rh) / 2);
+
     ctx.save();
+    ctx.translate(ox, oy);
+    // Clip al área exacta del formato — evita que capas fuera del lienzo se vean
+    ctx.beginPath();
+    ctx.rect(0, 0, rw, rh);
+    ctx.clip();
     ctx.scale(scale, scale);
     await _drawFormat(ctx, formatName, size.w, size.h);
     ctx.restore();
@@ -131,6 +142,7 @@ const VerTodas = (() => {
 
     for (const layer of layers) {
       if (layer.isMarcaIplus) continue; // se dibuja al final, encima de todo
+      if (layer.isMarcaSony) continue;
       const isVisible = _isLayerVisible(layer, formatName);
       if (!isVisible) continue;
       await _drawLayer(ctx, layer, formatName, W, H);
@@ -161,23 +173,29 @@ const VerTodas = (() => {
     if (marca && formatName === 'IPLUS PUBLI') {
       await _drawLayer(ctx, marca, formatName, W, H);
     }
+    const marcaSony = State.layers.find(l => l.isMarcaSony);
+    if (marcaSony && formatName === 'SONY') {
+      await _drawLayer(ctx, marcaSony, formatName, W, H);
+    }
   }
 
   function _isLayerVisible(layer, formatName) {
     if (layer.isTitleLayer) {
-      return formatName === 'MUX4 TXT' || formatName === 'MOVIL TXT';
+      return (formatName === 'MUX4 TXT' || formatName === 'MOVIL TXT' || formatName === 'TÍTULO FICHA' || formatName === 'CARÁTULA H' || formatName === 'CARÁTULA V' || formatName === 'CARTEL COM. H' || formatName === 'CARTEL COM. V' || formatName === 'AMAZON LOGO' || formatName === 'SONY') && formatName !== 'FANART' && formatName !== 'FANART MÓVIL';
     }
     if (layer.isComposicion) {
-      if (formatName === 'MUX4 TXT' || formatName === 'MOVIL TXT' || formatName === 'MUX4 FONDO' || formatName === 'MOVIL MUX FONDO') return false;
+      if (formatName === 'MUX4 TXT' || formatName === 'MOVIL TXT' || formatName === 'MUX4 FONDO' || formatName === 'MOVIL MUX FONDO' || formatName === 'TÍTULO FICHA' || formatName === 'CARÁTULA H' || formatName === 'CARÁTULA V' || formatName === 'CARTEL COM. H' || formatName === 'CARTEL COM. V' || formatName === 'FANART' || formatName === 'FANART MÓVIL' || formatName === 'AMAZON LOGO' || formatName === 'AMAZON BG' || formatName === 'SONY') return false;
       const fmtVisible = State.formatParams?.[formatName]?.[layer.id]?.visible;
       return fmtVisible !== undefined ? fmtVisible : true;
     }
     if (layer.isComposicionMovil) return false;
+    if (layer.isComposicionAmazon) return false;
+    if (layer.isMarcaSony) return formatName === 'SONY';
     if (layer.isMarcaIplus) return formatName === 'IPLUS PUBLI';
     if (layer.exclusiveFormat) {
       return layer.exclusiveFormat === formatName;
     }
-    if (formatName === 'MUX4 TXT' || formatName === 'MOVIL TXT') {
+    if (formatName === 'MUX4 TXT' || formatName === 'MOVIL TXT' || formatName === 'TÍTULO FICHA' || formatName === 'AMAZON LOGO') {
       return false;
     }
     const fmtVisible = State.formatParams?.[formatName]?.[layer.id]?.visible;
@@ -192,9 +210,22 @@ const VerTodas = (() => {
     const op  = (layer.params?.opacity ?? 100) / 100;
 
     // ── MÁSCARA SIL ───────────────────────────────────────
-    const maskRect = State.formatSizes[formatName]?.maskRect;
-    const isMasked = maskRect && State.formatMaskEnabled?.[formatName]?.[layer.id];
-    if (isMasked) {
+    const fmtSize    = State.formatSizes[formatName];
+    const maskRect   = fmtSize?.maskRect;
+    const maskCircle = fmtSize?.maskCircle;
+    const maskType   = State.formatMaskEnabled?.[formatName]?.[layer.id] ?? null;
+    const isSIL          = maskRect && !maskCircle;
+    const isMaskedSIL    = isSIL && !!maskType;
+    const isMaskedCircle = maskCircle && maskType === 'circle';
+    const isMaskedRect   = maskCircle && maskType === 'rect';
+    const isMasked = isMaskedSIL || isMaskedCircle || isMaskedRect;
+    if (isMaskedSIL) {
+      ctx.save();
+      _clipMaskRect(ctx, maskRect, W, H);
+    } else if (isMaskedCircle) {
+      ctx.save();
+      _clipMaskCircle(ctx, maskCircle, W, H);
+    } else if (isMaskedRect) {
       ctx.save();
       _clipMaskRect(ctx, maskRect, W, H);
     }
@@ -271,33 +302,57 @@ const VerTodas = (() => {
       ctx.fillRect(-gw/2, -gh/2, gw, gh);
 
     } else if (layer.type === 'text' && layer.textParams) {
-      const tp    = layer.textParams;
-      const sz    = tp.size || 48;
-      const wt    = String(tp.weight || '400').replace('italic', '').trim();
-      const st    = String(tp.weight || '').includes('italic') || tp.style === 'italic' ? 'italic' : 'normal';
-      const fam   = tp.family || 'Apercu Movistar';
-      const align = tp.align  || 'left';
-      const lineH = sz * 1.2;
-      const lines = (tp.content || '').split('\n');
-      const N     = lines.length;
-
+      if (typeof TextLayers !== 'undefined') TextLayers.migrate(layer);
+      const tp       = layer.textParams;
+      const sz       = tp.size || 48;
+      const align    = tp.align  || 'left';
+      const lineH    = sz * (tp.leading  ?? 120) / 100;
+      const tracking = (tp.tracking ?? 0) * 0.001;
+      const runs     = tp.runs || [];
+      const lineRuns = (typeof TextLayers !== 'undefined') ? TextLayers.buildLineRuns(runs) : [runs];
+      const N        = lineRuns.length;
+      ctx.save();
       ctx.scale(sx, sy);
-      ctx.font         = `${st} ${wt} ${sz}px '${fam}', Arial, sans-serif`;
-      ctx.fillStyle    = tp.color || '#ffffff';
-      ctx.textBaseline = 'middle';
-
-      const lineWidths = lines.map(l => ctx.measureText(l).width);
-      const textW      = Math.max(...lineWidths);
-
-      lines.forEach((line, i) => {
-        const lineY   = (i - (N - 1) / 2) * lineH + sz * 0.06;
-        const lw      = lineWidths[i];
-        const xOffset = align === 'center' ? -lw / 2
-                      : align === 'right'  ?  textW / 2 - lw
-                      :                      -textW / 2;
-        ctx.fillText(line, xOffset, lineY);
+      ctx.textBaseline  = 'middle';
+      ctx.letterSpacing = tracking + 'em';
+      // Calcular lineH por línea (tamaño mayor de cada línea * leading)
+      const lineHeights = lineRuns.map(lr => {
+        const maxSz = lr.length > 0 ? Math.max(...lr.map(r => r.size || sz)) : sz;
+        return maxSz * (tp.leading ?? 120) / 100;
       });
 
+      const lineWidths = lineRuns.map(lr => {
+        let w = 0;
+        for (const r of lr) {
+          const rsz = r.size || sz;
+          ctx.font = `${r.style||'normal'} ${r.weight||'400'} ${rsz}px '${r.family||'Apercu Movistar'}', Arial, sans-serif`;
+          w += ctx.measureText(r.text || '').width;
+        }
+        return w;
+      });
+      const textW    = Math.max(...lineWidths, 0);
+      const totalH   = lineHeights.reduce((a, b) => a + b, 0);
+      let   currentY = -totalH / 2;
+
+      lineRuns.forEach((lr, i) => {
+        const lh   = lineHeights[i];
+        const lineY = currentY + lh / 2;
+        currentY += lh;
+        const lw     = lineWidths[i];
+        // xStart: ajustar según alineación para coincidir con viewport
+        // En viewport: left→borde izq, center→centro, right→borde der
+        let   xStart = align === 'center' ? -lw / 2
+                      : align === 'right'  ? -lw
+                      : 0;
+        for (const r of lr) {
+          const rsz = r.size || sz;
+          ctx.font      = `${r.style||'normal'} ${r.weight||'400'} ${rsz}px '${r.family||'Apercu Movistar'}', Arial, sans-serif`;
+          ctx.fillStyle = r.color || '#ffffff';
+          ctx.fillText(r.text || '', xStart, lineY);
+          xStart += ctx.measureText(r.text || '').width;
+        }
+      });
+      ctx.restore();
     } else if (layer.src) {
       const iw = (layer.naturalWidth  || 200) * sx;
       const ih = (layer.naturalHeight || 200) * sy;
@@ -346,6 +401,15 @@ const VerTodas = (() => {
     ctx.lineTo(ax,       ay + m.h);
     ctx.lineTo(ax,       ay + r);
     ctx.arcTo(ax,        ay,       ax + r,   ay,           r);
+    ctx.closePath();
+    ctx.clip();
+  }
+
+  function _clipMaskCircle(ctx, m, W, H) {
+    const cx = W / 2 + m.cx;
+    const cy = H / 2 + m.cy;
+    ctx.beginPath();
+    ctx.arc(cx, cy, m.r, 0, Math.PI * 2);
     ctx.closePath();
     ctx.clip();
   }

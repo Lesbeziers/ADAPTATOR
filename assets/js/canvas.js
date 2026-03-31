@@ -54,6 +54,7 @@ const Canvas = (() => {
     _injectNoiseFilter();
     _bindArrowKeys();
     _initMarcaIplus();
+    _initMarcaSony();
     render();
   }
 
@@ -63,7 +64,6 @@ const Canvas = (() => {
     const img = new Image();
     img.onload = () => {
       if (State.layers.find(l => l.isMarcaIplus)) return;
-      // Convertir a data URL para que funcione en canvas offscreen (ver-todas, export)
       const tmp = document.createElement('canvas');
       tmp.width  = img.naturalWidth;
       tmp.height = img.naturalHeight;
@@ -75,6 +75,38 @@ const Canvas = (() => {
         isMarcaIplus: true,
         visible:      true,
         src:          dataUrl,
+        naturalWidth:  img.naturalWidth,
+        naturalHeight: img.naturalHeight,
+        params: { opacity: 100, blur: 0, noise: 0, brightness: 0, contrast: 0, saturation: 0, tintAmount: 0, tintColor: '#000000' },
+      };
+      State.layers.unshift(layer);
+      Object.keys(State.formatSizes || {}).forEach(fid => {
+        if (!State.formatParams[fid]) State.formatParams[fid] = {};
+        State.formatParams[fid][layer.id] = { scaleX: 100, scaleY: 100, rotation: 0, x: 0, y: 0 };
+      });
+      if (typeof Layers !== 'undefined') Layers.render();
+      render();
+    };
+    img.src = src;
+  }
+
+  function _initMarcaSony() {
+    if (State.layers.find(l => l.isMarcaSony)) return;
+    const src = 'assets/img/checkers/MARCA_SONY.png';
+    const img = new Image();
+    img.onload = () => {
+      if (State.layers.find(l => l.isMarcaSony)) return;
+      const tmp = document.createElement('canvas');
+      tmp.width  = img.naturalWidth;
+      tmp.height = img.naturalHeight;
+      tmp.getContext('2d').drawImage(img, 0, 0);
+      const dataUrl = tmp.toDataURL('image/png');
+      const layer = {
+        id:          'layer_marca_sony',
+        name:        'MARCA SONY',
+        isMarcaSony: true,
+        visible:     true,
+        src:         dataUrl,
         naturalWidth:  img.naturalWidth,
         naturalHeight: img.naturalHeight,
         params: { opacity: 100, blur: 0, noise: 0, brightness: 0, contrast: 0, saturation: 0, tintAmount: 0, tintColor: '#000000' },
@@ -127,6 +159,7 @@ const Canvas = (() => {
   function _deselect() {
     State.selectedLayerId  = null;
     State.selectedLayerIds = [];
+    _keyLayerId = null;
     _hideHandles();
     render();
     if (typeof Layers !== 'undefined') Layers.render();
@@ -214,6 +247,15 @@ const Canvas = (() => {
         _updateOkBtn();
       });
     }
+
+    let ccBtn = document.getElementById('canvas-cc-btn');
+    if (!ccBtn) {
+      ccBtn = document.createElement('button');
+      ccBtn.id = 'canvas-cc-btn';
+      _area.appendChild(ccBtn);
+      ccBtn.addEventListener('click', _copyToCartelCom);
+    }
+
     _updateOkBtn();
 
     const label = document.getElementById('lienzo-label');
@@ -226,6 +268,81 @@ const Canvas = (() => {
     const isDone = State.activeFormat && State.formatOk?.[State.activeFormat];
     okBtn.classList.toggle('done', !!isDone);
     okBtn.style.display = State.activeFormat ? 'block' : 'none';
+
+    const ccBtn = document.getElementById('canvas-cc-btn');
+    if (!ccBtn) return;
+    if (State.activeFormat === 'CARÁTULA H') {
+      ccBtn.textContent    = 'Atributos a CC H';
+      ccBtn.style.display  = 'block';
+    } else if (State.activeFormat === 'CARÁTULA V') {
+      ccBtn.textContent    = 'Atributos a CC V';
+      ccBtn.style.display  = 'block';
+    } else {
+      ccBtn.style.display  = 'none';
+      return;
+    }
+    // Alinear CC justo a la izquierda del OK con 8px de separación
+    requestAnimationFrame(() => {
+      const okEl = document.getElementById('canvas-ok-btn');
+      if (okEl) {
+        const okRight = parseInt(okEl.style.right || '10');
+        const okW     = okEl.offsetWidth;
+        ccBtn.style.right = (okRight + okW + 8) + 'px';
+      }
+    });
+  }
+
+  function _copyToCartelCom() {
+    const srcFormat = State.activeFormat;
+    if (srcFormat !== 'CARÁTULA H' && srcFormat !== 'CARÁTULA V') return;
+    const dstFormat = srcFormat === 'CARÁTULA H' ? 'CARTEL COM. H' : 'CARTEL COM. V';
+
+    const srcSize = State.formatSizes[srcFormat];
+    const dstSize = State.formatSizes[dstFormat];
+    if (!srcSize || !dstSize) return;
+
+    const scaleX = dstSize.w / srcSize.w;
+    const scaleY = dstSize.h / srcSize.h;
+
+    if (typeof History !== 'undefined') History.push();
+
+    if (!State.formatParams[dstFormat]) State.formatParams[dstFormat] = {};
+
+    State.layers.forEach(layer => {
+      const src = State.formatParams?.[srcFormat]?.[layer.id];
+      if (!src) return;
+
+      State.formatParams[dstFormat][layer.id] = {
+        x:        Math.round((src.x || 0) * scaleX),
+        y:        Math.round((src.y || 0) * scaleY),
+        scaleX:   (src.scaleX ?? 100) * scaleX,
+        scaleY:   (src.scaleY ?? 100) * scaleY,
+        rotation: src.rotation ?? 0,
+        visible:  src.visible !== undefined ? src.visible : true,
+      };
+
+      // Escalar tamaño de texto si tiene runs con size propio
+      if (layer.type === 'text' && layer.textParams?.runs) {
+        const avgScale = (scaleX + scaleY) / 2;
+        // size global
+        if (layer.textParams.size) {
+          if (!State.formatParams[dstFormat][layer.id]._textSizeOverride) {
+            layer.textParams.size = Math.round(layer.textParams.size * avgScale);
+          }
+        }
+      }
+    });
+
+    if (typeof Layers !== 'undefined') Layers.render();
+    render();
+
+    // Feedback visual
+    const ccBtn = document.getElementById('canvas-cc-btn');
+    if (ccBtn) {
+      const orig = ccBtn.textContent;
+      ccBtn.textContent = '✓ Copiado';
+      setTimeout(() => { ccBtn.textContent = orig; }, 1500);
+    }
   }
 
   // ── RENDER ────────────────────────────────────────────────
@@ -252,6 +369,7 @@ const Canvas = (() => {
         if (layer.type === 'text') {
           el = document.createElement('div');
           el.className = 'canvas-layer canvas-text-layer';
+          el.style.textAlign = layer.textParams?.align || 'left';
         } else if (layer.type === 'solid') {
           el = document.createElement('div');
           el.className = 'canvas-layer canvas-solid-layer';
@@ -263,7 +381,7 @@ const Canvas = (() => {
           el.className = 'canvas-layer';
           el.style.cssText = 'position:absolute;overflow:hidden;isolation:isolate;';
           const img = document.createElement('img');
-          img.src = layer.src;
+          if (layer.src && layer.src !== 'undefined') img.src = layer.src;
           img.alt = layer.name;
           img.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:fill;pointer-events:none;display:block;';
           el.appendChild(img);
@@ -278,7 +396,7 @@ const Canvas = (() => {
       }
 
       // Actualizar src de imagen si ha cambiado (siluetear, etc.)
-      if (!['text','solid','gradient'].includes(layer.type) && layer.src) {
+      if (!['text','solid','gradient'].includes(layer.type) && layer.src && layer.src !== 'undefined') {
         const imgEl = el.querySelector('img');
         const activeSrc =
           (layer.isComposicion       && State.activeFormat === 'MUX4 FONDO'      && layer.srcFondo)      ? layer.srcFondo :
@@ -287,6 +405,12 @@ const Canvas = (() => {
         if (imgEl && imgEl.src !== activeSrc) {
           imgEl.src = activeSrc;
         }
+      }
+
+      // Ocultar capas de composición que aún no tienen src generado
+      const isAutoLayer = layer.isComposicion || layer.isComposicionMovil || layer.isComposicionAmazon;
+      if (isAutoLayer && !layer.src) {
+        el.style.display = 'none';
       }
 
       if (layer.type === 'solid' && layer.solidParams) {
@@ -309,27 +433,28 @@ const Canvas = (() => {
       }
 
       if (layer.type === 'text' && layer.textParams) {
-        const tp     = layer.textParams;
-        const family = tp.family || 'Apercu Movistar';
-        const weight = tp.weight || '400';
-        const style  = tp.style  || 'normal';
+        const tp = layer.textParams;
+        if (typeof TextLayers !== 'undefined') TextLayers.migrate(layer);
         const _isEditing = el.contentEditable === 'true';
 
-        el.style.fontFamily  = `'${family}', Arial, sans-serif`;
-        el.style.fontWeight  = weight;
-        el.style.fontStyle   = style;
+        // Estilos globales del contenedor
         el.style.fontSize    = (tp.size * _scale * _contentScaleX) + 'px';
-        el.style.color       = tp.color || '#ffffff';
         el.style.textAlign   = tp.align || 'left';
-        el.style.whiteSpace  = _isEditing ? 'nowrap' : 'pre';
-        el.style.lineHeight  = '1.2';
+        el.style.whiteSpace  = 'pre-wrap';
+        el.style.lineHeight  = (tp.leading ?? 120) + '%';
+        el.style.letterSpacing = ((tp.tracking ?? 0) * 0.001) + 'em';
         el.style.userSelect  = 'none';
         el.style.padding     = '2px';
-        el.style.width       = _isEditing ? 'auto'   : 'max-content';
+        el.style.fontFamily  = ''; // los spans lo llevan inline
+        el.style.color       = '';
         const _contentW = _contentClip ? parseInt(_contentClip.style.width) : _lienzoW;
-        el.style.maxWidth    = _isEditing ? 'none'   : _contentW + 'px';
-        el.style.height      = '';
-        el.textContent       = _isEditing ? el.textContent : (tp.content || '');
+        el.style.width    = _isEditing ? _contentW + 'px' : 'max-content';
+        el.style.maxWidth = _contentW + 'px';
+        el.style.height   = '';
+
+        if (!_isEditing && typeof TextLayers !== 'undefined') {
+          el.innerHTML = TextLayers.getRunsHTML(layer);
+        }
 
         layer.naturalWidth  = el.offsetWidth  / (_scale * _contentScaleX) || 100;
         layer.naturalHeight = el.offsetHeight / (_scale * _contentScaleY) || 50;
@@ -338,6 +463,8 @@ const Canvas = (() => {
       if (layer.isComposicion && State.activeFormat === 'MUX4 FONDO') {
         el.style.zIndex = 9500;
       } else if (layer.isComposicionMovil && State.activeFormat === 'MOVIL MUX FONDO') {
+        el.style.zIndex = 9500;
+      } else if (layer.isComposicionAmazon && State.activeFormat === 'AMAZON BG') {
         el.style.zIndex = 9500;
       } else if (layer.isMarcaIplus && State.activeFormat === 'IPLUS PUBLI') {
         el.style.zIndex = 7999;
@@ -348,7 +475,7 @@ const Canvas = (() => {
       let isVisible;
 
       if (layer.isTitleLayer) {
-        if (State.activeFormat === 'MUX4 TXT' || State.activeFormat === 'MOVIL TXT') {
+        if (State.activeFormat === 'MUX4 TXT' || State.activeFormat === 'MOVIL TXT' || State.activeFormat === 'TÍTULO FICHA' || State.activeFormat === 'CARÁTULA H' || State.activeFormat === 'CARÁTULA V' || State.activeFormat === 'CARTEL COM. H' || State.activeFormat === 'CARTEL COM. V' || State.activeFormat === 'AMAZON LOGO' || State.activeFormat === 'SONY') {
           const fmtVisible = State.formatParams?.[State.activeFormat]?.[layer.id]?.visible;
           isVisible = fmtVisible !== undefined ? fmtVisible : true;
         } else {
@@ -357,13 +484,35 @@ const Canvas = (() => {
       } else if (layer.isComposicion) {
         isVisible = State.activeFormat !== 'MUX4 TXT'
                  && State.activeFormat !== 'MOVIL TXT'
-                 && State.activeFormat !== 'MOVIL MUX FONDO';
+                 && State.activeFormat !== 'MOVIL MUX FONDO'
+                 && State.activeFormat !== 'TÍTULO FICHA'
+                 && State.activeFormat !== 'CARÁTULA H'
+                 && State.activeFormat !== 'CARÁTULA V'
+                 && State.activeFormat !== 'CARTEL COM. H'
+                 && State.activeFormat !== 'CARTEL COM. V'
+                 && State.activeFormat !== 'FANART'
+                 && State.activeFormat !== 'FANART MÓVIL'
+                 && State.activeFormat !== 'AMAZON LOGO'
+                 && State.activeFormat !== 'AMAZON BG'
+                 && State.activeFormat !== 'SONY';
         if (isVisible) {
           const fmtVisible = State.formatParams?.[State.activeFormat]?.[layer.id]?.visible;
           isVisible = fmtVisible !== undefined ? fmtVisible : true;
         }
       } else if (layer.isComposicionMovil) {
         isVisible = State.activeFormat === 'MOVIL MUX FONDO';
+        if (isVisible) {
+          const fmtVisible = State.formatParams?.[State.activeFormat]?.[layer.id]?.visible;
+          isVisible = fmtVisible !== undefined ? fmtVisible : true;
+        }
+      } else if (layer.isComposicionAmazon) {
+        isVisible = State.activeFormat === 'AMAZON BG';
+        if (isVisible) {
+          const fmtVisible = State.formatParams?.[State.activeFormat]?.[layer.id]?.visible;
+          isVisible = fmtVisible !== undefined ? fmtVisible : true;
+        }
+      } else if (layer.isMarcaSony) {
+        isVisible = State.activeFormat === 'SONY';
         if (isVisible) {
           const fmtVisible = State.formatParams?.[State.activeFormat]?.[layer.id]?.visible;
           isVisible = fmtVisible !== undefined ? fmtVisible : true;
@@ -381,7 +530,7 @@ const Canvas = (() => {
           isVisible = fmtVisible !== undefined ? fmtVisible : layer.visible;
         }
       } else {
-        if (State.activeFormat === 'MUX4 TXT' || State.activeFormat === 'MOVIL TXT') {
+        if (State.activeFormat === 'MUX4 TXT' || State.activeFormat === 'MOVIL TXT' || State.activeFormat === 'TÍTULO FICHA' || State.activeFormat === 'AMAZON LOGO') {
           isVisible = false;
         } else {
           const fmtVisible = State.activeFormat && State.formatParams?.[State.activeFormat]?.[layer.id]?.visible;
@@ -391,55 +540,80 @@ const Canvas = (() => {
 
       el.style.display = isVisible ? 'block' : 'none';
       const isLocked = typeof Layers !== 'undefined' && Layers.getLocked(layer.id);
-      el.style.pointerEvents = (layer.isMarcaIplus || layer.isComposicionMovil || isLocked) ? 'none' : '';
+      el.style.pointerEvents = (layer.isMarcaIplus || layer.isMarcaSony || layer.isComposicionMovil || layer.isComposicionAmazon || isLocked) ? 'none' : '';
 
       if (layer.isComposicion && State.activeFormat === 'MUX4 FONDO') {
         el.classList.remove('canvas-layer-active');
       } else if (layer.isComposicionMovil && State.activeFormat === 'MOVIL MUX FONDO') {
         el.classList.remove('canvas-layer-active');
+      } else if (layer.isComposicionAmazon && State.activeFormat === 'AMAZON BG') {
+        el.classList.remove('canvas-layer-active');
+      } else if (layer.isMarcaSony && State.activeFormat === 'SONY') {
+        el.classList.remove('canvas-layer-active');
       } else if (layer.isMarcaIplus && State.activeFormat === 'IPLUS PUBLI') {
         el.classList.remove('canvas-layer-active');
       } else {
         el.classList.toggle('canvas-layer-active', State.selectedLayerIds.includes(layer.id));
+        el.classList.toggle('canvas-layer-key', layer.id === _keyLayerId);
       }
 
       if (!(layer.type === 'text' && el.contentEditable === 'true')) {
         _applyParams(el, layer);
       }
 
-      // ── MÁSCARA SIL — aplicar DESPUÉS de _applyParams ────
-      const maskRect = State.formatSizes[State.activeFormat]?.maskRect;
-      const isMasked = maskRect && State.formatMaskEnabled?.[State.activeFormat]?.[layer.id];
+      // ── MÁSCARA — aplicar DESPUÉS de _applyParams ────
+      const fmtSize    = State.formatSizes[State.activeFormat];
+      const maskRect   = fmtSize?.maskRect;
+      const maskCircle = fmtSize?.maskCircle;
+      const maskType   = State.formatMaskEnabled?.[State.activeFormat]?.[layer.id] ?? null;
+      const isSIL          = maskRect && !maskCircle;
+      const isMaskedSIL    = isSIL && !!maskType;
+      const isMaskedCircle = maskCircle && maskType === 'circle';
+      const isMaskedRect   = maskCircle && maskType === 'rect';
 
-      // Usar un overlay de recorte encima del elemento, sin tocar el DOM interno
-      let maskOverlay = el.querySelector('.sil-clip-overlay');
-      if (isMasked) {
-        const maskCX = _contentCenterX + maskRect.x * _scale * _contentScaleX;
-        const maskCY = _contentCenterY + maskRect.y * _scale * _contentScaleY;
-        const maskHW = maskRect.w / 2 * _scale * _contentScaleX;
-        const maskHH = maskRect.h / 2 * _scale * _contentScaleY;
-        const mx1 = maskCX - maskHW;
-        const my1 = maskCY - maskHH;
-        const mx2 = maskCX + maskHW;
-        const my2 = maskCY + maskHH;
-        const cx  = parseFloat(el.style.left);
-        const cy  = parseFloat(el.style.top);
-        const ew  = parseFloat(el.style.width)  || 0;
-        const eh  = parseFloat(el.style.height) || 0;
-        const ex1 = cx - ew / 2;
-        const ey1 = cy - eh / 2;
-        const ex2 = cx + ew / 2;
-        const ey2 = cy + eh / 2;
-        const top    = Math.max(0, my1 - ey1);
-        const right  = Math.max(0, ex2 - mx2);
-        const bottom = Math.max(0, ey2 - my2);
-        const left   = Math.max(0, mx1 - ex1);
-        const rPx    = (maskRect.r * _scale).toFixed(2);
-        el.style.clipPath = `inset(${top.toFixed(2)}px ${right.toFixed(2)}px ${bottom.toFixed(2)}px ${left.toFixed(2)}px round ${rPx}px ${rPx}px 0px 0px)`;
-        el.style.pointerEvents = 'auto';
+      const _calcInset = (mRect) => {
+        const maskCX = _contentCenterX + mRect.x * _scale * _contentScaleX;
+        const maskCY = _contentCenterY + mRect.y * _scale * _contentScaleY;
+        const maskHW = mRect.w / 2 * _scale * _contentScaleX;
+        const maskHH = mRect.h / 2 * _scale * _contentScaleY;
+        const mx1 = maskCX - maskHW; const my1 = maskCY - maskHH;
+        const mx2 = maskCX + maskHW; const my2 = maskCY + maskHH;
+        const cx = parseFloat(el.style.left); const cy = parseFloat(el.style.top);
+        const ew = parseFloat(el.style.width) || 0; const eh = parseFloat(el.style.height) || 0;
+        const ex1 = cx - ew/2; const ey1 = cy - eh/2;
+        const ex2 = cx + ew/2; const ey2 = cy + eh/2;
+        return {
+          top:    Math.max(0, my1 - ey1),
+          right:  Math.max(0, ex2 - mx2),
+          bottom: Math.max(0, ey2 - my2),
+          left:   Math.max(0, mx1 - ex1),
+        };
+      };
+
+      if (isMaskedSIL) {
+        const ins = _calcInset(maskRect);
+        const rPx = (maskRect.r * _scale).toFixed(2);
+        el.style.clipPath = `inset(${ins.top.toFixed(2)}px ${ins.right.toFixed(2)}px ${ins.bottom.toFixed(2)}px ${ins.left.toFixed(2)}px round ${rPx}px ${rPx}px 0px 0px)`;
+        if (!isLocked) el.style.pointerEvents = 'auto';
+
+      } else if (isMaskedCircle) {
+        const circleCX = _contentCenterX + maskCircle.cx * _scale * _contentScaleX;
+        const circleCY = _contentCenterY + maskCircle.cy * _scale * _contentScaleY;
+        const circleR  = maskCircle.r * _scale * Math.min(_contentScaleX, _contentScaleY);
+        const cx = parseFloat(el.style.left); const cy = parseFloat(el.style.top);
+        const ew = parseFloat(el.style.width) || 0; const eh = parseFloat(el.style.height) || 0;
+        const relCX = circleCX - (cx - ew/2);
+        const relCY = circleCY - (cy - eh/2);
+        el.style.clipPath = `circle(${circleR.toFixed(2)}px at ${relCX.toFixed(2)}px ${relCY.toFixed(2)}px)`;
+        if (!isLocked) el.style.pointerEvents = 'auto';
+
+      } else if (isMaskedRect) {
+        const ins = _calcInset(maskRect);
+        el.style.clipPath = `inset(${ins.top.toFixed(2)}px ${ins.right.toFixed(2)}px ${ins.bottom.toFixed(2)}px ${ins.left.toFixed(2)}px)`;
+        if (!isLocked) el.style.pointerEvents = 'auto';
+
       } else {
         el.style.clipPath = '';
-        // Limpiar wrapper antiguo si existía (compatibilidad)
         const oldWrapper = el.querySelector('.sil-mask-wrapper');
         if (oldWrapper) {
           while (oldWrapper.firstChild) el.insertBefore(oldWrapper.firstChild, oldWrapper);
@@ -458,7 +632,9 @@ const Canvas = (() => {
     if (State.selectedLayerId && State.activeFormat &&
         !(selLayer?.isComposicion && State.activeFormat === 'MUX4 FONDO') &&
         !(selLayer?.isComposicionMovil && State.activeFormat === 'MOVIL MUX FONDO') &&
-        !(selLayer?.isMarcaIplus && State.activeFormat === 'IPLUS PUBLI')) {
+        !(selLayer?.isComposicionAmazon && State.activeFormat === 'AMAZON BG') &&
+        !(selLayer?.isMarcaIplus && State.activeFormat === 'IPLUS PUBLI') &&
+        !(selLayer?.isMarcaSony && State.activeFormat === 'SONY')) {
       _updateHandles();
     } else {
       _hideHandles();
@@ -470,8 +646,14 @@ const Canvas = (() => {
     if (State.activeFormat === 'MOVIL TXT' && typeof ComposicionMovil !== 'undefined') {
       ComposicionMovil.generate();
     }
+    if (State.activeFormat === 'AMAZON LOGO' && typeof ComposicionAmazon !== 'undefined') {
+      ComposicionAmazon.generate();
+    }
     if (State.activeFormat === 'MOVIL MUX FONDO' && typeof ComposicionMovil !== 'undefined') {
       if (!State.layers.find(l => l.isComposicionMovil)) ComposicionMovil.generate();
+    }
+    if (State.activeFormat === 'AMAZON BG' && typeof ComposicionAmazon !== 'undefined') {
+      if (!State.layers.find(l => l.isComposicionAmazon)) ComposicionAmazon.generate();
     }
     _updateOkBtn();
   }
@@ -514,6 +696,25 @@ const Canvas = (() => {
       return;
     }
 
+    // ── AMAZON BG: COMPOSICIÓN AMAZON LOGO en posición fija ───
+    if (layer.isComposicionAmazon && State.activeFormat === 'AMAZON BG') {
+      const nw   = layer.naturalWidth  || 640;
+      const nh   = layer.naturalHeight || 480;
+      const posX = 104;
+      const posY = 65;
+      const left = _contentCenterX + (posX - State.formatSizes['AMAZON BG'].w / 2 + nw / 2) * _scale * _contentScaleX;
+      const top  = _contentCenterY + (posY - State.formatSizes['AMAZON BG'].h / 2 + nh / 2) * _scale * _contentScaleY;
+      el.style.width     = Math.round(nw * _scale * _contentScaleX) + 'px';
+      el.style.height    = Math.round(nh * _scale * _contentScaleY) + 'px';
+      el.style.left      = left + 'px';
+      el.style.top       = top  + 'px';
+      el.style.transform = 'translate(-50%, -50%)';
+      el.style.opacity   = '1';
+      el.style.filter    = '';
+      el.style.cursor    = 'default';
+      return;
+    }
+
     const p = _getParams(layer.id);
     const g = _getGlobalParams(layer);
 
@@ -536,7 +737,9 @@ const Canvas = (() => {
 
     if (!isEditing) {
       if (layer.type === 'text') {
-        el.style.transform = `translate(-50%, -50%) rotate(${rot}deg) scale(${scaleX / 100}, ${scaleY / 100})`;
+        const align = layer.textParams?.align || 'left';
+        const tx = align === 'left' ? '0%' : align === 'right' ? '-100%' : '-50%';
+        el.style.transform = `translate(${tx}, 0%) rotate(${rot}deg) scale(${scaleX / 100}, ${scaleY / 100})`;
       } else {
         const w = Math.round(nw * scaleX / 100 * _scale * _contentScaleX);
         const h = Math.round(nh * scaleY / 100 * _scale * _contentScaleY);
@@ -549,7 +752,13 @@ const Canvas = (() => {
 
     el.style.opacity = g.opacity / 100;
     el.style.left    = x + 'px';
-    el.style.top     = y + 'px';
+    // Para texto: ancla en borde superior → restar la mitad de la altura para que y=0 sea centrado
+    if (layer.type === 'text') {
+      const elH = el.offsetHeight || 0;
+      el.style.top = (y - elH / 2) + 'px';
+    } else {
+      el.style.top = y + 'px';
+    }
 
     const filters = [];
     if (g.blur       > 0)   filters.push(`blur(${g.blur * _scale}px)`);
@@ -683,7 +892,8 @@ const Canvas = (() => {
     _handles.style.top       = top    + 'px';
     _handles.style.width     = width  + 'px';
     _handles.style.height    = height + 'px';
-    _handles.style.boxShadow = '0 0 0 0.8px #f0c020';
+    const _isKey = State.selectedLayerId === _keyLayerId;
+    _handles.style.boxShadow = `0 0 0 0.8px ${_isKey ? '#ff4444' : '#f0c020'}`;
     _handles.style.display   = 'block';
 
     const pts = {
@@ -696,10 +906,34 @@ const Canvas = (() => {
       h.style.left = px + '%';
       h.style.top  = py + '%';
     });
+
+    // Marcos adicionales para el resto de capas seleccionadas (sin handles)
+    _lienzo.querySelectorAll('.canvas-layer-extra-handle').forEach(e => e.remove());
+    State.selectedLayerIds.forEach(id => {
+      if (id === State.selectedLayerId) return;
+      const extraEl = _lienzo.querySelector(`.canvas-layer[data-id="${id}"]`);
+      if (!extraEl || extraEl.style.display === 'none') return;
+      const r = extraEl.getBoundingClientRect();
+      const frame = document.createElement('div');
+      frame.className = 'canvas-layer-extra-handle';
+      const _frameIsKey = id === _keyLayerId;
+      frame.style.cssText = `
+        position:absolute;
+        pointer-events:none;
+        box-shadow:0 0 0 0.8px ${_frameIsKey ? '#ff4444' : '#f0c020'};
+        left:${r.left - lienzoRect.left}px;
+        top:${r.top  - lienzoRect.top}px;
+        width:${r.width}px;
+        height:${r.height}px;
+        z-index:7999;
+      `;
+      _lienzo.appendChild(frame);
+    });
   }
 
   function _hideHandles() {
     if (_handles) _handles.style.display = 'none';
+    _lienzo?.querySelectorAll('.canvas-layer-extra-handle').forEach(e => e.remove());
   }
 
   function _bindHandleDrag(handle, pos) {
@@ -818,11 +1052,16 @@ const Canvas = (() => {
       _editingText        = true;
       el.contentEditable  = 'true';
       el.style.cursor     = 'text';
-      el.style.whiteSpace = 'nowrap';
+      el.style.whiteSpace = 'pre-wrap';
       el.style.width      = 'auto';
       el.style.maxWidth   = 'none';
+      // Mantener el mismo ancla que en modo normal
+      const _editAlign = layer.textParams?.align || 'left';
+      const _editTx    = _editAlign === 'left' ? '0%' : _editAlign === 'right' ? '-100%' : '-50%';
+      el.style.transform = `translate(${_editTx}, 0%)`;
       _hideHandles();
       el.focus();
+      if (typeof TextLayers !== 'undefined') TextLayers.clearPendingOffsets();
 
       const range = document.createRange();
       range.selectNodeContents(el);
@@ -836,10 +1075,10 @@ const Canvas = (() => {
         _editingText        = false;
         el.contentEditable  = 'false';
         el.style.cursor     = 'move';
-        el.style.whiteSpace = 'pre';
+        el.style.whiteSpace = 'pre-wrap';
         el.style.width      = 'max-content';
-        if (layer.textParams) {
-          layer.textParams.content = el.textContent;
+        if (layer.textParams && typeof TextLayers !== 'undefined') {
+          TextLayers.saveRunsFromDOM(layer, el);
           layer.naturalWidth  = el.offsetWidth  / _scale || 100;
           layer.naturalHeight = el.offsetHeight / _scale || 50;
         }
@@ -851,7 +1090,7 @@ const Canvas = (() => {
 
       const onKeyDown = ev => {
         if (ev.key === 'Escape') {
-          el.textContent     = layer.textParams?.content || '';
+          if (typeof TextLayers !== 'undefined') el.innerHTML = TextLayers.getRunsHTML(layer);
           el.contentEditable = 'false';
           el.style.cursor    = 'move';
           el.removeEventListener('blur', onBlur);
@@ -872,13 +1111,33 @@ const Canvas = (() => {
 
       if (layer?.isComposicion && State.activeFormat === 'MUX4 FONDO') return;
       if (layer?.isComposicionMovil && State.activeFormat === 'MOVIL MUX FONDO') return;
+      if (layer?.isComposicionAmazon && State.activeFormat === 'AMAZON BG') return;
       if (layer?.isMarcaIplus && State.activeFormat === 'IPLUS PUBLI') return;
+      if (layer?.isMarcaSony && State.activeFormat === 'SONY') return;
 
       e.preventDefault();
+
+      if (e.shiftKey) {
+        // Shift+click: añadir/quitar de la selección múltiple
+        _keyLayerId = null; // limpiar capa clave al modificar selección
+        const idx = State.selectedLayerIds.indexOf(layerId);
+        if (idx === -1) {
+          State.selectedLayerIds.push(layerId);
+          State.selectedLayerId = layerId;
+        } else if (State.selectedLayerIds.length > 1) {
+          State.selectedLayerIds.splice(idx, 1);
+          State.selectedLayerId = State.selectedLayerIds[State.selectedLayerIds.length - 1];
+        }
+        render();
+        if (typeof Layers !== 'undefined') Layers.render();
+        if (typeof UI     !== 'undefined') UI.updateSliders();
+        return; // no iniciar drag en shift+click
+      }
 
       if (!State.selectedLayerIds.includes(layerId)) {
         State.selectedLayerId  = layerId;
         State.selectedLayerIds = [layerId];
+        _keyLayerId = null;
         render();
         if (typeof Layers !== 'undefined') Layers.render();
         if (typeof UI     !== 'undefined') UI.updateSliders();
@@ -886,6 +1145,12 @@ const Canvas = (() => {
             document.getElementById('text-editor-panel')?.classList.contains('visible')) {
           if (typeof TextLayers !== 'undefined') TextLayers.openPanel(layerId);
         }
+      } else if (State.selectedLayerIds.length > 1) {
+        // Click sin shift en capa ya seleccionada con múltiples → capa clave
+        _keyLayerId = layerId;
+        State.selectedLayerId = layerId;
+        render();
+        if (typeof Layers !== 'undefined') Layers.render();
       } else {
         State.selectedLayerId = layerId;
       }
@@ -906,8 +1171,15 @@ const Canvas = (() => {
 
       const onMove = ev => {
         if (!_dragging) return;
-        const dx = (ev.clientX - _dragStartX) / (_scale * _contentScaleX);
-        const dy = (ev.clientY - _dragStartY) / (_scale * _contentScaleY);
+        let dx = (ev.clientX - _dragStartX) / (_scale * _contentScaleX);
+        let dy = (ev.clientY - _dragStartY) / (_scale * _contentScaleY);
+
+        // Shift: restringir al eje dominante
+        if (ev.shiftKey) {
+          if (Math.abs(dx) >= Math.abs(dy)) dy = 0;
+          else                               dx = 0;
+        }
+
         State.selectedLayerIds.forEach(lid => {
           const origin = _dragOrigins[lid];
           if (!origin) return;
@@ -946,7 +1218,9 @@ const Canvas = (() => {
       const selLayer = State.layers.find(l => l.id === State.selectedLayerId);
       if (selLayer?.isComposicion && State.activeFormat === 'MUX4 FONDO') return;
       if (selLayer?.isComposicionMovil && State.activeFormat === 'MOVIL MUX FONDO') return;
+      if (selLayer?.isComposicionAmazon && State.activeFormat === 'AMAZON BG') return;
       if (selLayer?.isMarcaIplus && State.activeFormat === 'IPLUS PUBLI') return;
+      if (selLayer?.isMarcaSony && State.activeFormat === 'SONY') return;
 
       const DIRS = { ArrowLeft:[-1,0], ArrowRight:[1,0], ArrowUp:[0,-1], ArrowDown:[0,1] };
       if (!DIRS[e.key]) return;
@@ -1058,5 +1332,118 @@ const Canvas = (() => {
 
   function getScale() { return _scale; }
 
-  return { init, render, getScale };
+  // ── ALINEACIÓN ────────────────────────────────────────────
+  let _keyLayerId = null;
+
+  function setKeyLayer(layerId) {
+    _keyLayerId = _keyLayerId === layerId ? null : layerId;
+    if (typeof Layers !== 'undefined') Layers.render();
+  }
+
+  function getKeyLayerId() { return _keyLayerId; }
+
+  function align(direction) {
+    const fmt = State.activeFormat;
+    if (!fmt || State.selectedLayerIds.length === 0) return;
+    if (typeof History !== 'undefined') History.push();
+
+    const fmtSize = State.formatSizes[fmt];
+    const W = fmtSize?.w || 1920;
+    const H = fmtSize?.h || 1080;
+    const ids = State.selectedLayerIds;
+
+    function _getBox(id) {
+      const p  = State.formatParams?.[fmt]?.[id] || {};
+      const l  = State.layers.find(layer => layer.id === id);
+      if (!l) return null;
+      const sx = (p.scaleX ?? 100) / 100;
+      const sy = (p.scaleY ?? 100) / 100;
+      const nw = (l.naturalWidth  || 200) * sx;
+      const nh = (l.naturalHeight || 200) * sy;
+      const px = p.x ?? 0;
+      const py = p.y ?? 0;
+      // Para texto: el punto x es borde izq/centro/der según alineación
+      //             el punto y es el borde superior
+      let left, cx;
+      if (l.type === 'text') {
+        const align = l.textParams?.align || 'left';
+        left = align === 'left'    ? px
+             : align === 'center'  ? px - nw / 2
+             :                       px - nw;
+        cx = left + nw / 2;
+      } else {
+        cx   = px;
+        left = px - nw / 2;
+      }
+      // Para texto el py es el borde superior; para el resto es el centro
+      const top = l.type === 'text' ? py : py - nh / 2;
+      const cy  = top + nh / 2;
+      return { cx, cy, w: nw, h: nh, left, right: left + nw, top, bottom: top + nh };
+    }
+
+    let refBox;
+    if (ids.length === 1) {
+      refBox = { left: -W/2, right: W/2, top: -H/2, bottom: H/2, cx: 0, cy: 0, w: W, h: H };
+    } else if (_keyLayerId && ids.includes(_keyLayerId)) {
+      refBox = _getBox(_keyLayerId);
+    } else {
+      const boxes = ids.map(_getBox).filter(Boolean);
+      refBox = {
+        left:   Math.min(...boxes.map(b => b.left)),
+        right:  Math.max(...boxes.map(b => b.right)),
+        top:    Math.min(...boxes.map(b => b.top)),
+        bottom: Math.max(...boxes.map(b => b.bottom)),
+      };
+      refBox.cx = (refBox.left + refBox.right)  / 2;
+      refBox.cy = (refBox.top  + refBox.bottom) / 2;
+    }
+    if (!refBox) return;
+
+    const toMove = ids.filter(id => id !== _keyLayerId);
+    toMove.forEach(id => {
+      const box = _getBox(id);
+      const l   = State.layers.find(layer => layer.id === id);
+      if (!box || !l) return;
+      let ncx = box.cx, ncy = box.cy;
+      switch (direction) {
+        case 'left':    ncx = refBox.left   + box.w / 2; break;
+        case 'centerH': ncx = refBox.cx;                 break;
+        case 'right':   ncx = refBox.right  - box.w / 2; break;
+        case 'top':     ncy = refBox.top    + box.h / 2; break;
+        case 'centerV': ncy = refBox.cy;                 break;
+        case 'bottom':  ncy = refBox.bottom - box.h / 2; break;
+      }
+      let nx, ny;
+      if (l.type === 'text') {
+        const align  = l.textParams?.align || 'left';
+        const newLeft = ncx - box.w / 2;
+        nx = align === 'left'   ? newLeft
+           : align === 'center' ? ncx
+           :                      newLeft + box.w;
+        ny = ncy - box.h / 2;
+      } else {
+        nx = ncx;
+        ny = ncy;
+      }
+      Formats.setLayerParam(fmt, id, 'x', Math.round(nx));
+      Formats.setLayerParam(fmt, id, 'y', Math.round(ny));
+    });
+
+    // Limpiar selección y capa clave tras alinear
+    _keyLayerId = null;
+    State.selectedLayerId  = null;
+    State.selectedLayerIds = [];
+    _hideHandles();
+
+    render();
+    if (typeof Layers !== 'undefined') Layers.render();
+    if (typeof UI !== 'undefined') UI.updateSliders();
+  }
+
+  function reinitAutoLayers() {
+    _initMarcaIplus();
+    _initMarcaSony();
+  }
+
+  return { init, render, getScale, reinitAutoLayers, align, setKeyLayer, getKeyLayerId };
 })();

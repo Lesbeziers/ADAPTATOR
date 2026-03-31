@@ -114,7 +114,7 @@ const Project = (() => {
 
     // Preservar orden exacto, excluir composicion, composicionMovil y marcaIplus
     const layers = State.layers
-      .filter(l => !l.isComposicion && !l.isComposicionMovil && !l.isMarcaIplus)
+      .filter(l => !l.isComposicion && !l.isComposicionMovil && !l.isComposicionAmazon && !l.isMarcaIplus && !l.isMarcaSony)
       .map(layer => {
         const l = { ...layer, params: { ...layer.params } };
         if (!l.src) return l;
@@ -276,7 +276,9 @@ const Project = (() => {
     if (typeof Pastilla !== 'undefined') Pastilla.restore(data.pastilla);
 
     // Cargar capas en orden exacto guardado, sin composicion ni capas auto-generadas
-    State.layers = (data.layers ?? []).filter(l => !l.isComposicion && !l.isComposicionMovil && !l.isMarcaIplus);
+    State.layers = (data.layers ?? []).filter(l => !l.isComposicion && !l.isComposicionMovil && !l.isComposicionAmazon && !l.isMarcaIplus && !l.isMarcaSony);
+    // Limpiar src corruptos guardados como string "undefined"
+    State.layers.forEach(l => { if (l.src === 'undefined') l.src = null; });
 
     // Logos: reconvertir a dataURL para que el tint (mask-image) funcione
     const logoPromises = State.layers.filter(l => l.isLogo && l.logoPath).map(layer => {
@@ -296,7 +298,22 @@ const Project = (() => {
       });
     });
     Promise.all(logoPromises).then(() => {
-      if (typeof Canvas !== 'undefined') Canvas.render();
+      // Re-inicializar capas auto-generadas que no se guardan en el JSON
+      if (typeof Canvas !== 'undefined') {
+        Canvas.reinitAutoLayers();
+        Canvas.render();
+      }
+      // Regenerar composiciones para evitar tamaño incorrecto en la carga inicial
+      setTimeout(() => {
+        if (State.activeFormat === 'MUX4 TXT' && typeof Composicion !== 'undefined') Composicion.generate();
+        if (State.activeFormat === 'MOVIL TXT' && typeof ComposicionMovil !== 'undefined') ComposicionMovil.generate();
+        if (State.activeFormat === 'AMAZON LOGO' && typeof ComposicionAmazon !== 'undefined') ComposicionAmazon.generate();
+        // Si estamos en un formato que muestra una composición, regenerarla también
+        if (State.activeFormat === 'MUX4 FONDO' && typeof Composicion !== 'undefined') Composicion.generate();
+        if (State.activeFormat === 'MOVIL MUX FONDO' && typeof ComposicionMovil !== 'undefined') ComposicionMovil.generate();
+        if (State.activeFormat === 'AMAZON BG' && typeof ComposicionAmazon !== 'undefined') ComposicionAmazon.generate();
+        if (typeof Canvas !== 'undefined') Canvas.render();
+      }, 300);
     });
 
     // Restaurar visual del selector de modalidad

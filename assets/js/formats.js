@@ -58,6 +58,12 @@ const Formats = (() => {
       State.activeModality = id;
       State.activeFormat   = null;
       _renderFormatGrid();
+
+      // Activar el primer formato de la nueva modalidad
+      const modality = State.modalities.find(m => m.id === id);
+      if (modality?.formats?.length > 0) {
+        setActiveFormat(modality.formats[0]);
+      }
     });
   }
 
@@ -91,6 +97,21 @@ const Formats = (() => {
     const previous = State.activeFormat;
     State.activeFormat = formatName;
 
+    // Sincronizar modalidad — buscar a qué modalidad pertenece el formato
+    const targetModality = State.modalities.find(m => m.formats?.includes(formatName));
+    if (targetModality && targetModality.id !== State.activeModality && targetModality.id !== 'selecciona') {
+      State.activeModality = targetModality.id;
+      // Actualizar el selector de modalidad en el panel
+      const valueEl   = document.getElementById('modality-value');
+      const optionsEl = document.getElementById('modality-options');
+      if (valueEl) valueEl.textContent = targetModality.label;
+      if (optionsEl) {
+        optionsEl.querySelectorAll('.modality-option').forEach(opt => {
+          opt.classList.toggle('active', opt.dataset.id === targetModality.id);
+        });
+      }
+    }
+
     if (typeof GradientLayers !== 'undefined') GradientLayers.stopPickMode();
     if (typeof SystemLayers !== 'undefined') SystemLayers.invalidate();
 
@@ -104,6 +125,11 @@ const Formats = (() => {
     // Al salir de MOVIL TXT, generar la composición móvil
     if (previous === 'MOVIL TXT' && formatName !== 'MOVIL TXT') {
       if (typeof ComposicionMovil !== 'undefined') ComposicionMovil.generate();
+    }
+
+    // Al salir de AMAZON LOGO, generar la composición Amazon
+    if (previous === 'AMAZON LOGO' && formatName !== 'AMAZON LOGO') {
+      if (typeof ComposicionAmazon !== 'undefined') ComposicionAmazon.generate();
     }
 
     if (typeof Canvas !== 'undefined') Canvas.render();

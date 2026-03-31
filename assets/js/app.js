@@ -16,5 +16,13 @@ document.addEventListener('DOMContentLoaded', () => {
   Project.init();
   History.init();
   Export.init();
+
+  // Bind botones de alineación
+  document.querySelectorAll('.btn-align').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (typeof Canvas !== 'undefined') Canvas.align(btn.dataset.align);
+    });
+  });
+
   console.log('Editor de Adaptaciones M+ — listo.');
 });

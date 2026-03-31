@@ -349,9 +349,12 @@ const Logos = (() => {
         naturalHeight: cv.height,
         params: { opacity: 100, blur: 0, noise: 0, brightness: 0, contrast: 0, saturation: 0, tintAmount: 0, tintColor: '#000000' },
       };
-      if (formatAtImport === 'MUX4 TXT' || formatAtImport === 'MOVIL TXT') layer.exclusiveFormat = formatAtImport;
+      if (formatAtImport === 'MUX4 TXT' || formatAtImport === 'MOVIL TXT' || formatAtImport === 'AMAZON LOGO') layer.exclusiveFormat = formatAtImport;
 
-      const _ci = State.layers[0]?.isComposicion ? 1 : 0;
+      let _ci = 0;
+    while (_ci < State.layers.length && (State.layers[_ci].isComposicion || State.layers[_ci].isComposicionMovil || State.layers[_ci].isMarcaIplus || State.layers[_ci].isTitleLayer)) {
+      _ci++;
+    }
       if (typeof History !== 'undefined') History.push();
       State.layers.splice(_ci, 0, layer);
       State.selectedLayerId  = layer.id;
@@ -373,8 +376,11 @@ const Logos = (() => {
         naturalHeight: 200,
         params: { opacity: 100, blur: 0, noise: 0, brightness: 0, contrast: 0, saturation: 0, tintAmount: 0, tintColor: '#000000' },
       };
-      if (formatAtImport === 'MUX4 TXT' || formatAtImport === 'MOVIL TXT') layer.exclusiveFormat = formatAtImport;
-      const _ci = State.layers[0]?.isComposicion ? 1 : 0;
+      if (formatAtImport === 'MUX4 TXT' || formatAtImport === 'MOVIL TXT' || formatAtImport === 'AMAZON LOGO') layer.exclusiveFormat = formatAtImport;
+      let _ci = 0;
+    while (_ci < State.layers.length && (State.layers[_ci].isComposicion || State.layers[_ci].isComposicionMovil || State.layers[_ci].isMarcaIplus || State.layers[_ci].isTitleLayer)) {
+      _ci++;
+    }
       if (typeof History !== 'undefined') History.push();
       State.layers.splice(_ci, 0, layer);
       State.selectedLayerId  = layer.id;

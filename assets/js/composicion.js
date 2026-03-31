@@ -104,33 +104,52 @@ const Composicion = (() => {
           drawCtx.fillRect(-gw / 2, -gh / 2, gw, gh);
 
         } else if (layer.type === 'text' && layer.textParams) {
-          const tp    = layer.textParams;
-          const sz    = tp.size || 48;
-          const wt    = String(tp.weight || '400').replace('italic', '').trim();
-          const st    = String(tp.weight || '').includes('italic') || tp.style === 'italic' ? 'italic' : 'normal';
-          const fam   = tp.family || 'Apercu Movistar';
-          const align = tp.align || 'left';
-          const lineH = sz * 1.2;
-          const lines = (tp.content || '').split('\n');
-          const N     = lines.length;
+          if (typeof TextLayers !== 'undefined') TextLayers.migrate(layer);
+          const tp       = layer.textParams;
+          const sz       = tp.size || 48;
+          const align    = tp.align  || 'left';
+          const tracking = (tp.tracking ?? 0) * 0.001;
+          const runs     = tp.runs || [];
+          const lineRuns = (typeof TextLayers !== 'undefined') ? TextLayers.buildLineRuns(runs) : [runs];
+          const N        = lineRuns.length;
 
+          drawCtx.save();
           drawCtx.scale(sx, sy);
-          drawCtx.font         = `${st} ${wt} ${sz}px '${fam}', Arial, sans-serif`;
-          drawCtx.fillStyle    = tp.color || '#ffffff';
-          drawCtx.textBaseline = 'middle';
-          drawCtx.textAlign    = 'left';
+          drawCtx.textBaseline  = 'middle';
+          drawCtx.letterSpacing = tracking + 'em';
 
-          const lineWidths = lines.map(l => drawCtx.measureText(l).width);
-          const textW      = Math.max(...lineWidths);
-
-          lines.forEach((line, i) => {
-            const lineY   = (i - (N - 1) / 2) * lineH + sz * 0.06;
-            const lw      = lineWidths[i];
-            const xOffset = align === 'center' ? -lw / 2
-                          : align === 'right'  ?  textW / 2 - lw
-                          :                      -textW / 2;
-            drawCtx.fillText(line, xOffset, lineY);
+          const lineHeights = lineRuns.map(lr => {
+            const maxSz = lr.length > 0 ? Math.max(...lr.map(r => r.size || sz)) : sz;
+            return maxSz * (tp.leading ?? 120) / 100;
           });
+          const lineWidths = lineRuns.map(lr => {
+            let w = 0;
+            for (const r of lr) {
+              const rsz = r.size || sz;
+              drawCtx.font = `${r.style||'normal'} ${r.weight||'400'} ${rsz}px '${r.family||'Apercu Movistar'}', Arial, sans-serif`;
+              w += drawCtx.measureText(r.text || '').width;
+            }
+            return w;
+          });
+          const textW   = Math.max(...lineWidths, 0);
+          const totalH  = lineHeights.reduce((a, b) => a + b, 0);
+          let currentY  = -totalH / 2;
+
+          lineRuns.forEach((lr, i) => {
+            const lh    = lineHeights[i];
+            const lineY = currentY + lh / 2;
+            currentY += lh;
+            const lw     = lineWidths[i];
+            let   xStart = align === 'center' ? -lw / 2 : align === 'right' ? textW / 2 - lw : -textW / 2;
+            for (const r of lr) {
+              const rsz = r.size || sz;
+              drawCtx.font      = `${r.style||'normal'} ${r.weight||'400'} ${rsz}px '${r.family||'Apercu Movistar'}', Arial, sans-serif`;
+              drawCtx.fillStyle = r.color || '#ffffff';
+              drawCtx.fillText(r.text || '', xStart, lineY);
+              xStart += drawCtx.measureText(r.text || '').width;
+            }
+          });
+          drawCtx.restore();
 
         } else if (layer.src) {
           await new Promise(res => {
@@ -412,33 +431,52 @@ const ComposicionMovil = (() => {
           drawCtx.fillRect(-gw / 2, -gh / 2, gw, gh);
 
         } else if (layer.type === 'text' && layer.textParams) {
-          const tp    = layer.textParams;
-          const sz    = tp.size || 48;
-          const wt    = String(tp.weight || '400').replace('italic', '').trim();
-          const st    = String(tp.weight || '').includes('italic') || tp.style === 'italic' ? 'italic' : 'normal';
-          const fam   = tp.family || 'Apercu Movistar';
-          const align = tp.align || 'left';
-          const lineH = sz * 1.2;
-          const lines = (tp.content || '').split('\n');
-          const N     = lines.length;
+          if (typeof TextLayers !== 'undefined') TextLayers.migrate(layer);
+          const tp       = layer.textParams;
+          const sz       = tp.size || 48;
+          const align    = tp.align  || 'left';
+          const tracking = (tp.tracking ?? 0) * 0.001;
+          const runs     = tp.runs || [];
+          const lineRuns = (typeof TextLayers !== 'undefined') ? TextLayers.buildLineRuns(runs) : [runs];
+          const N        = lineRuns.length;
 
+          drawCtx.save();
           drawCtx.scale(sx, sy);
-          drawCtx.font         = `${st} ${wt} ${sz}px '${fam}', Arial, sans-serif`;
-          drawCtx.fillStyle    = tp.color || '#ffffff';
-          drawCtx.textBaseline = 'middle';
-          drawCtx.textAlign    = 'left';
+          drawCtx.textBaseline  = 'middle';
+          drawCtx.letterSpacing = tracking + 'em';
 
-          const lineWidths = lines.map(l => drawCtx.measureText(l).width);
-          const textW      = Math.max(...lineWidths);
-
-          lines.forEach((line, i) => {
-            const lineY   = (i - (N - 1) / 2) * lineH + sz * 0.06;
-            const lw      = lineWidths[i];
-            const xOffset = align === 'center' ? -lw / 2
-                          : align === 'right'  ?  textW / 2 - lw
-                          :                      -textW / 2;
-            drawCtx.fillText(line, xOffset, lineY);
+          const lineHeights = lineRuns.map(lr => {
+            const maxSz = lr.length > 0 ? Math.max(...lr.map(r => r.size || sz)) : sz;
+            return maxSz * (tp.leading ?? 120) / 100;
           });
+          const lineWidths = lineRuns.map(lr => {
+            let w = 0;
+            for (const r of lr) {
+              const rsz = r.size || sz;
+              drawCtx.font = `${r.style||'normal'} ${r.weight||'400'} ${rsz}px '${r.family||'Apercu Movistar'}', Arial, sans-serif`;
+              w += drawCtx.measureText(r.text || '').width;
+            }
+            return w;
+          });
+          const textW   = Math.max(...lineWidths, 0);
+          const totalH  = lineHeights.reduce((a, b) => a + b, 0);
+          let currentY  = -totalH / 2;
+
+          lineRuns.forEach((lr, i) => {
+            const lh    = lineHeights[i];
+            const lineY = currentY + lh / 2;
+            currentY += lh;
+            const lw     = lineWidths[i];
+            let   xStart = align === 'center' ? -lw / 2 : align === 'right' ? textW / 2 - lw : -textW / 2;
+            for (const r of lr) {
+              const rsz = r.size || sz;
+              drawCtx.font      = `${r.style||'normal'} ${r.weight||'400'} ${rsz}px '${r.family||'Apercu Movistar'}', Arial, sans-serif`;
+              drawCtx.fillStyle = r.color || '#ffffff';
+              drawCtx.fillText(r.text || '', xStart, lineY);
+              xStart += drawCtx.measureText(r.text || '').width;
+            }
+          });
+          drawCtx.restore();
 
         } else if (layer.src) {
           await new Promise(res => {
@@ -539,6 +577,275 @@ const ComposicionMovil = (() => {
 
     } catch(e) {
       console.error('ComposicionMovil error:', e);
+    } finally {
+      _generating = false;
+      if (_pending) generate();
+    }
+  }
+
+  function _rgba(hex, alpha) {
+    const r = parseInt(hex.slice(1,3), 16);
+    const g = parseInt(hex.slice(3,5), 16);
+    const b = parseInt(hex.slice(5,7), 16);
+    return `rgba(${r},${g},${b},${((alpha ?? 100) / 100).toFixed(2)})`;
+  }
+
+  function _roundRect(ctx, x, y, w, h, r) {
+    r = Math.min(r, w / 2, h / 2);
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y); ctx.arcTo(x + w, y,     x + w, y + r,     r);
+    ctx.lineTo(x + w, y + h - r); ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
+    ctx.lineTo(x + r, y + h); ctx.arcTo(x,     y + h, x,     y + h - r, r);
+    ctx.lineTo(x, y + r); ctx.arcTo(x,     y,     x + r, y,         r);
+    ctx.closePath();
+  }
+
+  return { generate };
+})();
+
+// ============================================================
+// COMPOSICION AMAZON — Genera "COMPOSICIÓN AMAZON LOGO" desde AMAZON LOGO
+// ============================================================
+
+const ComposicionAmazon = (() => {
+
+  const MASTER_FORMAT = 'AMAZON LOGO';
+  const COMP_NAME     = 'COMPOSICIÓN AMAZON LOGO';
+
+  let _generating = false;
+  let _pending    = false;
+
+  async function generate() {
+    if (_generating) { _pending = true; return; }
+    if (!State.formatSizes[MASTER_FORMAT]) return;
+
+    _generating = true;
+    _pending    = false;
+
+    try {
+      await document.fonts.ready;
+
+      const fmtSize = State.formatSizes[MASTER_FORMAT];
+      const W = fmtSize.w;
+      const H = fmtSize.h;
+
+      const visibleLayers = [...State.layers]
+        .reverse()
+        .filter(l => l.isTitleLayer || l.exclusiveFormat === MASTER_FORMAT);
+
+      const cv  = document.createElement('canvas');
+      cv.width  = W;
+      cv.height = H;
+      const ctx = cv.getContext('2d');
+      ctx.clearRect(0, 0, W, H);
+
+      for (const layer of visibleLayers) {
+        const p   = State.formatParams?.[MASTER_FORMAT]?.[layer.id] || {};
+        const sx  = (p.scaleX ?? 100) / 100;
+        const sy  = (p.scaleY ?? 100) / 100;
+        const rot = ((p.rotation ?? 0) * Math.PI) / 180;
+        const cx  = W / 2 + (p.x ?? 0);
+        const cy  = H / 2 + (p.y ?? 0);
+
+        const op         = (layer.params?.opacity     ?? 100) / 100;
+        const blur       = layer.params?.blur         ?? 0;
+        const noise      = layer.params?.noise        ?? 0;
+        const brightness = layer.params?.brightness   ?? 0;
+        const contrast   = layer.params?.contrast     ?? 0;
+        const saturation = layer.params?.saturation   ?? 0;
+
+        const filters = [];
+        if (blur       > 0)   filters.push(`blur(${blur}px)`);
+        if (brightness !== 0) filters.push(`brightness(${100 + brightness}%)`);
+        if (contrast   !== 0) filters.push(`contrast(${100 + contrast}%)`);
+        if (saturation !== 0) filters.push(`saturate(${100 + saturation}%)`);
+
+        const useTemp = noise > 0;
+        let drawCtx = ctx;
+        let tempCv  = null;
+
+        if (useTemp) {
+          tempCv        = document.createElement('canvas');
+          tempCv.width  = W;
+          tempCv.height = H;
+          drawCtx       = tempCv.getContext('2d');
+          drawCtx.clearRect(0, 0, W, H);
+        }
+
+        drawCtx.save();
+        drawCtx.globalAlpha = Math.max(0, Math.min(1, op));
+        drawCtx.filter      = filters.length ? filters.join(' ') : 'none';
+        drawCtx.translate(cx, cy);
+        drawCtx.rotate(rot);
+
+        if (layer.type === 'solid' && layer.solidParams) {
+          const sw = layer.solidParams.width  * sx;
+          const sh = layer.solidParams.height * sy;
+          const r  = layer.solidParams.radius || 0;
+          drawCtx.fillStyle = layer.solidParams.color;
+          _roundRect(drawCtx, -sw / 2, -sh / 2, sw, sh, r);
+          drawCtx.fill();
+
+        } else if (layer.type === 'gradient' && layer.gradientParams) {
+          const gp = layer.gradientParams;
+          const gw = (layer.naturalWidth  || W) * sx;
+          const gh = (layer.naturalHeight || H) * sy;
+          const c1 = _rgba(gp.color1, gp.alpha1);
+          const c2 = _rgba(gp.color2, gp.alpha2);
+          let grad;
+          if (gp.type === 'radial') {
+            grad = drawCtx.createRadialGradient(0, 0, 0, 0, 0, Math.max(gw, gh) / 2);
+          } else {
+            const ang = ((gp.angle - 90) * Math.PI) / 180;
+            const dx  = Math.cos(ang) * gw / 2;
+            const dy  = Math.sin(ang) * gh / 2;
+            grad = drawCtx.createLinearGradient(-dx, -dy, dx, dy);
+          }
+          grad.addColorStop(0, c1);
+          grad.addColorStop(1, c2);
+          drawCtx.fillStyle = grad;
+          drawCtx.fillRect(-gw / 2, -gh / 2, gw, gh);
+
+        } else if (layer.type === 'text' && layer.textParams) {
+          if (typeof TextLayers !== 'undefined') TextLayers.migrate(layer);
+          const tp       = layer.textParams;
+          const sz       = tp.size || 48;
+          const align    = tp.align  || 'left';
+          const tracking = (tp.tracking ?? 0) * 0.001;
+          const runs     = tp.runs || [];
+          const lineRuns = (typeof TextLayers !== 'undefined') ? TextLayers.buildLineRuns(runs) : [runs];
+          const N        = lineRuns.length;
+          drawCtx.save();
+          drawCtx.scale(sx, sy);
+          drawCtx.textBaseline  = 'middle';
+          drawCtx.letterSpacing = tracking + 'em';
+          const lineHeights = lineRuns.map(lr => {
+            const maxSz = lr.length > 0 ? Math.max(...lr.map(r => r.size || sz)) : sz;
+            return maxSz * (tp.leading ?? 120) / 100;
+          });
+          const lineWidths = lineRuns.map(lr => {
+            let w = 0;
+            for (const r of lr) {
+              const rsz = r.size || sz;
+              drawCtx.font = `${r.style||'normal'} ${r.weight||'400'} ${rsz}px '${r.family||'Apercu Movistar'}', Arial, sans-serif`;
+              w += drawCtx.measureText(r.text || '').width;
+            }
+            return w;
+          });
+          const textW  = Math.max(...lineWidths, 0);
+          const totalH = lineHeights.reduce((a, b) => a + b, 0);
+          let currentY = -totalH / 2;
+          lineRuns.forEach((lr, i) => {
+            const lh    = lineHeights[i];
+            const lineY = currentY + lh / 2;
+            currentY += lh;
+            const lw     = lineWidths[i];
+            let   xStart = align === 'center' ? -lw / 2 : align === 'right' ? textW / 2 - lw : -textW / 2;
+            for (const r of lr) {
+              const rsz = r.size || sz;
+              drawCtx.font      = `${r.style||'normal'} ${r.weight||'400'} ${rsz}px '${r.family||'Apercu Movistar'}', Arial, sans-serif`;
+              drawCtx.fillStyle = r.color || '#ffffff';
+              drawCtx.fillText(r.text || '', xStart, lineY);
+              xStart += drawCtx.measureText(r.text || '').width;
+            }
+          });
+          drawCtx.restore();
+
+        } else if (layer.src) {
+          await new Promise(res => {
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.onload = () => {
+              const iw = (layer.naturalWidth  || img.width)  * sx;
+              const ih = (layer.naturalHeight || img.height) * sy;
+              if (layer.params?.tintAmount > 0) {
+                const tmp = document.createElement('canvas');
+                tmp.width  = Math.round(iw);
+                tmp.height = Math.round(ih);
+                const tctx = tmp.getContext('2d');
+                tctx.drawImage(img, 0, 0, iw, ih);
+                tctx.globalCompositeOperation = 'source-in';
+                tctx.globalAlpha = layer.params.tintAmount / 100;
+                tctx.fillStyle   = layer.params.tintColor || '#000000';
+                tctx.fillRect(0, 0, iw, ih);
+                tctx.globalCompositeOperation = 'destination-over';
+                tctx.globalAlpha = 1;
+                tctx.drawImage(img, 0, 0, iw, ih);
+                drawCtx.drawImage(tmp, -iw / 2, -ih / 2);
+              } else {
+                drawCtx.drawImage(img, -iw / 2, -ih / 2, iw, ih);
+              }
+              res();
+            };
+            img.onerror = res;
+            img.src = layer.src;
+          });
+        }
+
+        drawCtx.restore();
+
+        if (useTemp && noise > 0) {
+          const t       = noise / 100;
+          const opacity = t * t * 1.5;
+          const nc      = document.createElement('canvas');
+          nc.width      = W; nc.height = H;
+          const nctx    = nc.getContext('2d');
+          const imgData = nctx.createImageData(W, H);
+          const data    = imgData.data;
+          for (let i = 0; i < data.length; i += 4) {
+            const v = Math.random() * 255;
+            data[i] = v; data[i+1] = v; data[i+2] = v;
+            data[i+3] = Math.random() * opacity * 255;
+          }
+          nctx.putImageData(imgData, 0, 0);
+          nctx.globalCompositeOperation = 'destination-in';
+          nctx.drawImage(tempCv, 0, 0);
+          drawCtx.save();
+          drawCtx.globalCompositeOperation = 'overlay';
+          drawCtx.globalAlpha = 1;
+          drawCtx.drawImage(nc, 0, 0);
+          drawCtx.restore();
+          ctx.drawImage(tempCv, 0, 0);
+        } else if (useTemp) {
+          ctx.drawImage(tempCv, 0, 0);
+        }
+      }
+
+      const dataUrl = cv.toDataURL('image/png');
+
+      let comp = State.layers.find(l => l.isComposicionAmazon);
+      if (!comp) {
+        comp = {
+          id:                  'layer_comp_amazon_' + Date.now(),
+          name:                COMP_NAME,
+          isComposicionAmazon: true,
+          visible:             true,
+          naturalWidth:        W,
+          naturalHeight:       H,
+          params: { opacity: 100, blur: 0, noise: 0, brightness: 0, contrast: 0, saturation: 0 },
+        };
+        State.layers.unshift(comp);
+        Object.keys(State.formatSizes || {}).forEach(fid => {
+          if (!State.formatParams[fid]) State.formatParams[fid] = {};
+          State.formatParams[fid][comp.id] = { scaleX: 100, scaleY: 100, rotation: 0, x: 0, y: 0 };
+        });
+      }
+
+      comp.src           = dataUrl;
+      comp.naturalWidth  = W;
+      comp.naturalHeight = H;
+
+      document.querySelectorAll(`.canvas-layer[data-id="${comp.id}"]`).forEach(el => {
+        const img = el.tagName === 'IMG' ? el : el.querySelector('img');
+        if (img) img.src = dataUrl;
+      });
+
+      if (typeof Layers !== 'undefined') Layers.render();
+      if (State.activeFormat === 'AMAZON BG' && typeof Canvas !== 'undefined') Canvas.render();
+
+    } catch(e) {
+      console.error('ComposicionAmazon error:', e);
     } finally {
       _generating = false;
       if (_pending) generate();
