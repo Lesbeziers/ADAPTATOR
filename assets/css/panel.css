@@ -180,6 +180,33 @@
   color: var(--col-green);
 }
 
+#canvas-cc-btn {
+  position: absolute;
+  top: 7px;
+  right: 147px;
+  z-index: 8000;
+  height: 22px;
+  padding: 0 10px;
+  background: #2a2a2a;
+  border: none;
+  border-radius: 2px;
+  color: #bbb;
+  font-family: var(--font);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  display: none;
+  white-space: nowrap;
+  transition: color 0.15s, background 0.15s;
+}
+
+#canvas-cc-btn:hover {
+  color: var(--col-text);
+  background: #333;
+}
+
 #modality-select option {
   font-weight: 700;
   font-family: var(--font);
@@ -569,13 +596,11 @@ body.layer-dragging * {
 
 /* ── CAPAS DE SISTEMA ─────────────────────────────────────── */
 .layer-item-system {
-  background: #191919;
-  opacity: 0.85;
+  background: rgba(255, 0, 0, 0.10); /* rojo al 10% */
 }
 
 .layer-item-system:hover {
-  background: #1e1e1e;
-  opacity: 1;
+  background: rgba(255, 0, 0, 0.20);
 }
 
 .layer-lock {
@@ -1103,4 +1128,76 @@ body.layer-dragging * {
   cursor: not-allowed;
   border-color: #444;
   color: #666;
+}
+
+/* ── ALINEACIÓN ───────────────────────────────────────────── */
+.align-section {
+  padding: 8px 12px 12px;
+}
+
+.align-separator {
+  height: 1px;
+  background: var(--col-border);
+  margin-bottom: 10px;
+}
+
+.align-label {
+  display: block;
+  font-family: var(--font);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--col-yellow);
+  margin-bottom: 8px;
+}
+
+.align-btns {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.btn-align {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #2a2a2a;
+  border: 1px solid #3a3a3a;
+  border-radius: 3px;
+  color: #888;
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.15s, background 0.15s, border-color 0.15s;
+  flex-shrink: 0;
+}
+
+.btn-align:hover {
+  color: var(--col-text);
+  background: #333;
+  border-color: #555;
+}
+
+.align-divider {
+  width: 1px;
+  height: 20px;
+  background: var(--col-border);
+  margin: 0 3px;
+  flex-shrink: 0;
+}
+
+/* Indicador capa clave en panel */
+.layer-item.key-layer {
+  background: #2a0a0a !important;
+  border-color: #5a1a1a !important;
+}
+
+.layer-item.key-layer .layer-name {
+  color: #ff4444 !important;
+}
+
+.layer-item.key-layer .btn-eye svg {
+  color: #ff4444 !important;
 }

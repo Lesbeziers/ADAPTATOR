@@ -151,12 +151,16 @@
   outline: none;
 }
 
+.canvas-layer-key {
+  /* sin outline — el indicador visual está solo en el panel */
+}
+
 /* ── PANEL FLOTANTE DE TEXTO ──────────────────────────────── */
 #text-editor-panel {
   position: fixed;
   top: 100px;
-  right: 20px;
-  width: 240px;
+  left: 350px;
+  width: 300px;
   background: #1c1c1c;
   border: 1px solid #333;
   border-radius: 4px;
@@ -249,7 +253,7 @@
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--col-text-muted);
-  width: 52px;
+  width: 80px;
   flex-shrink: 0;
 }
 
@@ -272,7 +276,9 @@
 }
 
 /* Input tamaño */
-#text-size {
+#text-size,
+#text-leading,
+#text-tracking {
   width: 52px;
   height: 24px;
   background: #2a2a2a;
@@ -336,13 +342,14 @@
   min-width: 20px;
   min-height: 20px;
   transform-origin: center center;
+  text-align: left;
 }
 
 /* ── PANEL FLOTANTE DE SÓLIDO ─────────────────────────────── */
 #solid-editor-panel {
   position: fixed;
   top: 100px;
-  right: 260px;
+  left: 350px;
   width: 220px;
   background: #1c1c1c;
   border: 1px solid #333;
@@ -409,7 +416,7 @@
 #solid-editor-panel {
   position: fixed;
   top: 100px;
-  right: 260px;
+  left: 350px;
   width: 200px;
   background: #1c1c1c;
   border: 1px solid #333;
@@ -496,7 +503,7 @@
 #gradient-editor-panel {
   position: fixed;
   top: 100px;
-  right: 500px;
+  left: 350px;
   width: 240px;
   background: #1c1c1c;
   border: 1px solid #333;
@@ -672,7 +679,8 @@ body.view-all #ver-todas-area {
 .vt-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 24px;
+  gap: 16px;
+  margin-bottom: 32px;
 }
 
 .vt-modality-heading {
@@ -683,9 +691,9 @@ body.view-all #ver-todas-area {
   text-align: center;
   text-transform: uppercase;
   color: var(--col-yellow);
-  padding: 24px 0 10px;
+  padding: 36px 0 14px;
   border-bottom: 1px solid #2a2a2a;
-  margin-bottom: 4px;
+  margin-bottom: 20px;
 }
 
 .vt-empty {
@@ -711,45 +719,30 @@ body.view-all #ver-todas-area {
 }
 
 .vt-card:hover .vt-thumb {
-  outline: 1px solid #555;
-}
-
-.vt-card-header {
-  display: flex;
-  align-items: center;
-  gap: 6px;
+  outline: 1px solid #666;
 }
 
 .vt-card-name {
   font-family: var(--font);
-  font-size: 14px;
-  font-weight: 300;
+  font-size: 11px;
+  font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--col-yellow);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.vt-ok-dot {
-  width: 11px;
-  height: 11px;
-  border-radius: 2px;
-  background: #2a2a2a;
-  flex-shrink: 0;
-}
-
-.vt-ok-dot.done {
-  background: var(--col-green);
+  text-align: center;
+  padding-top: 4px;
 }
 
 .vt-thumb {
   display: block;
   width: 100%;
-  height: auto;
-  background: #111;
+  aspect-ratio: 16 / 9;
+  background: #242424;
   outline: 1px solid #2e2e2e;
+  border-radius: 2px;
   transition: outline 0.15s;
 }
 
@@ -811,7 +804,7 @@ body.view-all #ver-todas-area {
 #pastilla-editor-panel {
   position: fixed;
   top: 100px;
-  right: 20px;
+  left: 350px;
   width: 200px;
   background: #1c1c1c;
   border: 1px solid #333;
