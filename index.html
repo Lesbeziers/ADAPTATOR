@@ -209,11 +209,11 @@
 <script src="assets/js/system-layers.js"></script>
 <script src="assets/js/pastilla.js"></script>
 <script src="assets/js/history.js"></script>
-<script src="assets/js/canvas.js"></script>
+<script src="assets/js/auto-layout.js"></script>
+  <script src="assets/js/canvas.js"></script>
 <script src="assets/js/layers.js"></script>
 <script src="assets/js/formats.js"></script>
 <script src="assets/js/ui.js"></script>
-<script src="assets/js/extras.js"></script>
 <script src="assets/js/jszip.min.js"></script>
 <script src="assets/js/project.js"></script>
 <script src="assets/js/export.js"></script>
@@ -221,6 +221,8 @@
 <script src="assets/js/composicion.js"></script>
 <script src="assets/js/ver-todas.js"></script>
 <script src="assets/js/logos.js"></script>
+<script src="assets/js/layout.js"></script>
+<script src="assets/js/mod-n-editor.js"></script>
 <script src="assets/js/app.js"></script>
 
 <!-- PANELES FLOTANTES -->
@@ -236,6 +238,7 @@
         <option value="Apercu Movistar" selected>Apercu Movistar</option>
         <option value="Movistar Sans">Movistar Sans</option>
         <option value="Movistar">Movistar</option>
+        <option value="Abolition">Abolition</option>
         <option disabled>──────────</option>
         <option value="Arial">Arial</option>
         <option value="Helvetica Neue, Helvetica, sans-serif">Helvetica</option>
@@ -338,6 +341,11 @@
       <span class="text-ctrl-label">Ángulo</span>
       <input type="number" id="gradient-angle" min="0" max="360" value="90" />
       <span style="font-size:10px;color:#666">°</span>
+    </div>
+    <div class="text-ctrl-row" id="gradient-radius-row" style="display:none">
+      <span class="text-ctrl-label">Radio</span>
+      <input type="range" id="gradient-radius" min="5" max="200" value="100" />
+      <span class="gradient-alpha-label" id="label-radius">100%</span>
     </div>
     <div class="gradient-divider">Color 1</div>
     <div class="text-ctrl-row">
