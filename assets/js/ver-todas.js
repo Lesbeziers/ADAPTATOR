@@ -2,7 +2,7 @@
 // VER-TODAS.JS — Vista de miniaturas de todos los formatos
 // ============================================================
 
-const VerTodas = (() => {
+var VerTodas = (() => {
 
   // Mini-viewport 16:9 — renderizar a doble resolución para evitar pixelado
   const CELL_W = 960;
@@ -12,6 +12,10 @@ const VerTodas = (() => {
   let _lightboxFormats = [];
   let _lightboxIndex   = -1;
   let _lightboxKeyHandler = null;
+  // Token de renderizado: cada vez que reconstruimos el grid lo incrementamos,
+  // los timeouts pendientes lo comparan y se auto-abortan si ha cambiado.
+  let _renderToken = 0;
+  let _pendingThumbTimeouts = [];
 
   // ── SHOW / HIDE ───────────────────────────────────────────
 
@@ -30,6 +34,12 @@ const VerTodas = (() => {
   // ── RENDER GRID ───────────────────────────────────────────
 
   function _render(area) {
+    // Cancelar cualquier render anterior pendiente — sin esto, los timeouts
+    // disparan más tarde sobre canvas detached que ya no se ven.
+    _renderToken++;
+    _pendingThumbTimeouts.forEach(t => clearTimeout(t));
+    _pendingThumbTimeouts = [];
+
     area.innerHTML = '';
 
     // Recoger todas las modalidades (salvo 'selecciona') con formatos OK
@@ -62,7 +72,14 @@ const VerTodas = (() => {
       formats.forEach(formatName => {
         const card = _buildCard(formatName);
         grid.appendChild(card);
-        setTimeout(() => _renderThumb(formatName, card.querySelector('canvas')), thumbIndex * 40);
+        const myToken = _renderToken;
+        const timer = setTimeout(() => {
+          // Si entre el setTimeout y el disparo el usuario cambió de vista
+          // (otra modalidad, otra apertura), no renderizamos sobre canvas muerto.
+          if (myToken !== _renderToken) return;
+          _renderThumb(formatName, card.querySelector('canvas'));
+        }, thumbIndex * 40);
+        _pendingThumbTimeouts.push(timer);
         thumbIndex++;
       });
     });
@@ -128,8 +145,19 @@ const VerTodas = (() => {
     ctx.rect(0, 0, rw, rh);
     ctx.clip();
     ctx.scale(scale, scale);
+    // Fondo verde "chivato" — coherente con export y editor (no en PNG)
+    if (typeof Export !== 'undefined' && !Export.isPngFormat(formatName)) {
+      ctx.fillStyle = '#00ff12';
+      ctx.fillRect(0, 0, size.w, size.h);
+    }
     await _drawFormat(ctx, formatName, size.w, size.h);
     ctx.restore();
+
+    // Ruido: aplicar con el mismo SVG filter del editor, sobre el área física del formato
+    const maxNoise = State.layers
+      .filter(l => _isLayerVisible(l, formatName) && (l.params?.noise ?? 0) > 0)
+      .reduce((mx, l) => Math.max(mx, l.params.noise), 0);
+    if (maxNoise > 0) await _applyNoiseSVG(cv, maxNoise, ox, oy, rw, rh);
   }
 
   // ── DIBUJAR UN FORMATO ────────────────────────────────────
@@ -143,6 +171,7 @@ const VerTodas = (() => {
     for (const layer of layers) {
       if (layer.isMarcaIplus) continue; // se dibuja al final, encima de todo
       if (layer.isMarcaSony) continue;
+      if (layer.isMolduraFanart) continue;
       const isVisible = _isLayerVisible(layer, formatName);
       if (!isVisible) continue;
       await _drawLayer(ctx, layer, formatName, W, H);
@@ -168,6 +197,30 @@ const VerTodas = (() => {
       });
     }
 
+    // Pastilla Freemium (solo en MUX4 TXT y MOVIL TXT cuando versión es Freemium)
+    if (typeof Layout !== 'undefined' && Layout.isFreemium() &&
+        typeof Pastilla !== 'undefined' &&
+        (formatName === 'MUX4 TXT' || formatName === 'MOVIL TXT')) {
+      const src = Pastilla.getFreemiumSrc();
+      const _presetPF = typeof Layout !== 'undefined' && Layout.getPreset && Layout.getPreset(formatName);
+      const posY = (_presetPF && _presetPF['PASTILLA_FREEMIUM']?.y) ?? 95;
+      await new Promise(res => {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => {
+          const targetH = (_presetPF && _presetPF['PASTILLA_FREEMIUM']?.pastillaH) ?? 61;
+          const sh = targetH;
+          const sw = (img.naturalWidth || 705) / (img.naturalHeight || 61) * targetH;
+          const px = W / 2 - sw / 2;
+          const py = H / 2 + posY - sh / 2;
+          ctx.drawImage(img, px, py, sw, sh);
+          res();
+        };
+        img.onerror = () => res();
+        img.src = src;
+      });
+    }
+
     // MARCA IPLUS: siempre al final, por encima de todo
     const marca = State.layers.find(l => l.isMarcaIplus);
     if (marca && formatName === 'IPLUS PUBLI') {
@@ -177,14 +230,24 @@ const VerTodas = (() => {
     if (marcaSony && formatName === 'SONY') {
       await _drawLayer(ctx, marcaSony, formatName, W, H);
     }
+    // MOLDURA FANART MOD N — siempre por encima de todo
+    const moldura = State.layers.find(l => l.isMolduraFanart);
+    if (moldura && formatName === 'FANART MOD N' && _isLayerVisible(moldura, formatName)) {
+      await _drawLayer(ctx, moldura, formatName, W, H);
+    }
+
   }
 
   function _isLayerVisible(layer, formatName) {
     if (layer.isTitleLayer) {
-      return (formatName === 'MUX4 TXT' || formatName === 'MOVIL TXT' || formatName === 'TÍTULO FICHA' || formatName === 'CARÁTULA H' || formatName === 'CARÁTULA V' || formatName === 'CARTEL COM. H' || formatName === 'CARTEL COM. V' || formatName === 'AMAZON LOGO' || formatName === 'SONY') && formatName !== 'FANART' && formatName !== 'FANART MÓVIL';
+      const inTextFormat = (formatName === 'MUX4 TXT' || formatName === 'MOVIL TXT' || formatName === 'TÍTULO FICHA' || formatName === 'CARÁTULA H' || formatName === 'CARÁTULA V' || formatName === 'CARTEL COM. H' || formatName === 'CARTEL COM. V' || formatName === 'AMAZON LOGO' || formatName === 'SONY' || formatName === 'XIAOMI BANNER' || formatName === 'DEST. DOBLE 1' || formatName === 'DEST. DOBLE 1 SIL' || formatName === 'DEST. DOBLE 2' || formatName === 'DEST. DOBLE 2 SIL' || formatName === 'DEST. DOBLE 4' || formatName === 'DEST. DOBLE 4 SIL' || formatName === 'MOD N SIL') && formatName !== 'FANART' && formatName !== 'FANART MÓVIL';
+      if (!inTextFormat) return false;
+      // Respetar visible:false puesto por el preset
+      const fmtVisible = State.formatParams?.[formatName]?.[layer.id]?.visible;
+      return fmtVisible !== false;
     }
     if (layer.isComposicion) {
-      if (formatName === 'MUX4 TXT' || formatName === 'MOVIL TXT' || formatName === 'MUX4 FONDO' || formatName === 'MOVIL MUX FONDO' || formatName === 'TÍTULO FICHA' || formatName === 'CARÁTULA H' || formatName === 'CARÁTULA V' || formatName === 'CARTEL COM. H' || formatName === 'CARTEL COM. V' || formatName === 'FANART' || formatName === 'FANART MÓVIL' || formatName === 'AMAZON LOGO' || formatName === 'AMAZON BG' || formatName === 'SONY') return false;
+      if (formatName === 'MUX4 TXT' || formatName === 'MOVIL TXT' || formatName === 'MUX4 FONDO' || formatName === 'MOVIL MUX FONDO' || formatName === 'TÍTULO FICHA' || formatName === 'CARÁTULA H' || formatName === 'CARÁTULA V' || formatName === 'CARTEL COM. H' || formatName === 'CARTEL COM. V' || formatName === 'FANART' || formatName === 'FANART MÓVIL' || formatName === 'FANART DEST.' || formatName === 'AMAZON LOGO' || formatName === 'AMAZON BG' || formatName === 'SONY' || formatName === 'XIAOMI BANNER' || formatName === 'DEST. DOBLE 1' || formatName === 'DEST. DOBLE 1 SIL' || formatName === 'DEST. DOBLE 2' || formatName === 'DEST. DOBLE 2 SIL' || formatName === 'DEST. DOBLE 4' || formatName === 'DEST. DOBLE 4 SIL' || formatName === 'MOD N' || formatName === 'FANART MOD N' || formatName === 'MOD N SIL' || formatName === 'PERFIL') return false;
       const fmtVisible = State.formatParams?.[formatName]?.[layer.id]?.visible;
       return fmtVisible !== undefined ? fmtVisible : true;
     }
@@ -192,22 +255,124 @@ const VerTodas = (() => {
     if (layer.isComposicionAmazon) return false;
     if (layer.isMarcaSony) return formatName === 'SONY';
     if (layer.isMarcaIplus) return formatName === 'IPLUS PUBLI';
+    if (layer.isMolduraFanart) {
+      if (formatName !== 'FANART MOD N') return false;
+      const fmtVisible = State.formatParams?.[formatName]?.[layer.id]?.visible;
+      return fmtVisible !== undefined ? fmtVisible : true;
+    }
+    if (layer.isMascaraBlur) {
+      if (formatName !== 'FANART MOD N') return false;
+      const fmtVisible = State.formatParams?.[formatName]?.[layer.id]?.visible;
+      return fmtVisible !== undefined ? fmtVisible : true;
+    }
     if (layer.exclusiveFormat) {
       return layer.exclusiveFormat === formatName;
     }
-    if (formatName === 'MUX4 TXT' || formatName === 'MOVIL TXT' || formatName === 'TÍTULO FICHA' || formatName === 'AMAZON LOGO') {
+    if ((formatName === 'MUX4 TXT' || formatName === 'MOVIL TXT' || formatName === 'TÍTULO FICHA' || formatName === 'AMAZON LOGO') && !layer._layoutGenerated) {
       return false;
     }
     const fmtVisible = State.formatParams?.[formatName]?.[layer.id]?.visible;
     return fmtVisible !== undefined ? fmtVisible : layer.visible !== false;
   }
 
+
+  // ── RUIDO — usa el mismo SVG filter del DOM que el editor ──
+  async function _applyNoiseSVG(physicalCanvas, noiseLevel, ox, oy, rw, rh) {
+    if (!noiseLevel || noiseLevel <= 0) return;
+    const filterId = `mp-noise-${Math.round(noiseLevel)}`;
+    const svgEl    = document.getElementById('mp-noise-svg');
+    if (!svgEl) return;
+    const filterDef = svgEl.querySelector(`#${filterId}`)?.outerHTML;
+    if (!filterDef) return;
+
+    // Capturar el área del formato desde el canvas físico
+    const tmp   = document.createElement('canvas');
+    tmp.width   = rw;
+    tmp.height  = rh;
+    const tctx  = tmp.getContext('2d');
+    tctx.drawImage(physicalCanvas, ox, oy, rw, rh, 0, 0, rw, rh);
+    const dataURL = tmp.toDataURL('image/png');
+
+    // Construir SVG con el mismo filter y volcar sobre el canvas físico
+    const svgStr = `<svg xmlns="http://www.w3.org/2000/svg" width="${rw}" height="${rh}"><defs>${filterDef}</defs><image href="${dataURL}" width="${rw}" height="${rh}" filter="url(#${filterId})"/></svg>`;
+    const url    = URL.createObjectURL(new Blob([svgStr], { type: 'image/svg+xml' }));
+
+    await new Promise((res) => {
+      const img = new Image();
+      img.onload = () => {
+        const ctx = physicalCanvas.getContext('2d');
+        ctx.drawImage(img, ox, oy);
+        URL.revokeObjectURL(url);
+        res();
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); res(); };
+      img.src = url;
+    });
+  }
+
+  // ── MÁSCARA BLUR (Canvas 2D backdrop-blur emulado) ───────
+  async function _drawMascaraBlur(ctx, layer, formatName, W, H) {
+    if (!layer.src) return;
+    const cv = ctx.canvas;
+    const physW = cv.width;
+    const physH = cv.height;
+    const physScale = physW / W;
+
+    const tmp1 = document.createElement('canvas');
+    tmp1.width  = physW;
+    tmp1.height = physH;
+    tmp1.getContext('2d').drawImage(cv, 0, 0);
+
+    const tmp2 = document.createElement('canvas');
+    tmp2.width  = physW;
+    tmp2.height = physH;
+    const t2 = tmp2.getContext('2d');
+    const blurPx = 14 * (physW / 3840);
+    t2.filter = `blur(${blurPx}px)`;
+    t2.drawImage(tmp1, 0, 0);
+    t2.filter = 'none';
+
+    const p = State.formatParams?.[formatName]?.[layer.id] || {};
+    const sx = (p.scaleX ?? 100) / 100;
+    const sy = (p.scaleY ?? 100) / 100;
+    const iw = (layer.naturalWidth  || 200) * sx;
+    const ih = (layer.naturalHeight || 200) * sy;
+    const cx = W / 2 + (p.x ?? 0);
+    const cy = H / 2 + (p.y ?? 0);
+    const maskX = (cx - iw / 2) * physScale;
+    const maskY = (cy - ih / 2) * physScale;
+    const maskW = iw * physScale;
+    const maskH = ih * physScale;
+
+    await new Promise(res => {
+      const maskImg = new Image();
+      maskImg.onload = () => {
+        t2.globalCompositeOperation = 'destination-in';
+        t2.drawImage(maskImg, maskX, maskY, maskW, maskH);
+        res();
+      };
+      maskImg.onerror = () => res();
+      maskImg.src = layer.src;
+    });
+
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.drawImage(tmp2, 0, 0);
+    ctx.restore();
+  }
+
   async function _drawLayer(ctx, layer, formatName, W, H) {
+    if (layer.isMascaraBlur) {
+      return await _drawMascaraBlur(ctx, layer, formatName, W, H);
+    }
+
     const p   = State.formatParams?.[formatName]?.[layer.id] || {};
     const sx  = (p.scaleX  ?? 100) / 100;
     const sy  = (p.scaleY  ?? 100) / 100;
     const rot = ((p.rotation ?? 0) * Math.PI) / 180;
     const op  = (layer.params?.opacity ?? 100) / 100;
+    // Blend mode: 'normal' en CSS = 'source-over' en canvas
+    const blend = (!layer.blendMode || layer.blendMode === 'normal') ? 'source-over' : layer.blendMode;
 
     // ── MÁSCARA SIL ───────────────────────────────────────
     const fmtSize    = State.formatSizes[formatName];
@@ -246,16 +411,19 @@ const VerTodas = (() => {
       }
       ctx.save();
       ctx.globalAlpha = op;
+      ctx.globalCompositeOperation = blend;
       await _drawImage(ctx, layer.src, posX, posY, drawW, drawH);
       ctx.restore();
       return;
     }
 
-    const cx = W / 2 + (p.x ?? 0);
-    const cy = H / 2 + (p.y ?? 0);
+    let cx = W / 2 + (p.x ?? 0);
+    let cy = H / 2 + (p.y ?? 0);
+    if (layer.type === 'text') { cx = Math.round(cx); cy = Math.round(cy); }
 
     ctx.save();
     ctx.globalAlpha = Math.max(0, Math.min(1, op));
+    ctx.globalCompositeOperation = blend;
 
     // Filtros CSS → canvas (solo blur, brightness, contrast, saturation)
     const filters = [];
@@ -288,16 +456,25 @@ const VerTodas = (() => {
       const c1 = _rgba(gp.color1, gp.alpha1);
       const c2 = _rgba(gp.color2, gp.alpha2);
       let grad;
+      let s1 = 0, s2 = 100;
       if (gp.type === 'radial') {
-        grad = ctx.createRadialGradient(0, 0, 0, 0, 0, Math.max(gw, gh) / 2);
+        const offX = ((gp.cx ?? 50) - 50) / 100 * gw;
+        const offY = ((gp.cy ?? 50) - 50) / 100 * gh;
+        const rPx  = (gp.radius ?? 100) / 100 * Math.max(gw, gh);
+        grad = ctx.createRadialGradient(offX, offY, 0, offX, offY, rPx);
       } else {
         const ang = ((gp.angle - 90) * Math.PI) / 180;
         const dx  = Math.cos(ang) * gw / 2;
         const dy  = Math.sin(ang) * gh / 2;
         grad = ctx.createLinearGradient(-dx, -dy, dx, dy);
+        if (typeof Canvas !== 'undefined' && Canvas.calcGradientStops) {
+          const stops = Canvas.calcGradientStops(gp, layer.naturalWidth || W, layer.naturalHeight || H);
+          s1 = stops.s1;
+          s2 = stops.s2;
+        }
       }
-      grad.addColorStop(0, c1);
-      grad.addColorStop(1, c2);
+      grad.addColorStop(Math.max(0, Math.min(1, s1/100)), c1);
+      grad.addColorStop(Math.max(0, Math.min(1, s2/100)), c2);
       ctx.fillStyle = grad;
       ctx.fillRect(-gw/2, -gh/2, gw, gh);
 
@@ -315,6 +492,7 @@ const VerTodas = (() => {
       ctx.scale(sx, sy);
       ctx.textBaseline  = 'middle';
       ctx.letterSpacing = tracking + 'em';
+      if ('textRendering' in ctx) ctx.textRendering = 'geometricPrecision';
       // Calcular lineH por línea (tamaño mayor de cada línea * leading)
       const lineHeights = lineRuns.map(lr => {
         const maxSz = lr.length > 0 ? Math.max(...lr.map(r => r.size || sz)) : sz;
@@ -336,7 +514,7 @@ const VerTodas = (() => {
 
       lineRuns.forEach((lr, i) => {
         const lh   = lineHeights[i];
-        const lineY = currentY + lh / 2;
+        const lineY = Math.round(currentY + lh / 2);
         currentY += lh;
         const lw     = lineWidths[i];
         // xStart: ajustar según alineación para coincidir con viewport
@@ -344,6 +522,7 @@ const VerTodas = (() => {
         let   xStart = align === 'center' ? -lw / 2
                       : align === 'right'  ? -lw
                       : 0;
+        xStart = Math.round(xStart);
         for (const r of lr) {
           const rsz = r.size || sz;
           ctx.font      = `${r.style||'normal'} ${r.weight||'400'} ${rsz}px '${r.family||'Apercu Movistar'}', Arial, sans-serif`;
@@ -377,6 +556,7 @@ const VerTodas = (() => {
         ctx.restore();
         ctx.save();
         ctx.globalAlpha = op;
+        ctx.globalCompositeOperation = blend;
         if (filters.length) ctx.filter = filters.join(' ');
         ctx.drawImage(tmp, 0, 0, W, H, 0, 0, W, H);
       } else {

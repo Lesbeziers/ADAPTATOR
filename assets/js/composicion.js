@@ -26,7 +26,13 @@ const Composicion = (() => {
 
       const visibleLayers = [...State.layers]
         .reverse()
-        .filter(l => l.isTitleLayer || l.exclusiveFormat === MASTER_FORMAT);
+        .filter(l => {
+          if (l.isTitleLayer) {
+            const fmtVisible = State.formatParams?.[MASTER_FORMAT]?.[l.id]?.visible;
+            return fmtVisible !== false;
+          }
+          return l.exclusiveFormat === MASTER_FORMAT;
+        });
 
       const cv  = document.createElement('canvas');
       cv.width  = W;
@@ -135,6 +141,12 @@ const Composicion = (() => {
           const totalH  = lineHeights.reduce((a, b) => a + b, 0);
           let currentY  = -totalH / 2;
 
+          // Ajuste de origen según alineación:
+          // p.x guarda el borde izquierdo (left), centro (center) o borde derecho (right)
+          // pero cx siempre usa p.x como centro → corregir con offset
+          if (align === 'left')  drawCtx.translate( textW / 2, 0);
+          if (align === 'right') drawCtx.translate(-textW / 2, 0);
+
           lineRuns.forEach((lr, i) => {
             const lh    = lineHeights[i];
             const lineY = currentY + lh / 2;
@@ -235,6 +247,29 @@ const Composicion = (() => {
           // Ruido = 0 pero useTemp estaba activo (no debería pasar, por si acaso)
           ctx.drawImage(tempCv, 0, 0);
         }
+      }
+
+      // Pastilla Freemium (solo si layout es Freemium)
+      if (typeof Layout !== 'undefined' && Layout.isFreemium() && typeof Pastilla !== 'undefined') {
+        const src  = Pastilla.getFreemiumSrc();
+        const _fmt = typeof State !== 'undefined' && State.activeFormat;
+      const _presetPF = typeof Layout !== 'undefined' && Layout.getPreset && Layout.getPreset(_fmt);
+      const posY = (_presetPF && _presetPF['PASTILLA_FREEMIUM']?.y) ?? 95;
+        await new Promise(res => {
+          const img = new Image();
+          img.crossOrigin = 'anonymous';
+          img.onload = () => {
+            const targetH = (_presetPF && _presetPF['PASTILLA_FREEMIUM']?.pastillaH) ?? 61;
+            const sh = targetH;
+            const sw = (img.naturalWidth || 705) / (img.naturalHeight || 61) * targetH;
+            const px = W / 2 - sw / 2;
+            const py = H / 2 + posY - sh / 2;
+            ctx.drawImage(img, px, py, sw, sh);
+            res();
+          };
+          img.onerror = res;
+          img.src = src;
+        });
       }
 
       // comp.src     → sin pastilla (todos los formatos excepto MUX4 FONDO)
@@ -355,7 +390,13 @@ const ComposicionMovil = (() => {
 
       const visibleLayers = [...State.layers]
         .reverse()
-        .filter(l => l.isTitleLayer || l.exclusiveFormat === MASTER_FORMAT);
+        .filter(l => {
+          if (l.isTitleLayer) {
+            const fmtVisible = State.formatParams?.[MASTER_FORMAT]?.[l.id]?.visible;
+            return fmtVisible !== false;
+          }
+          return l.exclusiveFormat === MASTER_FORMAT;
+        });
 
       const cv  = document.createElement('canvas');
       cv.width  = W;
@@ -462,6 +503,12 @@ const ComposicionMovil = (() => {
           const totalH  = lineHeights.reduce((a, b) => a + b, 0);
           let currentY  = -totalH / 2;
 
+          // Ajuste de origen según alineación:
+          // p.x guarda el borde izquierdo (left), centro (center) o borde derecho (right)
+          // pero cx siempre usa p.x como centro → corregir con offset
+          if (align === 'left')  drawCtx.translate( textW / 2, 0);
+          if (align === 'right') drawCtx.translate(-textW / 2, 0);
+
           lineRuns.forEach((lr, i) => {
             const lh    = lineHeights[i];
             const lineY = currentY + lh / 2;
@@ -540,6 +587,29 @@ const ComposicionMovil = (() => {
         } else if (useTemp) {
           ctx.drawImage(tempCv, 0, 0);
         }
+      }
+
+      // Pastilla Freemium en MOVIL TXT
+      if (typeof Layout !== 'undefined' && Layout.isFreemium() && typeof Pastilla !== 'undefined') {
+        const src  = Pastilla.getFreemiumSrc();
+        // Usar siempre MOVIL TXT como referencia para el preset de la pastilla
+        const _presetPF = typeof Layout !== 'undefined' && Layout.getPreset && Layout.getPreset('MOVIL TXT');
+      const posY = (_presetPF && _presetPF['PASTILLA_FREEMIUM']?.y) ?? 95;
+        await new Promise(res => {
+          const img = new Image();
+          img.crossOrigin = 'anonymous';
+          img.onload = () => {
+            const targetH = (_presetPF && _presetPF['PASTILLA_FREEMIUM']?.pastillaH) ?? 61;
+            const sh = targetH;
+            const sw = (img.naturalWidth || 705) / (img.naturalHeight || 61) * targetH;
+            const px = W / 2 - sw / 2;
+            const py = H / 2 + posY - sh / 2;
+            ctx.drawImage(img, px, py, sw, sh);
+            res();
+          };
+          img.onerror = res;
+          img.src = src;
+        });
       }
 
       const dataUrl = cv.toDataURL('image/png');
@@ -632,7 +702,13 @@ const ComposicionAmazon = (() => {
 
       const visibleLayers = [...State.layers]
         .reverse()
-        .filter(l => l.isTitleLayer || l.exclusiveFormat === MASTER_FORMAT);
+        .filter(l => {
+          if (l.isTitleLayer) {
+            const fmtVisible = State.formatParams?.[MASTER_FORMAT]?.[l.id]?.visible;
+            return fmtVisible !== false;
+          }
+          return l.exclusiveFormat === MASTER_FORMAT;
+        });
 
       const cv  = document.createElement('canvas');
       cv.width  = W;

@@ -51,6 +51,13 @@ const Canvas = (() => {
       render();
     });
 
+    // Re-render cuando las fuentes custom (Apercu, Movistar, Abolition…)
+    // terminan de cargar — sin esto, `el.offsetWidth/Height` mide texto con
+    // Arial fallback la primera vez y la posición/alineación queda mal.
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(() => render()).catch(() => {});
+    }
+
     _injectNoiseFilter();
     _bindArrowKeys();
     _initMarcaIplus();
@@ -87,6 +94,75 @@ const Canvas = (() => {
       if (typeof Layers !== 'undefined') Layers.render();
       render();
     };
+    img.onerror = () => console.error(`[Canvas] No se pudo cargar la marca IPLUS (${src}). El formato IPLUS PUBLI no mostrará la marca.`);
+    img.src = src;
+  }
+
+  function _initMascaraBlur() {
+    if (State.layers.find(l => l.isMascaraBlur)) return;
+    const src = 'assets/img/mascara_Blur_Fanart_MODN.png';
+    const img = new Image();
+    img.onload = () => {
+      if (State.layers.find(l => l.isMascaraBlur)) return;
+      const tmp = document.createElement('canvas');
+      tmp.width  = img.naturalWidth;
+      tmp.height = img.naturalHeight;
+      tmp.getContext('2d').drawImage(img, 0, 0);
+      const dataUrl = tmp.toDataURL('image/png');
+      const layer = {
+        id:               'layer_mascara_blur',
+        name:             'MÁSCARA BLUR',
+        isMascaraBlur:    true,
+        visible:          true,
+        src:              dataUrl,
+        naturalWidth:     img.naturalWidth,
+        naturalHeight:    img.naturalHeight,
+        params: { opacity: 100, blur: 0, noise: 0, brightness: 0, contrast: 0, saturation: 0, tintAmount: 0, tintColor: '#000000' },
+      };
+      // Insertar justo después de MOLDURA si existe (queda bajo MOLDURA, encima del resto)
+      const moldIdx = State.layers.findIndex(l => l.isMolduraFanart);
+      if (moldIdx >= 0) State.layers.splice(moldIdx + 1, 0, layer);
+      else State.layers.unshift(layer);
+      // Posicionar a 1920×1080 (PNG es 3840×2160 → 50%)
+      if (!State.formatParams['FANART MOD N']) State.formatParams['FANART MOD N'] = {};
+      State.formatParams['FANART MOD N'][layer.id] = { x: 0, y: 0, scaleX: 50, scaleY: 50, rotation: 0 };
+      if (typeof Layers !== 'undefined') Layers.render();
+      render();
+    };
+    img.onerror = () => console.error(`[Canvas] No se pudo cargar la máscara blur (${src}). FANART MOD N quedará sin difuminado.`);
+    img.src = src;
+  }
+
+  function _initMolduraFanart() {
+    if (State.layers.find(l => l.isMolduraFanart)) return;
+    const src = 'assets/img/moldura_fanart_MODN.png';
+    const img = new Image();
+    img.onload = () => {
+      if (State.layers.find(l => l.isMolduraFanart)) return;
+      const tmp = document.createElement('canvas');
+      tmp.width  = img.naturalWidth;
+      tmp.height = img.naturalHeight;
+      tmp.getContext('2d').drawImage(img, 0, 0);
+      const dataUrl = tmp.toDataURL('image/png');
+      const layer = {
+        id:               'layer_moldura_fanart',
+        name:             'MOLDURA',
+        isMolduraFanart:  true,
+        visible:          true,
+        blendMode:        'multiply',
+        src:              dataUrl,
+        naturalWidth:     img.naturalWidth,
+        naturalHeight:    img.naturalHeight,
+        params: { opacity: 100, blur: 0, noise: 0, brightness: 0, contrast: 0, saturation: 0, tintAmount: 0, tintColor: '#000000' },
+      };
+      State.layers.unshift(layer); // siempre arriba (z-index máximo)
+      // Escalar 3840×2160 → 1920×1080 (50%) y centrar
+      if (!State.formatParams['FANART MOD N']) State.formatParams['FANART MOD N'] = {};
+      State.formatParams['FANART MOD N'][layer.id] = { x: 0, y: 0, scaleX: 50, scaleY: 50, rotation: 0 };
+      if (typeof Layers !== 'undefined') Layers.render();
+      render();
+    };
+    img.onerror = () => console.error(`[Canvas] No se pudo cargar la moldura FANART (${src}). FANART MOD N quedará sin marco.`);
     img.src = src;
   }
 
@@ -119,6 +195,7 @@ const Canvas = (() => {
       if (typeof Layers !== 'undefined') Layers.render();
       render();
     };
+    img.onerror = () => console.error(`[Canvas] No se pudo cargar la marca SONY (${src}). El formato SONY no mostrará la marca.`);
     img.src = src;
   }
 
@@ -171,11 +248,18 @@ const Canvas = (() => {
   function _updateLienzo() {
     if (!State.activeFormat) {
       _lienzo.style.display = 'none';
+      const mb = document.getElementById('canvas-mockup-btn');
+      if (mb) mb.style.display = 'none';
       return;
     }
 
     const size = State.formatSizes[State.activeFormat];
-    if (!size) { _lienzo.style.display = 'none'; return; }
+    if (!size) {
+      _lienzo.style.display = 'none';
+      const mb = document.getElementById('canvas-mockup-btn');
+      if (mb) mb.style.display = 'none';
+      return;
+    }
 
     // Si el formato tiene contexto visual (ej: AD PAUSE), el lienzo muestra el contexto completo
     const dc = size.displayContext;
@@ -206,6 +290,7 @@ const Canvas = (() => {
         _contentClip.id = 'content-clip';
         _lienzo.appendChild(_contentClip);
       }
+      const _greenBg = (typeof Export !== 'undefined' && !Export.isPngFormat(State.activeFormat)) ? '#00ff12' : 'transparent';
       _contentClip.style.cssText = `
         position: absolute;
         left: ${Math.round(dc.contentX * _scale)}px;
@@ -214,6 +299,7 @@ const Canvas = (() => {
         height: ${Math.round(clipH * _scale)}px;
         overflow: hidden;
         z-index: 1;
+        background: ${_greenBg};
       `;
     } else {
       _contentScaleX  = 1;
@@ -235,7 +321,95 @@ const Canvas = (() => {
     _lienzo.style.left    = Math.round((_area.clientWidth  - _lienzoW) / 2) + 'px';
     _lienzo.style.top     = Math.round((_area.clientHeight - _lienzoH) / 2) + 'px';
 
+    // Fondo verde "chivato" — solo cuando no hay displayContext (con dc lo lleva _contentClip)
+    // y solo para formatos que se exportan como JPG (los PNG llevan transparencia).
+    const _isPng = typeof Export !== 'undefined' && Export.isPngFormat(State.activeFormat);
+    _lienzo.style.background = (!dc && !_isPng) ? '#00ff12' : 'transparent';
+
     // ── Botón OK flotante ─────────────────────────────────────
+    // OK se añade dentro de auto-controls (se crea allí abajo)
+
+    let ccBtn = document.getElementById('canvas-cc-btn');
+    if (!ccBtn) {
+      ccBtn = document.createElement('button');
+      ccBtn.id = 'canvas-cc-btn';
+      _area.appendChild(ccBtn);
+      ccBtn.addEventListener('click', _copyToCartelCom);
+    }
+
+    // Contenedor de botones de maquetación automática
+    if (!document.getElementById('canvas-auto-controls')) {
+      const controls = document.createElement('div');
+      controls.id = 'canvas-auto-controls';
+      _area.appendChild(controls);
+
+      const autoBtn = document.createElement('button');
+      autoBtn.id = 'canvas-auto-btn';
+      autoBtn.textContent = 'AUTO';
+      autoBtn.title = 'Resetear a maquetación automática';
+      controls.appendChild(autoBtn);
+      autoBtn.addEventListener('click', () => {
+        if (typeof AutoLayout !== 'undefined' && State.activeFormat) {
+          AutoLayout.resetFormat(State.activeFormat);
+          _updateAutoButtons();
+        }
+      });
+
+      const fitBtn = document.createElement('button');
+      fitBtn.id = 'canvas-fit-btn';
+      controls.appendChild(fitBtn);
+      fitBtn.addEventListener('click', () => {
+        if (typeof AutoLayout !== 'undefined' && State.activeFormat) {
+          AutoLayout.toggleScaleMode(State.activeFormat);
+          _updateAutoButtons();
+        }
+      });
+
+
+
+      // Botón EDITAR COLECCIÓN (solo MOD N) — mismo contenedor, reemplaza AUTO/CROP/variantes
+      const modnBtn = document.createElement('button');
+      modnBtn.id = 'canvas-modn-btn';
+      modnBtn.textContent = 'EDITAR COLECCIÓN';
+      controls.appendChild(modnBtn);
+      modnBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (typeof ModNEditor !== 'undefined') ModNEditor.toggleModal(modnBtn);
+      });
+
+      // Dropdown de variantes
+      const variantWrap = document.createElement('div');
+      variantWrap.id = 'canvas-variant-wrap';
+      controls.appendChild(variantWrap);
+
+      const variantBtn = document.createElement('button');
+      variantBtn.id = 'canvas-variant-btn';
+      variantBtn.textContent = 'VARIANTE A ▾';
+      variantWrap.appendChild(variantBtn);
+
+      const variantMenu = document.createElement('div');
+      variantMenu.id = 'canvas-variant-menu';
+      variantMenu.style.position = 'fixed';
+      variantMenu.style.zIndex   = '999999';
+      document.body.appendChild(variantMenu);
+
+      variantBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        const isOpen = variantMenu.style.display === 'flex';
+        if (!isOpen) {
+          const r = variantBtn.getBoundingClientRect();
+          variantMenu.style.top      = r.bottom + 'px';
+          variantMenu.style.left     = r.left + 'px';
+          variantMenu.style.minWidth      = r.width + 'px';
+          variantMenu.style.width         = 'fit-content';
+          variantMenu.style.flexDirection = 'column';
+        }
+        variantMenu.style.display = isOpen ? 'none' : 'flex';
+      });
+      document.addEventListener('click', () => { variantMenu.style.display = 'none'; });
+    }
+
+    // Botón OK — siempre visible, independiente del auto-layout
     let okBtn = document.getElementById('canvas-ok-btn');
     if (!okBtn) {
       okBtn = document.createElement('button');
@@ -248,18 +422,139 @@ const Canvas = (() => {
       });
     }
 
-    let ccBtn = document.getElementById('canvas-cc-btn');
-    if (!ccBtn) {
-      ccBtn = document.createElement('button');
-      ccBtn.id = 'canvas-cc-btn';
-      _area.appendChild(ccBtn);
-      ccBtn.addEventListener('click', _copyToCartelCom);
-    }
-
     _updateOkBtn();
+
+    // Botón GENERAR MOCKUP — visible solo en formatos con capa mockup real
+    let mockupBtn = document.getElementById('canvas-mockup-btn');
+    if (!mockupBtn) {
+      mockupBtn = document.createElement('button');
+      mockupBtn.id = 'canvas-mockup-btn';
+      mockupBtn.textContent = 'GENERAR MOCKUP';
+      _area.appendChild(mockupBtn);
+      mockupBtn.addEventListener('click', () => {
+        if (typeof Export !== 'undefined' && State.activeFormat) {
+          Export.generateMockup(State.activeFormat);
+        }
+      });
+    }
+    _updateMockupBtn();
 
     const label = document.getElementById('lienzo-label');
     if (label) label.textContent = `${size.w} × ${size.h} px`;
+  }
+
+  function _updateMockupBtn() {
+    const btn = document.getElementById('canvas-mockup-btn');
+    if (!btn) return;
+    const fmt = State.activeFormat;
+    const show = fmt && typeof Export !== 'undefined' && Export.isMockupFormat?.(fmt);
+    if (!show) { btn.style.display = 'none'; return; }
+    btn.style.display = 'inline-flex';
+
+    // Alinear horizontalmente con "GUARDAR PROYECTO" del topbar (mismo ancho y X exacto)
+    const guardarBtn = document.getElementById('btn-guardar');
+    if (guardarBtn && _area) {
+      const gRect = guardarBtn.getBoundingClientRect();
+      const aRect = _area.getBoundingClientRect();
+      btn.style.right = 'auto';
+      btn.style.left  = Math.round(gRect.left - aRect.left) + 'px';
+      btn.style.width = Math.round(gRect.width) + 'px';
+    }
+  }
+
+  function _updateAutoButtons() {
+    const fmt       = State.activeFormat;
+    const hasConfig = fmt && typeof AutoLayout !== 'undefined' && AutoLayout.hasConfig(fmt);
+    const hasRoles  = State.layerRoles && Object.values(State.layerRoles).some(r => r);
+    const show      = hasConfig && hasRoles;
+
+    const controls  = document.getElementById('canvas-auto-controls');
+    const autoBtn   = document.getElementById('canvas-auto-btn');
+    const fitBtn    = document.getElementById('canvas-fit-btn');
+    const mirrorBtn = document.getElementById('canvas-mirror-btn');
+    const modnBtn   = document.getElementById('canvas-modn-btn');
+    const variantWrapEl = document.getElementById('canvas-variant-wrap');
+    const isModN = fmt === 'MOD N';
+
+    if (controls) {
+      controls.classList.toggle('visible', show);
+      if (show) {
+        requestAnimationFrame(() => {
+          const topbarRight = document.getElementById('topbar-right');
+          const okBtn = document.getElementById('canvas-ok-btn');
+          if (topbarRight && okBtn) {
+            const okW    = okBtn.offsetWidth || 127;
+            const totalW = topbarRight.offsetWidth;
+            controls.style.width = (totalW - okW - 8) + 'px';
+            controls.style.right = (okW + 14) + 'px';
+          }
+        });
+      }
+    }
+    // En MOD N: ocultar AUTO/CROP/variantes y mostrar solo "EDITAR COLECCIÓN"
+    if (autoBtn)        autoBtn.style.display        = isModN ? 'none' : '';
+    if (fitBtn)         fitBtn.style.display         = isModN ? 'none' : '';
+    if (variantWrapEl)  variantWrapEl.style.display  = isModN ? 'none' : '';
+    if (modnBtn)        modnBtn.style.display        = isModN ? '' : 'none';
+    if (!show) return;
+    if (isModN) return;
+
+    // PERFIL: AUTO y CROP no tienen función — deshabilitar
+    const isPerfil = fmt === 'PERFIL';
+    if (autoBtn) {
+      autoBtn.disabled = isPerfil;
+      autoBtn.style.opacity = isPerfil ? '0.25' : '';
+      autoBtn.style.cursor  = isPerfil ? 'default' : '';
+    }
+
+    if (fitBtn && typeof AutoLayout !== 'undefined') {
+      const mode = AutoLayout.getScaleMode(fmt);
+      fitBtn.textContent = mode === 'crop' ? 'CROP' : 'FIT';
+      fitBtn.classList.toggle('done', mode !== 'crop');
+      fitBtn.disabled = isPerfil;
+      fitBtn.style.opacity = isPerfil ? '0.25' : '';
+      fitBtn.style.cursor  = isPerfil ? 'default' : '';
+    }
+
+
+    // Dropdown de variantes
+    const variantWrap = document.getElementById('canvas-variant-wrap');
+    const variantBtn  = document.getElementById('canvas-variant-btn');
+    const variantMenu = document.getElementById('canvas-variant-menu');
+    if (variantWrap && variantBtn && variantMenu && typeof AutoLayout !== 'undefined') {
+      const variants = AutoLayout.getVariants(fmt);
+      variantWrap.style.display = variants ? 'block' : 'none';
+      if (variants) {
+        const keys = Object.keys(variants);
+        const isSingle = keys.length <= 1;
+        const currentVariant = AutoLayout.getVariant(fmt);
+
+        // Botón deshabilitado si solo hay una variante
+        variantBtn.textContent = isSingle ? 'VARIANTE' : `VARIANTE ${currentVariant} ▾`;
+        variantBtn.style.opacity = isSingle ? '0.25' : '1';
+        variantBtn.style.cursor  = isSingle ? 'default' : 'pointer';
+        variantBtn.style.pointerEvents = isSingle ? 'none' : 'auto';
+
+        variantMenu.innerHTML = '';
+        if (!isSingle) {
+          Object.entries(variants).forEach(([key, v]) => {
+            const opt = document.createElement('div');
+            const isActive = key === currentVariant;
+            opt.style.cssText = `padding:7px 12px;font-size:10px;font-family:var(--font);letter-spacing:0.06em;text-transform:uppercase;cursor:pointer;white-space:nowrap;color:${isActive ? 'var(--col-yellow)' : '#ccc'};background:${isActive ? 'rgba(240,165,0,0.08)' : 'transparent'};`;
+            opt.textContent = `${key} — ${v.label}`;
+            opt.addEventListener('mouseenter', () => { opt.style.background = 'rgba(255,255,255,0.07)'; });
+            opt.addEventListener('mouseleave', () => { opt.style.background = isActive ? 'rgba(240,165,0,0.08)' : 'transparent'; });
+            opt.addEventListener('click', e => {
+              e.stopPropagation();
+              variantMenu.style.display = 'none';
+              AutoLayout.setVariant(fmt, key);
+              _updateAutoButtons();
+            });
+            variantMenu.appendChild(opt);
+          });
+        }
+      }
+    }
   }
 
   function _updateOkBtn() {
@@ -268,6 +563,7 @@ const Canvas = (() => {
     const isDone = State.activeFormat && State.formatOk?.[State.activeFormat];
     okBtn.classList.toggle('done', !!isDone);
     okBtn.style.display = State.activeFormat ? 'block' : 'none';
+    _updateAutoButtons();
 
     const ccBtn = document.getElementById('canvas-cc-btn');
     if (!ccBtn) return;
@@ -309,8 +605,15 @@ const Canvas = (() => {
     if (!State.formatParams[dstFormat]) State.formatParams[dstFormat] = {};
 
     State.layers.forEach(layer => {
-      const src = State.formatParams?.[srcFormat]?.[layer.id];
-      if (!src) return;
+      // Excluir capas exclusivas de OTROS formatos (no se ven en CARÁTULA → no se copian).
+      // Sin esto, se mutaba textParams.size globalmente de capas como TÍTULO de MOD N.
+      if (layer.exclusiveFormat && layer.exclusiveFormat !== srcFormat) return;
+      // Excluir también capas sistémicas que no aplican a CARÁTULA/CARTEL COM.
+      if (layer.isMolduraFanart || layer.isMascaraBlur || layer.isMarcaIplus || layer.isMarcaSony) return;
+
+      const src = State.formatParams?.[srcFormat]?.[layer.id] ?? {
+        x: 0, y: 0, scaleX: 100, scaleY: 100, rotation: 0, visible: true
+      };
 
       State.formatParams[dstFormat][layer.id] = {
         x:        Math.round((src.x || 0) * scaleX),
@@ -350,6 +653,12 @@ const Canvas = (() => {
   function render() {
     if (!_area || !_lienzo) return;
 
+    // Cargar capas sistémicas al entrar en FANART MOD N (idempotente)
+    if (State.activeFormat === 'FANART MOD N') {
+      _initMolduraFanart();
+      _initMascaraBlur();
+    }
+
     _updateLienzo();
 
     if (!State.activeFormat) {
@@ -376,6 +685,12 @@ const Canvas = (() => {
         } else if (layer.type === 'gradient') {
           el = document.createElement('div');
           el.className = 'canvas-layer canvas-gradient-layer';
+        } else if (layer.isMascaraBlur) {
+          // Capa especial: backdrop-filter blur con máscara alfa.
+          // Sin <img> hijo: el PNG actúa como mask-image.
+          el = document.createElement('div');
+          el.className = 'canvas-layer canvas-mascara-blur';
+          el.style.cssText = 'position:absolute;pointer-events:none;';
         } else {
           el = document.createElement('div');
           el.className = 'canvas-layer';
@@ -420,12 +735,33 @@ const Canvas = (() => {
         layer.naturalHeight   = layer.solidParams.height;
       }
 
+      // ── MÁSCARA BLUR (backdrop-filter + mask-image) ───────
+      if (layer.isMascaraBlur && layer.src) {
+        // 14px @ 3840 = 7px @ 1920 nativo, escalado por display _scale
+        const blurDisplayPx = 7 * _scale * _contentScaleX;
+        el.style.backdropFilter        = `blur(${blurDisplayPx}px)`;
+        el.style.webkitBackdropFilter  = `blur(${blurDisplayPx}px)`;
+        el.style.maskImage             = `url("${layer.src}")`;
+        el.style.webkitMaskImage       = `url("${layer.src}")`;
+        el.style.maskMode              = 'alpha';
+        el.style.webkitMaskMode        = 'alpha';
+        el.style.maskSize              = '100% 100%';
+        el.style.webkitMaskSize        = '100% 100%';
+        el.style.maskRepeat            = 'no-repeat';
+        el.style.webkitMaskRepeat      = 'no-repeat';
+      }
+
       if (layer.type === 'gradient' && layer.gradientParams) {
         const gp = layer.gradientParams;
         const c1 = _hexToRgba(gp.color1, gp.alpha1);
         const c2 = _hexToRgba(gp.color2, gp.alpha2);
         if (gp.type === 'radial') {
-          el.style.background = `radial-gradient(circle, ${c1} 0%, ${c2} 100%)`;
+          const cx = gp.cx ?? 50;
+          const cy = gp.cy ?? 50;
+          const nw = layer.naturalWidth  || 1920;
+          const nh = layer.naturalHeight || 1080;
+          const rPx = (gp.radius ?? 100) / 100 * Math.max(nw, nh);
+          el.style.background = `radial-gradient(circle ${rPx}px at ${cx}% ${cy}%, ${c1} 0%, ${c2} 100%)`;
         } else {
           const stops = _calcGradientStops(gp, layer.naturalWidth || 1920, layer.naturalHeight || 1080);
           el.style.background = `linear-gradient(${gp.angle}deg, ${c1} ${stops.s1}%, ${c2} ${stops.s2}%)`;
@@ -440,16 +776,25 @@ const Canvas = (() => {
         // Estilos globales del contenedor
         el.style.fontSize    = (tp.size * _scale * _contentScaleX) + 'px';
         el.style.textAlign   = tp.align || 'left';
-        el.style.whiteSpace  = 'pre-wrap';
+        // En edición usamos `pre` (sin wrap automático, solo \n manual).
+        // Fuera de edición `pre-wrap` para que respete maxWidth si el contenido excede.
+        el.style.whiteSpace  = _isEditing ? 'pre' : 'pre-wrap';
         el.style.lineHeight  = (tp.leading ?? 120) + '%';
         el.style.letterSpacing = ((tp.tracking ?? 0) * 0.001) + 'em';
         el.style.userSelect  = 'none';
         el.style.padding     = '2px';
-        el.style.fontFamily  = ''; // los spans lo llevan inline
-        el.style.color       = '';
+        // Fallback para texto bare (sin span) — los spans tienen estilo inline y ganan.
+        // Necesario en edit mode: si el navegador inserta texto sin envolver, hereda estos valores.
+        const _firstRun = (tp.runs || [])[0];
+        el.style.fontFamily  = _firstRun ? `'${_firstRun.family}', Arial, sans-serif` : '';
+        el.style.fontWeight  = _firstRun?.weight || '';
+        el.style.fontStyle   = _firstRun?.style  || '';
+        el.style.color       = _firstRun?.color  || '';
         const _contentW = _contentClip ? parseInt(_contentClip.style.width) : _lienzoW;
-        el.style.width    = _isEditing ? _contentW + 'px' : 'max-content';
-        el.style.maxWidth = _contentW + 'px';
+        // En edición: max-content y sin maxWidth para que la caja crezca sin wrap automático
+        // (el wrap solo ocurre con saltos de línea explícitos del usuario).
+        el.style.width    = 'max-content';
+        el.style.maxWidth = _isEditing ? 'none' : _contentW + 'px';
         el.style.height   = '';
 
         if (!_isEditing && typeof TextLayers !== 'undefined') {
@@ -475,7 +820,7 @@ const Canvas = (() => {
       let isVisible;
 
       if (layer.isTitleLayer) {
-        if (State.activeFormat === 'MUX4 TXT' || State.activeFormat === 'MOVIL TXT' || State.activeFormat === 'TÍTULO FICHA' || State.activeFormat === 'CARÁTULA H' || State.activeFormat === 'CARÁTULA V' || State.activeFormat === 'CARTEL COM. H' || State.activeFormat === 'CARTEL COM. V' || State.activeFormat === 'AMAZON LOGO' || State.activeFormat === 'SONY') {
+        if (State.activeFormat === 'MUX4 TXT' || State.activeFormat === 'MOVIL TXT' || State.activeFormat === 'TÍTULO FICHA' || State.activeFormat === 'CARÁTULA H' || State.activeFormat === 'CARÁTULA V' || State.activeFormat === 'CARTEL COM. H' || State.activeFormat === 'CARTEL COM. V' || State.activeFormat === 'AMAZON LOGO' || State.activeFormat === 'SONY' || State.activeFormat === 'XIAOMI BANNER' || State.activeFormat === 'DEST. DOBLE 4' || State.activeFormat === 'DEST. DOBLE 4 SIL' || State.activeFormat === 'DEST. DOBLE 1' || State.activeFormat === 'DEST. DOBLE 1 SIL' || State.activeFormat === 'DEST. DOBLE 2' || State.activeFormat === 'DEST. DOBLE 2 SIL' || State.activeFormat === 'MOD N SIL') {
           const fmtVisible = State.formatParams?.[State.activeFormat]?.[layer.id]?.visible;
           isVisible = fmtVisible !== undefined ? fmtVisible : true;
         } else {
@@ -492,9 +837,21 @@ const Canvas = (() => {
                  && State.activeFormat !== 'CARTEL COM. V'
                  && State.activeFormat !== 'FANART'
                  && State.activeFormat !== 'FANART MÓVIL'
+                 && State.activeFormat !== 'FANART DEST.'
                  && State.activeFormat !== 'AMAZON LOGO'
                  && State.activeFormat !== 'AMAZON BG'
-                 && State.activeFormat !== 'SONY';
+                 && State.activeFormat !== 'SONY'
+                 && State.activeFormat !== 'XIAOMI BANNER'
+                 && State.activeFormat !== 'DEST. DOBLE 4'
+                 && State.activeFormat !== 'DEST. DOBLE 4 SIL'
+                 && State.activeFormat !== 'DEST. DOBLE 1'
+                 && State.activeFormat !== 'DEST. DOBLE 1 SIL'
+                 && State.activeFormat !== 'DEST. DOBLE 2'
+                 && State.activeFormat !== 'DEST. DOBLE 2 SIL'
+                 && State.activeFormat !== 'MOD N'
+                 && State.activeFormat !== 'FANART MOD N'
+                 && State.activeFormat !== 'MOD N SIL'
+                 && State.activeFormat !== 'PERFIL';
         if (isVisible) {
           const fmtVisible = State.formatParams?.[State.activeFormat]?.[layer.id]?.visible;
           isVisible = fmtVisible !== undefined ? fmtVisible : true;
@@ -507,6 +864,18 @@ const Canvas = (() => {
         }
       } else if (layer.isComposicionAmazon) {
         isVisible = State.activeFormat === 'AMAZON BG';
+        if (isVisible) {
+          const fmtVisible = State.formatParams?.[State.activeFormat]?.[layer.id]?.visible;
+          isVisible = fmtVisible !== undefined ? fmtVisible : true;
+        }
+      } else if (layer.isMolduraFanart) {
+        isVisible = State.activeFormat === 'FANART MOD N';
+        if (isVisible) {
+          const fmtVisible = State.formatParams?.[State.activeFormat]?.[layer.id]?.visible;
+          isVisible = fmtVisible !== undefined ? fmtVisible : true;
+        }
+      } else if (layer.isMascaraBlur) {
+        isVisible = State.activeFormat === 'FANART MOD N';
         if (isVisible) {
           const fmtVisible = State.formatParams?.[State.activeFormat]?.[layer.id]?.visible;
           isVisible = fmtVisible !== undefined ? fmtVisible : true;
@@ -530,7 +899,7 @@ const Canvas = (() => {
           isVisible = fmtVisible !== undefined ? fmtVisible : layer.visible;
         }
       } else {
-        if (State.activeFormat === 'MUX4 TXT' || State.activeFormat === 'MOVIL TXT' || State.activeFormat === 'TÍTULO FICHA' || State.activeFormat === 'AMAZON LOGO') {
+        if (!layer._layoutGenerated && (State.activeFormat === 'MUX4 TXT' || State.activeFormat === 'MOVIL TXT' || State.activeFormat === 'TÍTULO FICHA' || State.activeFormat === 'AMAZON LOGO')) {
           isVisible = false;
         } else {
           const fmtVisible = State.activeFormat && State.formatParams?.[State.activeFormat]?.[layer.id]?.visible;
@@ -540,7 +909,7 @@ const Canvas = (() => {
 
       el.style.display = isVisible ? 'block' : 'none';
       const isLocked = typeof Layers !== 'undefined' && Layers.getLocked(layer.id);
-      el.style.pointerEvents = (layer.isMarcaIplus || layer.isMarcaSony || layer.isComposicionMovil || layer.isComposicionAmazon || isLocked) ? 'none' : '';
+      el.style.pointerEvents = (layer.isMarcaIplus || layer.isMarcaSony || layer.isMolduraFanart || layer.isMascaraBlur || layer.isComposicionMovil || layer.isComposicionAmazon || isLocked) ? 'none' : '';
 
       if (layer.isComposicion && State.activeFormat === 'MUX4 FONDO') {
         el.classList.remove('canvas-layer-active');
@@ -551,6 +920,10 @@ const Canvas = (() => {
       } else if (layer.isMarcaSony && State.activeFormat === 'SONY') {
         el.classList.remove('canvas-layer-active');
       } else if (layer.isMarcaIplus && State.activeFormat === 'IPLUS PUBLI') {
+        el.classList.remove('canvas-layer-active');
+      } else if (layer.isMolduraFanart && State.activeFormat === 'FANART MOD N') {
+        el.classList.remove('canvas-layer-active');
+      } else if (layer.isMascaraBlur && State.activeFormat === 'FANART MOD N') {
         el.classList.remove('canvas-layer-active');
       } else {
         el.classList.toggle('canvas-layer-active', State.selectedLayerIds.includes(layer.id));
@@ -627,6 +1000,7 @@ const Canvas = (() => {
     }
 
     _renderPastilla();
+    _renderPastillaFreemium();
 
     const selLayer = State.layers.find(l => l.id === State.selectedLayerId);
     if (State.selectedLayerId && State.activeFormat &&
@@ -751,6 +1125,7 @@ const Canvas = (() => {
     }
 
     el.style.opacity = g.opacity / 100;
+    el.style.mixBlendMode = layer.blendMode || 'normal';
     el.style.left    = x + 'px';
     // Para texto: ancla en borde superior → restar la mitad de la altura para que y=0 sea centrado
     if (layer.type === 'text') {
@@ -806,6 +1181,11 @@ const Canvas = (() => {
 
   function _calcGradientStops(gp, nw, nh) {
     if (gp.x1 == null || gp.x2 == null) return { s1: 0, s2: 100 };
+    // Guard contra dimensiones degeneradas — sin esto un nw=0 produce aspect=Infinity
+    // y propaga NaN a los stops, dejando la capa pintada en negro.
+    if (!Number.isFinite(nw) || nw <= 0 || !Number.isFinite(nh) || nh <= 0) {
+      return { s1: 0, s2: 100 };
+    }
 
     const angleRad = gp.angle * Math.PI / 180;
     const sinA = Math.sin(angleRad);
@@ -1022,14 +1402,19 @@ const Canvas = (() => {
       };
 
       const onUp = () => {
+        if (!_resizing) return;
         _resizing = false;
         document.body.classList.remove('layer-dragging');
-        document.removeEventListener('mousemove', onMove);
-        document.removeEventListener('mouseup',   onUp);
+        document.removeEventListener('mousemove',     onMove);
+        document.removeEventListener('mouseup',       onUp);
+        document.removeEventListener('pointercancel', onUp);
+        window.removeEventListener('blur',            onUp);
       };
 
-      document.addEventListener('mousemove', onMove);
-      document.addEventListener('mouseup',   onUp);
+      document.addEventListener('mousemove',     onMove);
+      document.addEventListener('mouseup',       onUp);
+      document.addEventListener('pointercancel', onUp);
+      window.addEventListener('blur',            onUp);
     });
   }
 
@@ -1049,11 +1434,14 @@ const Canvas = (() => {
       }
       if (layer.type !== 'text') return;
 
+      // Capturar top visual antes de editar para preservar posición tras blur
+      const _topBeforeEdit = parseFloat(el.style.top) || 0;
+
       _editingText        = true;
       el.contentEditable  = 'true';
       el.style.cursor     = 'text';
-      el.style.whiteSpace = 'pre-wrap';
-      el.style.width      = 'auto';
+      el.style.whiteSpace = 'pre';
+      el.style.width      = 'max-content';
       el.style.maxWidth   = 'none';
       // Mantener el mismo ancla que en modo normal
       const _editAlign = layer.textParams?.align || 'left';
@@ -1081,8 +1469,36 @@ const Canvas = (() => {
           TextLayers.saveRunsFromDOM(layer, el);
           layer.naturalWidth  = el.offsetWidth  / _scale || 100;
           layer.naturalHeight = el.offsetHeight / _scale || 50;
+
+          // Sincronizar contenido entre MUX4 TXT y MOVIL TXT
+          if (layer._layoutGenerated && layer.exclusiveFormat) {
+            const otherFormat = layer.exclusiveFormat === 'MUX4 TXT' ? 'MOVIL TXT' : 'MUX4 TXT';
+            const mirror = State.layers.find(l =>
+              l._layoutGenerated &&
+              l.exclusiveFormat === otherFormat &&
+              l.name === layer.name
+            );
+            if (mirror && mirror.textParams && layer.textParams) {
+              // Copiar solo el contenido (texto de cada run), no el estilo
+              const srcRuns  = layer.textParams.runs || [];
+              const dstRuns  = mirror.textParams.runs || [];
+              srcRuns.forEach((r, i) => {
+                if (dstRuns[i]) dstRuns[i].text = r.text;
+              });
+            }
+          }
         }
         render();
+        // Compensar deriva vertical: si el alto cambió, ajustar p.y para preservar el top visual
+        const _topAfterEdit = parseFloat(el.style.top) || 0;
+        const _drift = _topAfterEdit - _topBeforeEdit;
+        if (Math.abs(_drift) > 0.5 && State.activeFormat) {
+          if (!State.formatParams[State.activeFormat]) State.formatParams[State.activeFormat] = {};
+          if (!State.formatParams[State.activeFormat][layer.id]) State.formatParams[State.activeFormat][layer.id] = _defaultParams();
+          const p = State.formatParams[State.activeFormat][layer.id];
+          p.y = (p.y || 0) - _drift / (_scale * _contentScaleY);
+          render();
+        }
         _updateHandles();
         el.removeEventListener('blur', onBlur);
         el.removeEventListener('keydown', onKeyDown);
@@ -1114,6 +1530,8 @@ const Canvas = (() => {
       if (layer?.isComposicionAmazon && State.activeFormat === 'AMAZON BG') return;
       if (layer?.isMarcaIplus && State.activeFormat === 'IPLUS PUBLI') return;
       if (layer?.isMarcaSony && State.activeFormat === 'SONY') return;
+      if (layer?.isMolduraFanart && State.activeFormat === 'FANART MOD N') return;
+      if (layer?.isMascaraBlur && State.activeFormat === 'FANART MOD N') return;
 
       e.preventDefault();
 
@@ -1190,13 +1608,21 @@ const Canvas = (() => {
       };
 
       const onUp = () => {
+        if (!_dragging) return;
         _dragging = false;
-        document.removeEventListener('mousemove', onMove);
-        document.removeEventListener('mouseup',   onUp);
+        document.removeEventListener('mousemove',     onMove);
+        document.removeEventListener('mouseup',       onUp);
+        document.removeEventListener('pointercancel', onUp);
+        window.removeEventListener('blur',            onUp);
       };
 
-      document.addEventListener('mousemove', onMove);
-      document.addEventListener('mouseup',   onUp);
+      document.addEventListener('mousemove',     onMove);
+      document.addEventListener('mouseup',       onUp);
+      // Red de seguridad: si el usuario suelta el ratón fuera de la ventana
+      // (sobre la barra de pestañas, otra app, etc.) `mouseup` no llega; sin
+      // estos listeners la capa quedaría siguiendo el cursor al volver a entrar.
+      document.addEventListener('pointercancel', onUp);
+      window.addEventListener('blur',            onUp);
     });
   }
 
@@ -1221,6 +1647,8 @@ const Canvas = (() => {
       if (selLayer?.isComposicionAmazon && State.activeFormat === 'AMAZON BG') return;
       if (selLayer?.isMarcaIplus && State.activeFormat === 'IPLUS PUBLI') return;
       if (selLayer?.isMarcaSony && State.activeFormat === 'SONY') return;
+      if (selLayer?.isMolduraFanart && State.activeFormat === 'FANART MOD N') return;
+      if (selLayer?.isMascaraBlur && State.activeFormat === 'FANART MOD N') return;
 
       const DIRS = { ArrowLeft:[-1,0], ArrowRight:[1,0], ArrowUp:[0,-1], ArrowDown:[0,1] };
       if (!DIRS[e.key]) return;
@@ -1328,6 +1756,69 @@ const Canvas = (() => {
     if (el.parentElement !== target) target.appendChild(el);
 
 
+  }
+
+  function _renderPastillaFreemium() {
+    const fid = State.activeFormat;
+    let el = _lienzo.querySelector('#canvas-pastilla-freemium');
+
+    // Solo visible en MUX4 TXT o MOVIL TXT cuando la versión es Freemium
+    const isFreemium = typeof Layout !== 'undefined' && Layout.isFreemium();
+    const isTextFormat = fid === 'MUX4 TXT' || fid === 'MOVIL TXT';
+
+    if (!isFreemium || !isTextFormat || typeof Pastilla === 'undefined') {
+      if (el) el.remove();
+      return;
+    }
+
+    const src = Pastilla.getFreemiumSrc();
+
+    if (!el) {
+      el = document.createElement('img');
+      el.id = 'canvas-pastilla-freemium';
+      el.style.position = 'absolute';
+      el.style.pointerEvents = 'none';
+      el.draggable = false;
+      el.addEventListener('load', () => _renderPastillaFreemium());
+      const target = _contentClip || _lienzo;
+      target.appendChild(el);
+    }
+
+    if (el.src !== new URL(src, location.href).href) el.src = src;
+
+    const size = State.formatSizes[fid];
+    const dc   = size?.displayContext;
+    const clipW = dc ? (dc.contentW || size.w) : size.w;
+    const clipH = dc ? (dc.contentH || size.h) : size.h;
+    const csX   = dc ? clipW / size.w : 1;
+    const csY   = dc ? clipH / size.h : 1;
+
+    // Alto configurable por preset o fijo 61px, ancho proporcional al SVG
+    const natW    = el.naturalWidth  || 705;
+    const natH    = el.naturalHeight || 61;
+    const _presetPH = typeof Layout !== 'undefined' && Layout.getPreset && Layout.getPreset(fid);
+    const targetH = (_presetPH && _presetPH['PASTILLA_FREEMIUM']?.pastillaH) ?? 61;
+    const targetW = natW / natH * targetH;
+
+    const w = targetW * _scale * csX;
+    const h = targetH * _scale * csY;
+
+    // Centrada horizontalmente, Y fija del preset
+    const _presetPastilla = typeof Layout !== 'undefined' && Layout.getPreset && Layout.getPreset(fid);
+    const posY = (_presetPastilla && _presetPastilla['PASTILLA_FREEMIUM']?.y) ?? 95;
+    const px = _contentCenterX;
+    const py = _contentCenterY + posY * _scale * csY;
+
+    el.style.zIndex    = '7600';
+    el.style.width     = w + 'px';
+    el.style.height    = h + 'px';
+    el.style.transform = 'translate(-50%, -50%)';
+    el.style.left      = px + 'px';
+    el.style.top       = py + 'px';
+
+    // Mover al contenedor correcto
+    const target = _contentClip || _lienzo;
+    if (el.parentElement !== target) target.appendChild(el);
   }
 
   function getScale() { return _scale; }
@@ -1445,5 +1936,5 @@ const Canvas = (() => {
     _initMarcaSony();
   }
 
-  return { init, render, getScale, reinitAutoLayers, align, setKeyLayer, getKeyLayerId };
+  return { init, render, getScale, reinitAutoLayers, align, setKeyLayer, getKeyLayerId, calcGradientStops: _calcGradientStops };
 })();

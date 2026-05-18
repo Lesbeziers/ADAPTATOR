@@ -13,6 +13,8 @@ document.addEventListener('DOMContentLoaded', () => {
   TextLayers.init();
   Logos.init();
   Pastilla.init();
+  Layout.init();
+  ModNEditor.init();
   Project.init();
   History.init();
   Export.init();

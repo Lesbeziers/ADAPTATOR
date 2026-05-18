@@ -31,6 +31,9 @@ const TextLayers = (() => {
     { val: '400|normal', label: 'Regular' }, { val: '400|italic', label: 'Italic' },
     { val: '700|normal', label: 'Bold' },    { val: '700|italic', label: 'Bold Italic' },
   ];
+  const WEIGHTS_ABOLITION = [
+    { val: '400|normal', label: 'Regular' },
+  ];
 
   // ── INIT ───────────────────────────────────────────────────
   function init() {
@@ -83,20 +86,23 @@ const TextLayers = (() => {
     }).join('');
   }
 
-  function htmlToRuns(el) {
+  function htmlToRuns(el, fallbackStyle) {
     // Extraer texto plano con newlines y el estilo dominante
     // Estrategia: recorrer el árbol DOM preservando estructura de runs y saltos
     const result = [];
     let lastStyle = null;
+    const _fallback = fallbackStyle
+      ? { family: fallbackStyle.family || 'Apercu Movistar', weight: fallbackStyle.weight || '400', style: fallbackStyle.style || 'normal', color: fallbackStyle.color || '#ffffff' }
+      : { family: 'Apercu Movistar', weight: '400', style: 'normal', color: '#ffffff' };
 
     function _getSpanStyle(node) {
       if (node.nodeType !== Node.ELEMENT_NODE) return null;
       const tag = node.tagName;
       if (tag === 'SPAN') {
-        const family = (node.style.fontFamily || '').replace(/['"]/g,'').split(',')[0].trim() || 'Apercu Movistar';
-        const weight = node.style.fontWeight || '400';
-        const style  = node.style.fontStyle  || 'normal';
-        const color  = _rgbToHex(node.style.color) || '#ffffff';
+        const family = (node.style.fontFamily || '').replace(/['"]/g,'').split(',')[0].trim() || _fallback.family;
+        const weight = node.style.fontWeight || _fallback.weight;
+        const style  = node.style.fontStyle  || _fallback.style;
+        const color  = _rgbToHex(node.style.color) || _fallback.color;
         return { family, weight, style, color };
       }
       return null;
@@ -106,7 +112,7 @@ const TextLayers = (() => {
       if (node.nodeType === Node.TEXT_NODE) {
         const text = node.textContent;
         if (!text) return;
-        const st = currentStyle || lastStyle || { family: 'Apercu Movistar', weight: '400', style: 'normal', color: '#ffffff' };
+        const st = currentStyle || lastStyle || _fallback;
         const prev = result[result.length - 1];
         if (prev && prev.family === st.family && prev.weight === st.weight && prev.style === st.style && prev.color === st.color) {
           prev.text += text;
@@ -117,7 +123,7 @@ const TextLayers = (() => {
       } else if (node.nodeType === Node.ELEMENT_NODE) {
         const tag = node.tagName;
         if (tag === 'BR') {
-          const st = currentStyle || lastStyle || { family: 'Apercu Movistar', weight: '400', style: 'normal', color: '#ffffff' };
+          const st = currentStyle || lastStyle || _fallback;
           const prev = result[result.length - 1];
           if (prev && prev.family === st.family && prev.weight === st.weight && prev.style === st.style && prev.color === st.color) {
             prev.text += '\n';
@@ -198,27 +204,35 @@ const TextLayers = (() => {
 
   function _restoreSelectionOffsets(el, saved) {
     if (!saved) return;
-    const range = document.createRange();
-    let count = 0, startSet = false, endSet = false;
-    const walker = document.createTreeWalker(el, NodeFilter.SHOW_ALL);
-    let node;
-    while ((node = walker.nextNode()) && (!startSet || !endSet)) {
-      if (node.nodeType === Node.TEXT_NODE) {
-        const len = node.textContent.length;
-        if (!startSet && count + len >= saved.start) { range.setStart(node, saved.start - count); startSet = true; }
-        if (!endSet   && count + len >= saved.end)   { range.setEnd(node,   saved.end   - count); endSet   = true; }
-        count += len;
-      } else if (node.nodeName === 'BR') {
-        if (!startSet && count + 1 >= saved.start) { range.setStartAfter(node); startSet = true; }
-        if (!endSet   && count + 1 >= saved.end)   { range.setEndAfter(node);   endSet   = true; }
-        count += 1;
+    // Si el usuario ha alterado el contenido entre el save y el restore (ej:
+    // un cambio de runs ha acortado el texto) los offsets pueden caer fuera y
+    // las APIs de Range lanzan IndexSizeError. Toda la operación es opcional —
+    // si falla, mejor no aplicar selección que romper el panel entero.
+    try {
+      const range = document.createRange();
+      let count = 0, startSet = false, endSet = false;
+      const walker = document.createTreeWalker(el, NodeFilter.SHOW_ALL);
+      let node;
+      while ((node = walker.nextNode()) && (!startSet || !endSet)) {
+        if (node.nodeType === Node.TEXT_NODE) {
+          const len = node.textContent.length;
+          if (!startSet && count + len >= saved.start) { range.setStart(node, saved.start - count); startSet = true; }
+          if (!endSet   && count + len >= saved.end)   { range.setEnd(node,   saved.end   - count); endSet   = true; }
+          count += len;
+        } else if (node.nodeName === 'BR') {
+          if (!startSet && count + 1 >= saved.start) { range.setStartAfter(node); startSet = true; }
+          if (!endSet   && count + 1 >= saved.end)   { range.setEndAfter(node);   endSet   = true; }
+          count += 1;
+        }
       }
+      if (!startSet) range.setStart(el, el.childNodes.length);
+      if (!endSet)   range.setEnd(el,   el.childNodes.length);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+    } catch (err) {
+      console.warn('[TextLayers] No se pudo restaurar la selección de texto:', err);
     }
-    if (!startSet) range.setStart(el, el.childNodes.length);
-    if (!endSet)   range.setEnd(el,   el.childNodes.length);
-    const sel = window.getSelection();
-    sel.removeAllRanges();
-    sel.addRange(range);
   }
 
   // ── APPLY STYLE TO RANGE ────────────────────────────────────
@@ -296,6 +310,10 @@ const TextLayers = (() => {
     const layer = State.layers.find(l => l.id === layerId);
     if (!layer || layer.type !== 'text') return;
     _migrate(layer);
+    // Si abrimos el panel para una capa distinta, descartar la selección
+    // pendiente de la capa anterior — sin esto, aplicar un estilo desde el
+    // panel reusaría offsets que apuntan a la capa que ya no es la activa.
+    if (_activeLayerId !== layerId) _pendingOffsets = null;
     _activeLayerId = layerId;
     _refreshPanel();
     document.getElementById('text-editor-panel').classList.add('visible');
@@ -303,7 +321,8 @@ const TextLayers = (() => {
 
   function closePanel() {
     document.getElementById('text-editor-panel').classList.remove('visible');
-    _activeLayerId = null;
+    _activeLayerId  = null;
+    _pendingOffsets = null;
   }
 
   function _refreshPanel() {
@@ -359,6 +378,7 @@ const TextLayers = (() => {
     if (family === 'Apercu Movistar')    weights = WEIGHTS_APERCU;
     else if (family === 'Movistar Sans') weights = WEIGHTS_MOVISTAR_SANS;
     else if (family === 'Movistar')      weights = WEIGHTS_MOVISTAR;
+    else if (family === 'Abolition')     weights = WEIGHTS_ABOLITION;
     else                                 weights = WEIGHTS_SYSTEM;
     select.innerHTML = '';
     if (!selectedVal) {
@@ -502,7 +522,9 @@ const TextLayers = (() => {
 
   function saveRunsFromDOM(layer, el) {
     _migrate(layer);
-    layer.textParams.runs = htmlToRuns(el);
+    const firstRun = (layer.textParams.runs || [])[0];
+    const fallback = firstRun ? { family: firstRun.family, weight: firstRun.weight, style: firstRun.style, color: firstRun.color } : null;
+    layer.textParams.runs = htmlToRuns(el, fallback);
   }
 
   function buildLineRuns(runs) {

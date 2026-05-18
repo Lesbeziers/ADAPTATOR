@@ -46,6 +46,8 @@ const GradientLayers = (() => {
         alpha2:  0,
         x1: undefined, y1: undefined,
         x2: undefined, y2: undefined,
+        // Radial: centro (% de la capa) y radio (% del lado mayor)
+        cx: 50, cy: 50, radius: 100,
       },
     };
 
@@ -82,6 +84,10 @@ const GradientLayers = (() => {
     document.getElementById('gradient-color2').value        = gp.color2;
     document.getElementById('gradient-alpha2').value        = gp.alpha2;
     document.getElementById('label-alpha2').textContent     = gp.alpha2 + '%';
+    const radiusInput = document.getElementById('gradient-radius');
+    const radiusLabel = document.getElementById('label-radius');
+    if (radiusInput) radiusInput.value = gp.radius ?? 100;
+    if (radiusLabel) radiusLabel.textContent = (gp.radius ?? 100) + '%';
 
     _updateAngleVisibility(gp.type);
     document.getElementById('gradient-editor-panel').classList.add('visible');
@@ -96,6 +102,8 @@ const GradientLayers = (() => {
   function _updateAngleVisibility(type) {
     const row = document.getElementById('gradient-angle-row');
     if (row) row.style.display = type === 'linear' ? 'flex' : 'none';
+    const radRow = document.getElementById('gradient-radius-row');
+    if (radRow) radRow.style.display = type === 'radial' ? 'flex' : 'none';
   }
 
   // ── MODO PICK (definir en pantalla) ───────────────────────
@@ -113,6 +121,17 @@ const GradientLayers = (() => {
 
   function _startPickMode() {
     if (!_activeLayerId) return;
+    // Limpiar cualquier handler global colgado de una sesión anterior — sin
+    // esto, abrir/cerrar pick mode varias veces deja listeners huérfanos en
+    // document que siguen escuchando aunque sus closures apuntan a estado viejo.
+    if (document._gradientMoveHandler) {
+      document.removeEventListener('mousemove', document._gradientMoveHandler);
+      document._gradientMoveHandler = null;
+    }
+    if (document._gradientKeyHandler) {
+      document.removeEventListener('keydown', document._gradientKeyHandler);
+      document._gradientKeyHandler = null;
+    }
     _pickingMode = true;
     _pickStep    = 0;
 
@@ -125,7 +144,11 @@ const GradientLayers = (() => {
     if (btn) { btn.textContent = 'Cancelar'; btn.classList.add('active'); }
 
     document.body.classList.add('gradient-pick-mode');
-    _showPickHint('Click para fijar el punto inicial — ESC para cancelar');
+    const layer = State.layers.find(l => l.id === _activeLayerId);
+    const isRadial = layer?.gradientParams?.type === 'radial';
+    _showPickHint(isRadial
+      ? 'Click para fijar el CENTRO del círculo — ESC para cancelar'
+      : 'Click para fijar el punto inicial — ESC para cancelar');
 
     setTimeout(() => {
       area._gradientPickHandler = (e) => _onLienzoClick(e);
@@ -171,28 +194,52 @@ const GradientLayers = (() => {
 
     const layer = State.layers.find(l => l.id === _activeLayerId);
     if (!layer) return;
+    const isRadial = layer.gradientParams.type === 'radial';
 
     if (_pickStep === 0) {
       if (typeof History !== 'undefined') History.push();
-      layer.gradientParams.x1 = px;
-      layer.gradientParams.y1 = py;
+      if (isRadial) {
+        layer.gradientParams.cx = px;
+        layer.gradientParams.cy = py;
+      } else {
+        layer.gradientParams.x1 = px;
+        layer.gradientParams.y1 = py;
+      }
       _pickStep = 1;
       _addPickMarker(px, py);
-      _showPickHint('Click para fijar el punto final — ESC para cancelar');
+      _showPickHint(isRadial
+        ? 'Click para fijar el BORDE del círculo (define el radio) — ESC para cancelar'
+        : 'Click para fijar el punto final — ESC para cancelar');
       _startLiveLine(px, py);
+      if (isRadial && typeof Canvas !== 'undefined') Canvas.render();
     } else {
-      layer.gradientParams.x2 = px;
-      layer.gradientParams.y2 = py;
-      const dx = px - layer.gradientParams.x1;
-      const dy = py - layer.gradientParams.y1;
-      const angle = Math.round(Math.atan2(dy, dx) * 180 / Math.PI + 90);
-      layer.gradientParams.angle = ((angle % 360) + 360) % 360;
-      // Limpiar coordenadas — el ángulo ya está calculado, _calcGradientStops usará s1=0, s2=100
-      layer.gradientParams.x1 = undefined;
-      layer.gradientParams.y1 = undefined;
-      layer.gradientParams.x2 = undefined;
-      layer.gradientParams.y2 = undefined;
-      document.getElementById('gradient-angle').value = layer.gradientParams.angle;
+      if (isRadial) {
+        // Radio en % del lado mayor de la capa
+        const nw = layer.naturalWidth  || 1920;
+        const nh = layer.naturalHeight || 1080;
+        // px/py están en % del lienzo; la capa cubre el lienzo, así que % == %
+        const dxPct = px - layer.gradientParams.cx;
+        const dyPct = py - layer.gradientParams.cy;
+        // Convertir % a px de la capa para medir distancia real
+        const dxPx = dxPct / 100 * nw;
+        const dyPx = dyPct / 100 * nh;
+        const distPx = Math.sqrt(dxPx*dxPx + dyPx*dyPx);
+        const maxDim = Math.max(nw, nh);
+        layer.gradientParams.radius = Math.max(1, Math.round(distPx / maxDim * 100));
+        const radiusInput = document.getElementById('gradient-radius');
+        const radiusLabel = document.getElementById('label-radius');
+        if (radiusInput) radiusInput.value = layer.gradientParams.radius;
+        if (radiusLabel) radiusLabel.textContent = layer.gradientParams.radius + '%';
+      } else {
+        layer.gradientParams.x2 = px;
+        layer.gradientParams.y2 = py;
+        const dx = px - layer.gradientParams.x1;
+        const dy = py - layer.gradientParams.y1;
+        const angle = Math.round(Math.atan2(dy, dx) * 180 / Math.PI + 90);
+        layer.gradientParams.angle = ((angle % 360) + 360) % 360;
+        // Conservar x1/y1/x2/y2 para que _calcGradientStops ubique los stops
+        document.getElementById('gradient-angle').value = layer.gradientParams.angle;
+      }
       if (typeof Canvas !== 'undefined') Canvas.render();
       _stopPickMode();
     }
@@ -356,6 +403,14 @@ const GradientLayers = (() => {
     document.getElementById('gradient-alpha2')?.addEventListener('input', e => {
       _updateGradientParam('alpha2', +e.target.value);
       document.getElementById('label-alpha2').textContent = e.target.value + '%';
+    });
+    document.getElementById('gradient-radius')?.addEventListener('mousedown', () => {
+      if (typeof History !== 'undefined') History.push();
+    });
+    document.getElementById('gradient-radius')?.addEventListener('input', e => {
+      _updateGradientParam('radius', +e.target.value);
+      const lbl = document.getElementById('label-radius');
+      if (lbl) lbl.textContent = e.target.value + '%';
     });
   }
 

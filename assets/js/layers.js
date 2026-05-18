@@ -7,6 +7,22 @@ const Layers = (() => {
   let _longPressTimer = null;
   let _contextMenu = null;
 
+  // ── BLEND MODES ───────────────────────────────────────────
+  // Nombres coinciden con CSS mix-blend-mode y Canvas globalCompositeOperation
+  // (excepto 'normal' → 'source-over' en canvas, gestionado en export.js)
+  const BLEND_MODES = [
+    { id: 'normal',      label: 'Normal' },
+    { id: 'multiply',    label: 'Multiply' },
+    { id: 'screen',      label: 'Screen' },
+    { id: 'overlay',     label: 'Overlay' },
+    { id: 'darken',      label: 'Darken' },
+    { id: 'lighten',     label: 'Lighten' },
+    { id: 'color-dodge', label: 'Color Dodge' },
+    { id: 'color-burn',  label: 'Color Burn' },
+    { id: 'soft-light',  label: 'Soft Light' },
+    { id: 'hard-light',  label: 'Hard Light' },
+  ];
+
   function init() {
     document.getElementById('btn-add-layer')
       ?.addEventListener('click', () => {
@@ -16,7 +32,7 @@ const Layers = (() => {
     document.getElementById('file-input-layer')
       ?.addEventListener('change', e => {
         const files = [...e.target.files];
-        files.forEach(file => _importLayer(file));
+        _importLayerBatch(files);
         e.target.value = '';
       });
 
@@ -33,9 +49,84 @@ const Layers = (() => {
 
   // ── IMPORTAR ──────────────────────────────────────────────
 
+  // Lote de importación — dispara AutoLayout al terminar
+  function _importLayerBatch(files) {
+    const imageFiles = files.filter(f => f.type.startsWith('image/'));
+    if (!imageFiles.length) return;
+
+    let pending = imageFiles.length;
+    const newLayers = [];
+
+    const onDone = (layer) => {
+      if (layer) newLayers.push(layer);
+      pending--;
+      if (pending === 0) {
+        // Todas importadas — disparar AutoLayout si no hay roles asignados
+        setTimeout(() => {
+          const rolesEmpty = !State.layerRoles || Object.keys(State.layerRoles).length === 0;
+          if (rolesEmpty && typeof AutoLayout !== 'undefined') {
+            const imageLayers = State.layers.filter(l =>
+              !['text','solid','gradient'].includes(l.type) &&
+              !l.isComposicion && !l.isComposicionMovil && !l.isComposicionAmazon &&
+              !l.isMarcaIplus && !l.isMarcaSony && l.src
+            );
+            if (imageLayers.length > 0) AutoLayout.onFirstImport(imageLayers);
+          }
+        }, 150);
+      }
+    };
+
+    imageFiles.forEach(file => _importLayer(file, onDone));
+  }
+
   const _TITLE_KEYWORDS = /titulo|title|texto|text/i;
 
-  function _importLayer(file) {
+  // Detecta el bounding box real del contenido opaco de un asset PNG.
+  // Devuelve { x, y, w, h } en proporciones 0-1 del asset, o null si no aplica.
+  // Redimensiona a max 300px para no bloquear el hilo principal.
+  function _detectContentBounds(src, mimeType, naturalWidth, naturalHeight, callback) {
+    if (!mimeType || !mimeType.includes('png')) { callback(null); return; }
+    const SCAN_MAX = 300;
+    const scale = Math.min(1, SCAN_MAX / Math.max(naturalWidth, naturalHeight));
+    const sw = Math.max(1, Math.round(naturalWidth  * scale));
+    const sh = Math.max(1, Math.round(naturalHeight * scale));
+    const cv  = document.createElement('canvas');
+    cv.width  = sw;
+    cv.height = sh;
+    const ctx = cv.getContext('2d');
+    const img = new Image();
+    img.onload = () => {
+      ctx.drawImage(img, 0, 0, sw, sh);
+      let data;
+      try { data = ctx.getImageData(0, 0, sw, sh).data; }
+      catch(e) { callback(null); return; }
+
+      const ALPHA_THRESHOLD = 10;
+      let minX = sw, maxX = 0, minY = sh, maxY = 0;
+      for (let y = 0; y < sh; y++) {
+        for (let x = 0; x < sw; x++) {
+          const a = data[(y * sw + x) * 4 + 3];
+          if (a > ALPHA_THRESHOLD) {
+            if (x < minX) minX = x;
+            if (x > maxX) maxX = x;
+            if (y < minY) minY = y;
+            if (y > maxY) maxY = y;
+          }
+        }
+      }
+      if (minX > maxX || minY > maxY) { callback(null); return; }
+      callback({
+        x: minX / sw,
+        y: minY / sh,
+        w: (maxX - minX + 1) / sw,
+        h: (maxY - minY + 1) / sh,
+      });
+    };
+    img.onerror = () => callback(null);
+    img.src = src;
+  }
+
+  function _importLayer(file, onDone) {
     const reader = new FileReader();
     const formatAtImport = State.activeFormat; // capturar ANTES de cualquier async
     reader.onload = e => {
@@ -43,6 +134,7 @@ const Layers = (() => {
       const img = new Image();
       img.onload = () => {
         const isTitleLayer = _TITLE_KEYWORDS.test(name);
+        const mimeType = file.type || 'image/png';
 
         const layer = {
           id:               'layer_' + Date.now() + '_' + Math.random().toString(36).slice(2),
@@ -52,31 +144,37 @@ const Layers = (() => {
           naturalWidth:     img.naturalWidth,
           naturalHeight:    img.naturalHeight,
           originalFilename: file.name,
-          originalMimeType: file.type || 'image/png',
+          originalMimeType: mimeType,
           params: { opacity: 100, blur: 0, noise: 0, brightness: 0, contrast: 0, saturation: 0, tintAmount: 0, tintColor: '#000000' },
           isTitleLayer,
         };
 
-        if (isTitleLayer) {
-          _importTitleLayer(layer);
-        } else {
-          // Si se importa estando en MUX4 TXT o MOVIL TXT, la capa es exclusiva de ese formato
-          if (formatAtImport === 'MUX4 TXT' || formatAtImport === 'MOVIL TXT' || formatAtImport === 'AMAZON LOGO') {
-            layer.exclusiveFormat = formatAtImport;
+        _detectContentBounds(e.target.result, mimeType, img.naturalWidth, img.naturalHeight, bounds => {
+          if (bounds) layer.contentBounds = bounds;
+
+          if (isTitleLayer) {
+            _importTitleLayer(layer);
+            if (onDone) onDone(layer);
+          } else {
+            // Si se importa estando en MUX4 TXT o MOVIL TXT, la capa es exclusiva de ese formato
+            if (formatAtImport === 'MUX4 TXT' || formatAtImport === 'MOVIL TXT' || formatAtImport === 'AMAZON LOGO') {
+              layer.exclusiveFormat = formatAtImport;
+            }
+            // Calcular índice de inserción: después de capas auto-generadas y de isTitleLayer
+            let _ci = 0;
+            while (_ci < State.layers.length && (State.layers[_ci].isComposicion || State.layers[_ci].isComposicionMovil || State.layers[_ci].isComposicionAmazon || State.layers[_ci].isMarcaIplus || State.layers[_ci].isMarcaSony || State.layers[_ci].isTitleLayer)) {
+              _ci++;
+            }
+            if (typeof History !== 'undefined') History.push();
+            State.layers.splice(_ci, 0, layer);
+            State.selectedLayerId  = layer.id;
+            State.selectedLayerIds = [layer.id];
+            _render();
+            if (typeof Canvas !== 'undefined') Canvas.render();
+            if (typeof UI !== 'undefined') UI.updateSliders();
+            if (onDone) onDone(layer);
           }
-          // Calcular índice de inserción: después de capas auto-generadas y de isTitleLayer
-          let _ci = 0;
-          while (_ci < State.layers.length && (State.layers[_ci].isComposicion || State.layers[_ci].isComposicionMovil || State.layers[_ci].isComposicionAmazon || State.layers[_ci].isMarcaIplus || State.layers[_ci].isMarcaSony || State.layers[_ci].isTitleLayer)) {
-            _ci++;
-          }
-          if (typeof History !== 'undefined') History.push();
-          State.layers.splice(_ci, 0, layer);
-          State.selectedLayerId  = layer.id;
-          State.selectedLayerIds = [layer.id];
-          _render();
-          if (typeof Canvas !== 'undefined') Canvas.render();
-          if (typeof UI !== 'undefined') UI.updateSliders();
-        }
+        });
       };
       img.src = e.target.result;
     };
@@ -93,9 +191,58 @@ const Layers = (() => {
     State.layers.splice(_ci, 0, layer);
 
     const defaultParams = { scaleX: 100, scaleY: 100, rotation: 0, x: 0, y: 0, visible: true };
+
+    // Zonas seguras por formato para fit contenido automático al importar título
+    const TITLE_FIT_ZONES = {
+      'MUX4 TXT':      { x: 0.051, y: 0.132, w: 0.897, h: 0.739 },
+      'MOVIL TXT':     { x: 0.014, y: 0.043, w: 0.971, h: 0.912 },
+      'TÍTULO FICHA':  { x: 0.003, y: 0.020, w: 0.993, h: 0.950, alignLeft: true },
+    };
+
     Object.keys(State.formatSizes || {}).forEach(fid => {
       if (!State.formatParams[fid]) State.formatParams[fid] = {};
-      State.formatParams[fid][layer.id] = { ...defaultParams };
+      const fitZone = TITLE_FIT_ZONES[fid];
+      if (fitZone && layer.naturalWidth && layer.naturalHeight) {
+        const W = State.formatSizes[fid].w;
+        const H = State.formatSizes[fid].h;
+        const nw = layer.naturalWidth;
+        const nh = layer.naturalHeight;
+        const zoneW = W * fitZone.w;
+        const zoneH = H * fitZone.h;
+        const zoneX = W * fitZone.x;
+        const zoneY = H * fitZone.y;
+        const assetRatio = nw / nh;
+        const zoneRatio  = zoneW / zoneH;
+
+        // Calcular el scale de fit contenido
+        let fitScale;
+        if (assetRatio >= zoneRatio) {
+          fitScale = zoneW / nw;
+        } else {
+          fitScale = zoneH / nh;
+        }
+        // No upscaling: si el asset ya cabe al 100%, usarlo tal cual
+        const scale = Math.min(fitScale, 1.0);
+
+        const drawW = nw * scale;
+        const drawH = nh * scale;
+        // alignLeft: el borde izquierdo del contenido se alinea con zoneX
+        // centrado por defecto en los demás formatos
+        const cx = fitZone.alignLeft
+          ? zoneX + drawW / 2
+          : zoneX + (zoneW - drawW) / 2 + drawW / 2;
+        const cy = zoneY + (zoneH - drawH) / 2 + drawH / 2;
+        State.formatParams[fid][layer.id] = {
+          scaleX:   Math.round(scale * 1000) / 10,
+          scaleY:   Math.round(scale * 1000) / 10,
+          x:        Math.round(cx - W / 2),
+          y:        Math.round(cy - H / 2),
+          rotation: 0,
+          visible:  true,
+        };
+      } else {
+        State.formatParams[fid][layer.id] = { ...defaultParams };
+      }
     });
 
     State.selectedLayerId  = layer.id;
@@ -124,7 +271,28 @@ const Layers = (() => {
     UI.showConfirm(msg).then(ok => {
       if (!ok) return;
       if (typeof History !== 'undefined') History.push();
-      State.layers = State.layers.filter(l => !State.selectedLayerIds.includes(l.id));
+
+      // Identificar capas borrables (las sistémicas obligatorias se protegen)
+      const idsToDelete = new Set(
+        State.layers
+          .filter(l => State.selectedLayerIds.includes(l.id) &&
+                       !l.isMarcaIplus && !l.isMarcaSony &&
+                       !l.isMolduraFanart && !l.isMascaraBlur)
+          .map(l => l.id)
+      );
+
+      State.layers = State.layers.filter(l => !idsToDelete.has(l.id));
+
+      // Limpiar referencias auxiliares que apuntaban a esas capas — sin esto,
+      // los formatParams, máscaras, roles y origins quedan como basura que
+      // crece con cada eliminación y puede chocar contra IDs reusados.
+      idsToDelete.forEach(id => {
+        Object.values(State.formatParams || {}).forEach(byLayer => { delete byLayer[id]; });
+        Object.values(State.formatMaskEnabled || {}).forEach(byLayer => { delete byLayer[id]; });
+        if (State._multiOrigins) delete State._multiOrigins[id];
+        if (State.layerRoles)    delete State.layerRoles[id];
+      });
+
       State.selectedLayerId = State.layers[0]?.id ?? null;
       State.selectedLayerIds = State.selectedLayerId ? [State.selectedLayerId] : [];
       _render();
@@ -141,14 +309,16 @@ const Layers = (() => {
 
     const copy = {
       ...src,
-      id:   'layer_' + Date.now(),
+      id:   'layer_' + Date.now() + '_' + Math.random().toString(36).slice(2),
       name: src.name + ' copia',
     };
+    // El enlace debe ser manual, no se hereda al duplicar
+    delete copy.linkGroupId;
     // Deep copy objetos internos para que no compartan referencia
     if (src.params)         copy.params         = { ...src.params };
     if (src.solidParams)    copy.solidParams    = { ...src.solidParams };
-    if (src.textParams)     copy.textParams     = { ...src.textParams };
-    if (src.gradientParams) copy.gradientParams = { ...src.gradientParams };
+    if (src.textParams)     copy.textParams     = JSON.parse(JSON.stringify(src.textParams));
+    if (src.gradientParams) copy.gradientParams = JSON.parse(JSON.stringify(src.gradientParams));
 
     const idx = State.layers.findIndex(l => l.id === layerId);
     if (typeof History !== 'undefined') History.push();
@@ -159,7 +329,8 @@ const Layers = (() => {
         State.formatParams[fid][copy.id] = { ...State.formatParams[fid][layerId] };
     });
 
-    State.selectedLayerId = copy.id;
+    State.selectedLayerId  = copy.id;
+    State.selectedLayerIds = [copy.id];
     _render();
     if (typeof Canvas !== 'undefined') Canvas.render();
     if (typeof UI !== 'undefined') UI.updateSliders();
@@ -179,6 +350,46 @@ const Layers = (() => {
     }
     _render();
     if (typeof Canvas !== 'undefined') Canvas.render();
+  }
+
+  function _replaceImage(layer) {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.addEventListener('change', () => {
+      const file = input.files[0];
+      if (!file) return;
+      if (typeof History !== 'undefined') History.push();
+      const reader = new FileReader();
+      reader.onload = ev => {
+        const img = new Image();
+        img.onload = () => {
+          const fmt = State.activeFormat;
+          const p   = State.formatParams?.[fmt]?.[layer.id] || {};
+          const oldVisualW = (layer.naturalWidth  || 1) * (p.scaleX ?? 100) / 100;
+          const oldVisualH = (layer.naturalHeight || 1) * (p.scaleY ?? 100) / 100;
+          const newScaleX  = (oldVisualW / img.naturalWidth)  * 100;
+          const newScaleY  = (oldVisualH / img.naturalHeight) * 100;
+          layer.src           = ev.target.result;
+          layer.naturalWidth  = img.naturalWidth;
+          layer.naturalHeight = img.naturalHeight;
+          const mimeType = file.type || 'image/png';
+          layer.originalMimeType = mimeType;
+          _detectContentBounds(ev.target.result, mimeType, img.naturalWidth, img.naturalHeight, bounds => {
+            layer.contentBounds = bounds || null;
+            if (fmt && typeof Formats !== 'undefined') {
+              Formats.setLayerParam(fmt, layer.id, 'scaleX', Math.round(newScaleX * 10) / 10);
+              Formats.setLayerParam(fmt, layer.id, 'scaleY', Math.round(newScaleY * 10) / 10);
+            }
+            if (typeof Canvas !== 'undefined') Canvas.render();
+            _render();
+          });
+        };
+        img.src = ev.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+    input.click();
   }
 
   function _showContextMenu(e, layerId) {
@@ -204,9 +415,11 @@ const Layers = (() => {
     const isPinned = !!layer?.exclusiveFormat;
     const pinLabel = isPinned ? 'Visible en todos los formatos' : 'Fijar a este formato';
 
+    const isImageLayer = !['text','solid','gradient'].includes(layer?.type) && !!layer?.src;
     const menuItems = [
       { label: 'Duplicar capa', action: () => _duplicateLayer(layerId), disabled: false },
       { label: pinLabel, action: () => { if (layer) { _toggleExclusive(layer); _render(); } }, disabled: isSystemExclusive || !State.activeFormat },
+      ...(isImageLayer ? [{ label: 'Reemplazar imagen', action: () => _replaceImage(layer), disabled: false }] : []),
     ];
 
     menuItems.forEach(item => {
@@ -260,10 +473,112 @@ const Layers = (() => {
     State.formatParams[fid][layerId].locked = val;
   }
 
+  // ── CABECERA: BLEND MODE ──────────────────────────────────
+  function _buildBlendModeHeader() {
+    const wrap = document.createElement('div');
+    wrap.className = 'layers-blend-header';
+    wrap.style.cssText = `
+      display:flex;align-items:center;gap:8px;
+      padding:6px 8px;border-bottom:1px solid #2a2a2a;background:#161616;
+      font-family:var(--font);font-size:10px;color:#888;
+      letter-spacing:0.06em;text-transform:uppercase;
+    `;
+
+    const label = document.createElement('span');
+    label.textContent = 'Modo de capa';
+    label.style.cssText = 'font-weight:700;color:#888;flex-shrink:0;';
+
+    const select = document.createElement('select');
+    select.style.cssText = `
+      width:auto;background:#1c1c1c;color:#ccc;border:1px solid #333;
+      border-radius:2px;padding:3px 6px;font-family:var(--font);
+      font-size:10px;letter-spacing:0.06em;text-transform:uppercase;
+      cursor:pointer;outline:none;margin-left:auto;
+    `;
+
+    const selectedLayers = (State.selectedLayerIds || [])
+      .map(id => State.layers.find(l => l.id === id))
+      .filter(Boolean);
+
+    const hasSelection = selectedLayers.length > 0;
+    const modes = new Set(selectedLayers.map(l => l.blendMode || 'normal'));
+    const isMixed = modes.size > 1;
+    const currentMode = isMixed ? '__mixed__' : (selectedLayers[0]?.blendMode || 'normal');
+
+    if (isMixed) {
+      const optMixed = document.createElement('option');
+      optMixed.value = '__mixed__';
+      optMixed.textContent = '— Múltiple —';
+      select.appendChild(optMixed);
+    }
+    BLEND_MODES.forEach(m => {
+      const opt = document.createElement('option');
+      opt.value = m.id;
+      opt.textContent = m.label;
+      select.appendChild(opt);
+    });
+    select.value = currentMode;
+
+    if (!hasSelection) {
+      select.disabled = true;
+      select.style.opacity = '0.4';
+      select.style.cursor = 'not-allowed';
+    }
+
+    select.addEventListener('change', e => {
+      const newMode = e.target.value;
+      if (newMode === '__mixed__') return;
+      if (typeof History !== 'undefined') History.push();
+      selectedLayers.forEach(l => {
+        // Capas sistémicas obligatorias: blend mode bloqueado
+        if (l.isMarcaIplus || l.isMarcaSony || l.isMolduraFanart || l.isMascaraBlur) return;
+        l.blendMode = newMode === 'normal' ? null : newMode;
+      });
+      _render();
+      if (typeof Canvas !== 'undefined') Canvas.render();
+    });
+
+    wrap.appendChild(label);
+    wrap.appendChild(select);
+    return wrap;
+  }
+
   function _render() {
     const list = document.getElementById('layers-list');
     if (!list) return;
     list.innerHTML = '';
+
+    // Indicador de maquetación activa (solo en MUX4 TXT y MOVIL TXT)
+    if ((State.activeFormat === 'MUX4 TXT' || State.activeFormat === 'MOVIL TXT') &&
+        typeof Layout !== 'undefined') {
+      const tipo    = Layout.getType();
+      const version = Layout.getVersion();
+      const ind = document.createElement('div');
+      ind.className = 'layout-indicator';
+      if (tipo && version) {
+        ind.innerHTML = `
+          <div class="layout-indicator-dot"></div>
+          <span class="layout-indicator-text">${tipo.toUpperCase()} · ${version.toUpperCase()}</span>
+          <span class="layout-indicator-edit">Cambiar</span>
+        `;
+      } else {
+        ind.innerHTML = `
+          <div class="layout-indicator-dot" style="background:#555;"></div>
+          <span class="layout-indicator-text">Sin maquetación</span>
+          <span class="layout-indicator-edit">Elegir</span>
+        `;
+      }
+      ind.addEventListener('click', () => {
+        if (typeof Layout !== 'undefined') Layout.openModal();
+      });
+      list.appendChild(ind);
+      const sep = document.createElement('div');
+      sep.className = 'layers-separator';
+      list.appendChild(sep);
+    }
+
+    // ── CABECERA: SELECTOR DE MODO DE CAPA ───────────────
+    list.appendChild(_buildBlendModeHeader());
 
     // En MUX4 FONDO: COMPOSICIÓN TÍTULO va primero, por encima de todo
     if (State.activeFormat === 'MUX4 FONDO') {
@@ -308,6 +623,16 @@ const Layers = (() => {
       list.appendChild(sep);
     }
 
+    // Pastilla Freemium — solo si la versión activa es Freemium
+    if ((State.activeFormat === 'MUX4 TXT' || State.activeFormat === 'MOVIL TXT') &&
+        typeof Layout !== 'undefined' && Layout.isFreemium() &&
+        typeof Pastilla !== 'undefined') {
+      list.appendChild(_buildPastillaFreemiumItem());
+      const sep = document.createElement('div');
+      sep.className = 'layers-separator';
+      list.appendChild(sep);
+    }
+
     // Capas de sistema (arriba)
     if (State.activeFormat && typeof SystemLayers !== 'undefined') {
       const sysLayers = SystemLayers.getLayersForPanel(State.activeFormat).slice().reverse();
@@ -338,7 +663,24 @@ const Layers = (() => {
       if (State.activeFormat === 'SONY') {
         const marcaSony = State.layers.find(l => l.isMarcaSony);
         if (marcaSony) {
-          list.appendChild(_buildMarcaIplusItem(marcaSony));
+          list.appendChild(_buildMarcaIplusItem(marcaSony, 'SONY'));
+          const sep = document.createElement('div');
+          sep.className = 'layers-separator';
+          list.appendChild(sep);
+        }
+      }
+
+      // MOLDURA + MÁSCARA BLUR: capas sistémicas obligatorias de FANART MOD N
+      if (State.activeFormat === 'FANART MOD N') {
+        const moldura = State.layers.find(l => l.isMolduraFanart);
+        if (moldura) {
+          list.appendChild(_buildMarcaIplusItem(moldura, 'FANART MOD N'));
+        }
+        const mascara = State.layers.find(l => l.isMascaraBlur);
+        if (mascara) {
+          list.appendChild(_buildMarcaIplusItem(mascara, 'FANART MOD N'));
+        }
+        if (moldura || mascara) {
           const sep = document.createElement('div');
           sep.className = 'layers-separator';
           list.appendChild(sep);
@@ -348,10 +690,13 @@ const Layers = (() => {
       // Capas normales — en MUX4 FONDO y MOVIL MUX FONDO saltamos isComposicion porque ya la pintamos arriba
       State.layers.forEach((layer, index) => {
         if (layer.isComposicion && (State.activeFormat === 'MUX4 FONDO' || State.activeFormat === 'MOVIL MUX FONDO' || State.activeFormat === 'AMAZON BG')) return;
+        if (layer.isComposicion && State.activeFormat === 'FANART DEST.') return;
         if (layer.isComposicionMovil) return;
         if (layer.isComposicionAmazon) return;
         if (layer.isMarcaIplus) return;
         if (layer.isMarcaSony) return;
+        if (layer.isMolduraFanart) return;
+        if (layer.isMascaraBlur) return;
         const item = _buildItem(layer, index);
         if (item) list.appendChild(item);
       });
@@ -379,7 +724,23 @@ const Layers = (() => {
       if (State.activeFormat === 'SONY') {
         const marcaSony = State.layers.find(l => l.isMarcaSony);
         if (marcaSony) {
-          list.appendChild(_buildMarcaIplusItem(marcaSony));
+          list.appendChild(_buildMarcaIplusItem(marcaSony, 'SONY'));
+          const sep = document.createElement('div');
+          sep.className = 'layers-separator';
+          list.appendChild(sep);
+        }
+      }
+      // MOLDURA + MÁSCARA BLUR: capas sistémicas obligatorias de FANART MOD N
+      if (State.activeFormat === 'FANART MOD N') {
+        const moldura = State.layers.find(l => l.isMolduraFanart);
+        if (moldura) {
+          list.appendChild(_buildMarcaIplusItem(moldura, 'FANART MOD N'));
+        }
+        const mascara = State.layers.find(l => l.isMascaraBlur);
+        if (mascara) {
+          list.appendChild(_buildMarcaIplusItem(mascara, 'FANART MOD N'));
+        }
+        if (moldura || mascara) {
           const sep = document.createElement('div');
           sep.className = 'layers-separator';
           list.appendChild(sep);
@@ -387,10 +748,13 @@ const Layers = (() => {
       }
       State.layers.forEach((layer, index) => {
         if (layer.isComposicion && (State.activeFormat === 'MUX4 FONDO' || State.activeFormat === 'MOVIL MUX FONDO' || State.activeFormat === 'AMAZON BG')) return;
+        if (layer.isComposicion && State.activeFormat === 'FANART DEST.') return;
         if (layer.isComposicionMovil) return;
         if (layer.isComposicionAmazon) return;
         if (layer.isMarcaIplus) return;
         if (layer.isMarcaSony) return;
+        if (layer.isMolduraFanart) return;
+        if (layer.isMascaraBlur) return;
         const item = _buildItem(layer, index);
         if (item) list.appendChild(item);
       });
@@ -489,6 +853,61 @@ const Layers = (() => {
     return item;
   }
 
+  // ── PASTILLA FREEMIUM (item del panel) ───────────────────
+
+  function _buildPastillaFreemiumItem() {
+    const item = document.createElement('div');
+    item.className = 'layer-item';
+
+    // Ojo — siempre visible (la pastilla freemium se muestra cuando el layout es freemium)
+    const eye = document.createElement('div');
+    eye.className = 'layer-eye';
+    const eyeImg = document.createElement('img');
+    eyeImg.src = 'assets/img/ojo_on.svg';
+    eye.appendChild(eyeImg);
+
+    // Thumb
+    const thumb = document.createElement('div');
+    thumb.className = 'layer-thumb';
+    const thumbImg = document.createElement('img');
+    thumbImg.src = Pastilla.getFreemiumSrc();
+    thumb.appendChild(thumbImg);
+
+    // Nombre
+    const name = document.createElement('span');
+    name.className = 'layer-name';
+    name.textContent = 'PASTILLA FREEMIUM';
+    name.style.color = 'var(--col-yellow)';
+
+    // Acciones — lápiz
+    const actionsWrap = document.createElement('div');
+    actionsWrap.className = 'layer-actions';
+
+    const editBtn = document.createElement('div');
+    editBtn.className = 'layer-edit-btn';
+    editBtn.dataset.tooltip = 'Editar pastilla freemium';
+    const editUp = document.createElement('img');
+    editUp.className = 'icon-up';
+    editUp.src = 'assets/img/ic_lapiz_up.svg';
+    const editDown = document.createElement('img');
+    editDown.className = 'icon-down';
+    editDown.src = 'assets/img/ic_lapiz_down.svg';
+    editBtn.appendChild(editUp);
+    editBtn.appendChild(editDown);
+    editBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      Pastilla.openFreemiumPanel();
+    });
+    actionsWrap.appendChild(editBtn);
+
+    item.appendChild(eye);
+    item.appendChild(thumb);
+    item.appendChild(name);
+    item.appendChild(actionsWrap);
+
+    return item;
+  }
+
   function _buildSystemItem(layerDef) {
     const item = document.createElement('div');
     item.className = 'layer-item layer-item-system';
@@ -500,6 +919,7 @@ const Layers = (() => {
     eye.appendChild(eyeImg);
     eye.addEventListener('click', e => {
       e.stopPropagation();
+      if (typeof History !== 'undefined') History.push();
       const newVisible = !layerDef.visible;
       SystemLayers.updateVisibility(
         document.getElementById('lienzo'),
@@ -536,17 +956,18 @@ const Layers = (() => {
 
   function _buildItem(layer, index) {
     // Capas title: solo en MUX4 TXT, MOVIL TXT, TÍTULO FICHA y formatos de gráfica oficial
-    if (layer.isTitleLayer && State.activeFormat !== 'MUX4 TXT' && State.activeFormat !== 'MOVIL TXT' && State.activeFormat !== 'TÍTULO FICHA' && State.activeFormat !== 'CARÁTULA H' && State.activeFormat !== 'CARÁTULA V' && State.activeFormat !== 'CARTEL COM. H' && State.activeFormat !== 'CARTEL COM. V' && State.activeFormat !== 'AMAZON LOGO' && State.activeFormat !== 'SONY') return null;
+    if (layer.isTitleLayer && State.activeFormat !== 'MUX4 TXT' && State.activeFormat !== 'MOVIL TXT' && State.activeFormat !== 'TÍTULO FICHA' && State.activeFormat !== 'CARÁTULA H' && State.activeFormat !== 'CARÁTULA V' && State.activeFormat !== 'CARTEL COM. H' && State.activeFormat !== 'CARTEL COM. V' && State.activeFormat !== 'AMAZON LOGO' && State.activeFormat !== 'SONY' && State.activeFormat !== 'XIAOMI BANNER' && State.activeFormat !== 'DEST. DOBLE 4' && State.activeFormat !== 'DEST. DOBLE 4 SIL' && State.activeFormat !== 'DEST. DOBLE 1' && State.activeFormat !== 'DEST. DOBLE 1 SIL' && State.activeFormat !== 'DEST. DOBLE 2' && State.activeFormat !== 'DEST. DOBLE 2 SIL' && State.activeFormat !== 'MOD N SIL') return null;
     if (layer.isTitleLayer && (State.activeFormat === 'FANART' || State.activeFormat === 'FANART MÓVIL')) return null;
+    if (layer.isTitleLayer && typeof Layout !== 'undefined' && Layout.isUpsell()) return null;
 
     // Composición título: oculta en MUX4 TXT, MOVIL TXT, TÍTULO FICHA y formatos de gráfica oficial
-    if (layer.isComposicion && (State.activeFormat === 'MUX4 TXT' || State.activeFormat === 'MOVIL TXT' || State.activeFormat === 'TÍTULO FICHA' || State.activeFormat === 'CARÁTULA H' || State.activeFormat === 'CARÁTULA V' || State.activeFormat === 'CARTEL COM. H' || State.activeFormat === 'CARTEL COM. V' || State.activeFormat === 'FANART' || State.activeFormat === 'FANART MÓVIL' || State.activeFormat === 'AMAZON LOGO' || State.activeFormat === 'SONY')) return null;
+    if (layer.isComposicion && (State.activeFormat === 'MUX4 TXT' || State.activeFormat === 'MOVIL TXT' || State.activeFormat === 'TÍTULO FICHA' || State.activeFormat === 'CARÁTULA H' || State.activeFormat === 'CARÁTULA V' || State.activeFormat === 'CARTEL COM. H' || State.activeFormat === 'CARTEL COM. V' || State.activeFormat === 'FANART' || State.activeFormat === 'FANART MÓVIL' || State.activeFormat === 'AMAZON LOGO' || State.activeFormat === 'SONY' || State.activeFormat === 'XIAOMI BANNER' || State.activeFormat === 'DEST. DOBLE 4' || State.activeFormat === 'DEST. DOBLE 4 SIL' || State.activeFormat === 'DEST. DOBLE 1' || State.activeFormat === 'DEST. DOBLE 1 SIL' || State.activeFormat === 'DEST. DOBLE 2' || State.activeFormat === 'DEST. DOBLE 2 SIL' || State.activeFormat === 'MOD N' || State.activeFormat === 'MOD N SIL' || State.activeFormat === 'PERFIL')) return null;
 
     // Capas con exclusiveFormat: solo en su formato
     if (layer.exclusiveFormat && layer.exclusiveFormat !== State.activeFormat) return null;
 
     // Capas normales importadas: ocultas en MUX4 TXT, MOVIL TXT y TÍTULO FICHA
-    if (!layer.isTitleLayer && !layer.isComposicion && !layer.exclusiveFormat) {
+    if (!layer.isTitleLayer && !layer.isComposicion && !layer.exclusiveFormat && !layer._layoutGenerated) {
       if (State.activeFormat === 'MUX4 TXT' || State.activeFormat === 'MOVIL TXT' || State.activeFormat === 'TÍTULO FICHA' || State.activeFormat === 'AMAZON LOGO') return null;
     }
 
@@ -604,7 +1025,11 @@ const Layers = (() => {
       const thumbImg = document.createElement('img');
       thumbImg.src = layer.src;
       thumbImg.alt = layer.name;
+      thumbImg.style.cssText = 'pointer-events:none;'; // evitar que el img consuma el evento
       thumb.appendChild(thumbImg);
+      thumb.dataset.hasCtx = 'image';
+
+      // Reemplazar imagen: gestionado desde _showContextMenu
     }
 
     // ── MÁSCARA: sistema por formato ──
@@ -638,7 +1063,7 @@ const Layers = (() => {
       // Menú flotante
       const maskMenu = document.createElement('div');
       maskMenu.style.cssText = `
-        position:absolute;bottom:calc(100% + 4px);left:50%;transform:translateX(-50%);
+        position:absolute;bottom:100%;left:50%;transform:translateX(-50%);
         background:#1a1a1a;border:1px solid #333;border-radius:4px;
         display:none;flex-direction:column;overflow:hidden;z-index:1000;min-width:110px;
       `;
@@ -717,7 +1142,7 @@ const Layers = (() => {
 
       const maskMenu = document.createElement('div');
       maskMenu.style.cssText = `
-        position:absolute;bottom:calc(100% + 4px);left:50%;transform:translateX(-50%);
+        position:absolute;bottom:100%;left:50%;transform:translateX(-50%);
         background:#1a1a1a;border:1px solid #333;border-radius:4px;
         display:none;flex-direction:column;overflow:hidden;z-index:1000;min-width:110px;
       `;
@@ -800,15 +1225,30 @@ const Layers = (() => {
     item.appendChild(nameSpan);
     item.appendChild(nameInput);
 
+    // ── BADGE: blend mode activo ──
+    if (layer.blendMode && layer.blendMode !== 'normal') {
+      const badge = document.createElement('span');
+      const modeLabel = (BLEND_MODES.find(m => m.id === layer.blendMode)?.label) || layer.blendMode;
+      badge.textContent = modeLabel.charAt(0).toUpperCase();
+      badge.title = modeLabel;
+      badge.style.cssText = `
+        display:inline-flex;align-items:center;justify-content:center;
+        width:14px;height:14px;border-radius:2px;margin-left:4px;
+        font-family:var(--font);font-size:9px;font-weight:700;
+        color:#1a1a1a;background:var(--col-yellow);flex-shrink:0;
+      `;
+      item.appendChild(badge);
+    }
+
     // ── CONTENEDOR de acciones (lápiz, candado, chincheta) ──
     const actionsWrap = document.createElement('div');
     actionsWrap.className = 'layer-actions';
 
     // Lápiz para capas editables
-    if (layer.type === 'text' || layer.type === 'solid' || layer.type === 'gradient') {
+    if (layer.type === 'text' || layer.type === 'solid' || layer.type === 'gradient' || layer.isLogo) {
       const editBtn = document.createElement('div');
       editBtn.className = 'layer-edit-btn';
-      editBtn.dataset.tooltip = layer.type === 'text' ? 'Editar texto' : layer.type === 'solid' ? 'Editar sólido' : 'Editar degradado';
+      editBtn.dataset.tooltip = layer.type === 'text' ? 'Editar texto' : layer.type === 'solid' ? 'Editar sólido' : layer.type === 'gradient' ? 'Editar degradado' : 'Cambiar logo';
       const imgUp   = document.createElement('img');
       imgUp.className   = 'icon-up';
       imgUp.src = 'assets/img/ic_lapiz_up.svg';
@@ -823,6 +1263,7 @@ const Layers = (() => {
         if (layer.type === 'text'     && typeof TextLayers     !== 'undefined') TextLayers.openPanel(layer.id);
         if (layer.type === 'solid'    && typeof SolidLayers    !== 'undefined') SolidLayers.openPanel(layer.id);
         if (layer.type === 'gradient' && typeof GradientLayers !== 'undefined') GradientLayers.openPanel(layer.id);
+        if (layer.isLogo              && typeof Logos           !== 'undefined') Logos.openForReplace(layer.id);
       });
       actionsWrap.appendChild(editBtn);
     }
@@ -892,8 +1333,17 @@ const Layers = (() => {
     chainBtn.addEventListener('mouseleave', () => { if (!layer.linkGroupId) chainBtn.style.color = ''; });
     const _svgChainOn  = '<svg width="13" height="14" viewBox="0 0 13 14" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4.5 9L8.5 5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M5.5 6.5L4 8a2.121 2.121 0 0 0 3 3l1.5-1.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M7.5 7.5L9 6a2.121 2.121 0 0 0-3-3L4.5 4.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>';
     const _svgChainOff = '<svg width="13" height="14" viewBox="0 0 13 14" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4.5 9L8.5 5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" opacity="0.35"/><path d="M5.5 6.5L4 8a2.121 2.121 0 0 0 3 3l1.5-1.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" opacity="0.35"/><path d="M7.5 7.5L9 6a2.121 2.121 0 0 0-3-3L4.5 4.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" opacity="0.35"/></svg>';
+    const _hasValidLinkPartner = () => {
+      if (!layer.linkGroupId) return false;
+      const fmt = State.activeFormat;
+      return State.layers.some(l =>
+        l.id !== layer.id &&
+        l.linkGroupId === layer.linkGroupId &&
+        (!l.exclusiveFormat || l.exclusiveFormat === fmt)
+      );
+    };
     const _updateChainBtn = () => {
-      const linked = !!layer.linkGroupId;
+      const linked = _hasValidLinkPartner();
       chainBtn.classList.toggle('linked', linked);
       chainBtn.dataset.tooltip = linked ? 'Desenlazar capa' : 'Enlazar con seleccionadas';
       chainBtn.innerHTML = linked ? _svgChainOn : _svgChainOff;
@@ -928,6 +1378,8 @@ const Layers = (() => {
     });
 
     item.addEventListener('contextmenu', e => {
+      // Si el click viene del thumb de imagen, no abrir el menú general
+      if (e.target.closest('.layer-thumb')?.dataset.hasCtx === 'image') return;
       _select(layer);
       _showContextMenu(e, layer.id);
     });
@@ -1164,7 +1616,8 @@ const Layers = (() => {
     return item;
   }
 
-  function _buildMarcaIplusItem(layer) {
+  function _buildMarcaIplusItem(layer, formatId) {
+    formatId = formatId || State.activeFormat || 'IPLUS PUBLI';
     const item = document.createElement('div');
     item.className = 'layer-item layer-item-system';
     item.dataset.id = layer.id;
@@ -1173,7 +1626,7 @@ const Layers = (() => {
     eye.className = 'layer-eye';
     const eyeImg = document.createElement('img');
     const _getVis = () => {
-      const fv = State.formatParams?.['IPLUS PUBLI']?.[layer.id]?.visible;
+      const fv = State.formatParams?.[formatId]?.[layer.id]?.visible;
       return fv !== undefined ? fv : true;
     };
     eyeImg.src = _getVis() ? 'assets/img/ojo_on.svg' : 'assets/img/ojo_off.svg';
@@ -1182,9 +1635,9 @@ const Layers = (() => {
       e.stopPropagation();
       if (typeof History !== 'undefined') History.push();
       const newVis = !_getVis();
-      if (!State.formatParams['IPLUS PUBLI']) State.formatParams['IPLUS PUBLI'] = {};
-      if (!State.formatParams['IPLUS PUBLI'][layer.id]) State.formatParams['IPLUS PUBLI'][layer.id] = {};
-      State.formatParams['IPLUS PUBLI'][layer.id].visible = newVis;
+      if (!State.formatParams[formatId]) State.formatParams[formatId] = {};
+      if (!State.formatParams[formatId][layer.id]) State.formatParams[formatId][layer.id] = {};
+      State.formatParams[formatId][layer.id].visible = newVis;
       eyeImg.src = newVis ? 'assets/img/ojo_on.svg' : 'assets/img/ojo_off.svg';
       if (typeof Canvas !== 'undefined') Canvas.render();
     });

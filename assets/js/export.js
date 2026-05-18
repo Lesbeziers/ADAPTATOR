@@ -37,7 +37,8 @@ const Export = (() => {
     'DEST. DOBLE 2 SIL':  { suffix: 'MOD_DESTACADO_DOBLE2_SIL',     type: 'png', maxMB: 1     },
     'DEST. DOBLE 4':      { suffix: 'MOD_DESTACADO_DOBLE4',         type: 'jpg', maxMB: 1     },
     'DEST. DOBLE 4 SIL':  { suffix: 'MOD_DESTACADO_DOBLE4_SIL',     type: 'png', maxMB: 1     },
-    'MOD N':              { suffix: 'MOD_N',                        type: 'jpg', maxMB: 0.6   },
+    'MOD N':              { suffix: 'MODULO_N',                     type: 'jpg', maxMB: 0.6   },
+    'FANART MOD N':       { suffix: 'FANART_COLECCION',             type: 'jpg', maxMB: 10    },
     'MOD N SIL':          { suffix: 'MOD_N_SIL',                    type: 'png', maxMB: 0.6   },
     'AMAZON BG':          { suffix: 'AMAZON_BG',                    type: 'jpg', maxMB: 0.45  },
     'AMAZON LOGO':        { suffix: 'AMAZON_LOGO',                  type: 'png', maxMB: 0.45  },
@@ -45,6 +46,21 @@ const Export = (() => {
     'SONY':               { suffix: 'SONY',                         type: 'png', maxMB: 10    },
     'XIAOMI BANNER':      { suffix: 'XIAOMI_BANNER_MES',            type: 'jpg', maxMB: 10    },
   };
+
+  // Formatos con capa de sistema 'mockup' real (no zona de seguridad).
+  // Habilitan el botón "GENERAR MOCKUP" en el viewport.
+  const MOCKUP_FORMATS = [
+    'FANART DEST.',
+    'MUX4 FONDO',
+    'MOVIL MUX FONDO',
+    'WEB PUBLI',
+    'FANART MÓVIL',
+    'AMAZON BG',
+  ];
+
+  function isMockupFormat(formatName) {
+    return MOCKUP_FORMATS.includes(formatName);
+  }
 
   // ── INIT ──────────────────────────────────────────────────
 
@@ -166,7 +182,7 @@ const Export = (() => {
     btnOk.addEventListener('mouseenter', () => btnOk.style.opacity = '0.85');
     btnOk.addEventListener('mouseleave', () => btnOk.style.opacity = '1');
     btnOk.addEventListener('click', () => {
-      const nombre = input.value.trim().replace(/[^a-zA-Z0-9_\-áéíóúüñÁÉÍÓÚÜÑ ]/g, '_') || 'EXPORT';
+      const nombre = (input.value.trim().replace(/[^a-zA-Z0-9_\-áéíóúüñÁÉÍÓÚÜÑ ]/g, '_').replace(/\s+/g, '_')) || 'EXPORT';
       overlay.remove();
       _exportZip(nombre, okFormats);
     });
@@ -201,63 +217,108 @@ const Export = (() => {
     const progress = _showProgress(okFormats.length);
     const zip = new JSZip();
     const warnings = [];
+    let exportedCount = 0;
 
-    for (let i = 0; i < okFormats.length; i++) {
-      const formatName = okFormats[i];
-      progress.update(i + 1, formatName);
+    try {
+      for (let i = 0; i < okFormats.length; i++) {
+        const formatName = okFormats[i];
+        progress.update(i + 1, formatName);
 
-      const cfg = FORMAT_CONFIG[formatName];
-      if (!cfg) {
-        warnings.push(`${formatName}: sin configuración, omitido.`);
-        continue;
+        const cfg = FORMAT_CONFIG[formatName];
+        if (!cfg) {
+          warnings.push(`${formatName}: sin configuración, omitido.`);
+          continue;
+        }
+
+        let blob;
+        try {
+          blob = await _renderFormat(formatName, cfg);
+        } catch (err) {
+          console.error(`[Export] Error al renderizar ${formatName}:`, err);
+          warnings.push(`❌ ${formatName}: error al renderizar — no incluido en el ZIP. (${err?.message || err})`);
+          continue;
+        }
+
+        if (!blob) {
+          // _renderFormat devolvió null: o falta el size en formatSizes, o
+          // toBlob/JPG quality search no produjeron salida (canvas tainted, OOM, etc.)
+          warnings.push(`❌ ${formatName}: no se pudo generar la imagen (canvas vacío o demasiado grande). No incluido en el ZIP.`);
+          continue;
+        }
+
+        const sizeMB = blob.size / (1024 * 1024);
+        const filename = `${_buildBaseName(nombre, formatName)}_${cfg.suffix}.${cfg.type}`;
+
+        if (cfg.type === 'png' && sizeMB > cfg.maxMB) {
+          warnings.push(`⚠️ ${formatName}: ${sizeMB.toFixed(2)}MB supera el límite de ${cfg.maxMB}MB (exportado igualmente)`);
+        }
+
+        const arrayBuf = await blob.arrayBuffer();
+        zip.file(filename, arrayBuf);
+        exportedCount++;
       }
 
-      const blob = await _renderFormat(formatName, cfg);
-      if (!blob) continue;
+      progress.close();
 
-      const sizeMB = blob.size / (1024 * 1024);
-      const filename = `${nombre}_${cfg.suffix}.${cfg.type}`;
-
-      if (cfg.type === 'png' && sizeMB > cfg.maxMB) {
-        warnings.push(`⚠️ ${formatName}: ${sizeMB.toFixed(2)}MB supera el límite de ${cfg.maxMB}MB (exportado igualmente)`);
+      if (exportedCount === 0) {
+        alert('No se ha podido generar ningún formato.\n\n' + warnings.join('\n'));
+        return;
       }
 
-      const arrayBuf = await blob.arrayBuffer();
-      zip.file(filename, arrayBuf);
-    }
+      const zipBlob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } });
+      const url = URL.createObjectURL(zipBlob);
+      const a   = Object.assign(document.createElement('a'), { href: url, download: `${nombre}_EXPORT.zip` });
+      a.click();
+      URL.revokeObjectURL(url);
 
-    progress.close();
-
-    const zipBlob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } });
-    const url = URL.createObjectURL(zipBlob);
-    const a   = Object.assign(document.createElement('a'), { href: url, download: `${nombre}_EXPORT.zip` });
-    a.click();
-    URL.revokeObjectURL(url);
-
-    if (warnings.length > 0) {
-      setTimeout(() => alert('Export completado con avisos:\n\n' + warnings.join('\n')), 300);
+      if (warnings.length > 0) {
+        const resumen = `Export completado: ${exportedCount} de ${okFormats.length} formatos.`;
+        setTimeout(() => alert(resumen + '\n\n' + warnings.join('\n')), 300);
+      }
+    } catch (err) {
+      progress.close();
+      console.error('[Export] Error global durante export:', err);
+      alert('Error durante la exportación.\n\n' + (err?.message || err) + (warnings.length ? '\n\nAvisos previos:\n' + warnings.join('\n') : ''));
     }
   }
 
   // ── RENDER DE UN FORMATO ──────────────────────────────────
 
-  async function _renderFormat(formatName, cfg) {
+  // Factor de supersampling para mejorar nitidez de texto, degradados e imágenes.
+  // Se renderiza a SS× y se reduce al tamaño final con interpolación high quality.
+  const SS = 2;
+
+  // Renderiza el diseño del formato a un canvas nativo (W×H) con ruido aplicado,
+  // sin encoding. Reutilizable por export normal y por export de mockup.
+  async function _renderFormatCanvas(formatName) {
     const size = State.formatSizes[formatName];
     if (!size) return null;
 
     const W = size.w;
     const H = size.h;
+    // Canvas supersampled: dibujamos en coordenadas lógicas (W,H) gracias a ctx.scale(SS,SS)
     const cv  = document.createElement('canvas');
-    cv.width  = W;
-    cv.height = H;
+    cv.width  = W * SS;
+    cv.height = H * SS;
     const ctx = cv.getContext('2d');
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.scale(SS, SS);
     ctx.clearRect(0, 0, W, H);
+
+    // Fondo verde "chivato": revela huecos cuando la imagen de fondo no cubre
+    // todo el formato. No se aplica a PNG porque rompería la transparencia.
+    if (FORMAT_CONFIG[formatName]?.type !== 'png') {
+      ctx.fillStyle = '#00ff12';
+      ctx.fillRect(0, 0, W, H);
+    }
 
     await document.fonts.ready;
 
     const layers = [...State.layers].reverse();
     for (const layer of layers) {
       if (layer.isMarcaIplus) continue;
+      if (layer.isMolduraFanart) continue; // se dibuja al final, por encima de todo
       if (!_isLayerVisible(layer, formatName)) continue;
       await _drawLayer(ctx, layer, formatName, W, H);
     }
@@ -281,6 +342,32 @@ const Export = (() => {
       });
     }
 
+    // Pastilla Freemium (solo en MUX4 TXT y MOVIL TXT cuando versión es Freemium)
+    if (typeof Layout !== 'undefined' && Layout.isFreemium() &&
+        typeof Pastilla !== 'undefined' &&
+        (formatName === 'MUX4 TXT' || formatName === 'MOVIL TXT')) {
+      const src = Pastilla.getFreemiumSrc();
+      const _presetPF = typeof Layout !== 'undefined' && Layout.getPreset && Layout.getPreset(formatName);
+      const posY = (_presetPF && _presetPF['PASTILLA_FREEMIUM']?.y) ?? 95;
+      await new Promise(res => {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => {
+          const targetH = (_presetPF && _presetPF['PASTILLA_FREEMIUM']?.pastillaH) ?? 61;
+          const sh = targetH;
+          const sw = (img.naturalWidth || 705) / (img.naturalHeight || 61) * targetH;
+          const px = W / 2 - sw / 2;
+          const py = H / 2 + posY - sh / 2;
+          ctx.imageSmoothingEnabled = false;
+          ctx.drawImage(img, px, py, sw, sh);
+          ctx.imageSmoothingEnabled = true;
+          res();
+        };
+        img.onerror = () => res();
+        img.src = src;
+      });
+    }
+
     const marca = State.layers.find(l => l.isMarcaIplus);
     if (marca && formatName === 'IPLUS PUBLI') {
       await _drawLayer(ctx, marca, formatName, W, H);
@@ -289,12 +376,170 @@ const Export = (() => {
     if (marcaSony && formatName === 'SONY') {
       await _drawLayer(ctx, marcaSony, formatName, W, H);
     }
-
-    if (cfg.type === 'png') {
-      return await new Promise(res => cv.toBlob(res, 'image/png'));
+    // MOLDURA FANART MOD N — siempre por encima de todo
+    const moldura = State.layers.find(l => l.isMolduraFanart);
+    if (moldura && formatName === 'FANART MOD N' && _isLayerVisible(moldura, formatName)) {
+      await _drawLayer(ctx, moldura, formatName, W, H);
     }
 
-    return await _jpgWithMaxSize(cv, cfg.maxMB);
+    // ── DOWNSAMPLE al tamaño nativo ───────────────────────
+    // Crear lienzo final a resolución nativa y reducir el supersampled con interpolación high quality.
+    const finalCv = document.createElement('canvas');
+    finalCv.width  = W;
+    finalCv.height = H;
+    const finalCtx = finalCv.getContext('2d');
+    finalCtx.imageSmoothingEnabled = true;
+    finalCtx.imageSmoothingQuality = 'high';
+    finalCtx.drawImage(cv, 0, 0, cv.width, cv.height, 0, 0, W, H);
+
+    // Ruido: nivel máximo entre capas visibles — se aplica después del downsample
+    // para que el patrón de ruido tenga el grano correcto a tamaño nativo.
+    const maxNoise = State.layers
+      .filter(l => _isLayerVisible(l, formatName) && (l.params?.noise ?? 0) > 0)
+      .reduce((mx, l) => Math.max(mx, l.params.noise), 0);
+    if (maxNoise > 0) await _applyNoiseSVG(finalCv, maxNoise);
+
+    return finalCv;
+  }
+
+  async function _renderFormat(formatName, cfg) {
+    const finalCv = await _renderFormatCanvas(formatName);
+    if (!finalCv) return null;
+
+    if (cfg.type === 'png') {
+      return await new Promise(res => finalCv.toBlob(res, 'image/png'));
+    }
+
+    return await _jpgWithMaxSize(finalCv, cfg.maxMB);
+  }
+
+  // ── MOCKUP: diseño + capas de sistema visibles (sin zona de seguridad) ──
+  async function _renderMockupCanvas(formatName) {
+    const size = State.formatSizes[formatName];
+    if (!size) return null;
+
+    // Render del diseño al tamaño nativo del formato
+    const designCv = await _renderFormatCanvas(formatName);
+    if (!designCv) return null;
+
+    // Componer COMPOSICIÓN TÍTULO / COMPOSICIÓN MOVIL TEXTO en sus formatos de fondo
+    // (en el export normal no van; aquí se añaden para reflejar lo que ve el usuario en pantalla).
+    await _drawCompositionOverlay(designCv, formatName);
+
+    const dc = size.displayContext;
+    const W = dc ? dc.w : size.w;
+    const H = dc ? dc.h : size.h;
+    const contentX = dc ? dc.contentX : 0;
+    const contentY = dc ? dc.contentY : 0;
+    const contentW = dc ? (dc.contentW || size.w) : size.w;
+    const contentH = dc ? (dc.contentH || size.h) : size.h;
+
+    // Canvas supersampled al tamaño del display
+    const cv = document.createElement('canvas');
+    cv.width  = W * SS;
+    cv.height = H * SS;
+    const ctx = cv.getContext('2d');
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.scale(SS, SS);
+    ctx.clearRect(0, 0, W, H);
+
+    const sysLayers = State.systemLayers[formatName] || [];
+    const isVisible = (l) =>
+      (typeof SystemLayers !== 'undefined')
+        ? SystemLayers.getVisible(formatName, l.key)
+        : (l.defaultVisible !== false);
+    const include = (l) => isVisible(l) && l.label !== 'ZONA DE SEGURIDAD';
+
+    // Capas zBase debajo del diseño
+    for (const layer of sysLayers.filter(l => l.zBase && include(l))) {
+      await _drawSystemMockupLayer(ctx, layer, W, H, dc);
+    }
+
+    // Diseño en su content area (o full si no hay displayContext)
+    ctx.drawImage(designCv, 0, 0, designCv.width, designCv.height,
+                  contentX, contentY, contentW, contentH);
+
+    // Capas zBottom (encima del diseño base pero todavía por debajo de overlays "top")
+    for (const layer of sysLayers.filter(l => l.zBottom && !l.zBase && include(l))) {
+      await _drawSystemMockupLayer(ctx, layer, W, H, dc);
+    }
+
+    // Capas top (encima de todo): el mockup principal va aquí
+    for (const layer of sysLayers.filter(l => !l.zBase && !l.zBottom && include(l))) {
+      await _drawSystemMockupLayer(ctx, layer, W, H, dc);
+    }
+
+    // Downsample a resolución nativa
+    const finalCv = document.createElement('canvas');
+    finalCv.width  = W;
+    finalCv.height = H;
+    const finalCtx = finalCv.getContext('2d');
+    finalCtx.imageSmoothingEnabled = true;
+    finalCtx.imageSmoothingQuality = 'high';
+    finalCtx.drawImage(cv, 0, 0, cv.width, cv.height, 0, 0, W, H);
+
+    return finalCv;
+  }
+
+  // Pinta sobre el canvas del diseño (a tamaño nativo del formato) la composición
+  // que normalmente se ve en pantalla pero no se incluye en el export estándar.
+  //  - MUX4 FONDO       → COMPOSICIÓN TÍTULO  (posición depende del overlay 'foco')
+  //  - MOVIL MUX FONDO  → COMPOSICIÓN MOVIL TEXTO
+  async function _drawCompositionOverlay(designCv, formatName) {
+    if (formatName !== 'MUX4 FONDO' && formatName !== 'MOVIL MUX FONDO') return;
+    const ctx = designCv.getContext('2d');
+
+    if (formatName === 'MUX4 FONDO') {
+      const comp = State.layers.find(l => l.isComposicion);
+      if (!comp || !(comp.srcFondo || comp.src)) return;
+      const focoVisible = (typeof SystemLayers !== 'undefined')
+        ? SystemLayers.getVisible('MUX4 FONDO', 'foco')
+        : false;
+      const posX = 106;
+      const posY = focoVisible ? 457 : 185;
+      const nw   = comp.naturalWidth  || 784;
+      const nh   = comp.naturalHeight || 318;
+      const src  = comp.srcFondo || comp.src;
+      await _drawImage(ctx, src, posX, posY, nw, nh);
+      return;
+    }
+
+    if (formatName === 'MOVIL MUX FONDO') {
+      const comp = State.layers.find(l => l.isComposicionMovil);
+      if (!comp || !(comp.srcMovilFondo || comp.src)) return;
+      const posX = 0;
+      const posY = 1217;
+      const nw   = comp.naturalWidth  || 1440;
+      const nh   = comp.naturalHeight || 466;
+      const src  = comp.srcMovilFondo || comp.src;
+      await _drawImage(ctx, src, posX, posY, nw, nh);
+    }
+  }
+
+  async function _drawSystemMockupLayer(ctx, layer, W, H, dc) {
+    if (!layer?.src) return;
+    let dx = 0, dy = 0, dw = W, dh = H;
+    if (dc && layer.contentArea) {
+      dx = dc.contentX;
+      dy = dc.contentY;
+      dw = dc.contentW || dc.w;
+      dh = dc.contentH || dc.h;
+    } else if (dc && layer.contextPos) {
+      // Tamaño natural en la posición indicada por contextPos
+      await new Promise(res => {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => {
+          ctx.drawImage(img, layer.contextPos.x, layer.contextPos.y, img.naturalWidth, img.naturalHeight);
+          res();
+        };
+        img.onerror = () => res();
+        img.src = layer.src;
+      });
+      return;
+    }
+    await _drawImage(ctx, layer.src, dx, dy, dw, dh);
   }
 
   // ── JPG QUALITY BINARY SEARCH ─────────────────────────────
@@ -366,10 +611,14 @@ const Export = (() => {
 
   function _isLayerVisible(layer, formatName) {
     if (layer.isTitleLayer) {
-      return (formatName === 'MUX4 TXT' || formatName === 'MOVIL TXT' || formatName === 'TÍTULO FICHA' || formatName === 'CARÁTULA H' || formatName === 'CARÁTULA V' || formatName === 'CARTEL COM. H' || formatName === 'CARTEL COM. V' || formatName === 'AMAZON LOGO' || formatName === 'SONY') && formatName !== 'FANART' && formatName !== 'FANART MÓVIL';
+      const inTextFormat = (formatName === 'MUX4 TXT' || formatName === 'MOVIL TXT' || formatName === 'TÍTULO FICHA' || formatName === 'CARÁTULA H' || formatName === 'CARÁTULA V' || formatName === 'CARTEL COM. H' || formatName === 'CARTEL COM. V' || formatName === 'AMAZON LOGO' || formatName === 'SONY' || formatName === 'XIAOMI BANNER' || formatName === 'DEST. DOBLE 4' || formatName === 'DEST. DOBLE 4 SIL' || formatName === 'DEST. DOBLE 1' || formatName === 'DEST. DOBLE 1 SIL' || formatName === 'DEST. DOBLE 2' || formatName === 'DEST. DOBLE 2 SIL' || formatName === 'MOD N SIL') && formatName !== 'FANART' && formatName !== 'FANART MÓVIL';
+      if (!inTextFormat) return false;
+      // Respetar visible:false puesto por el preset
+      const fmtVisible = State.formatParams?.[formatName]?.[layer.id]?.visible;
+      return fmtVisible !== false;
     }
     if (layer.isComposicion) {
-      if (formatName === 'MUX4 TXT' || formatName === 'MOVIL TXT' || formatName === 'MUX4 FONDO' || formatName === 'MOVIL MUX FONDO' || formatName === 'TÍTULO FICHA' || formatName === 'CARÁTULA H' || formatName === 'CARÁTULA V' || formatName === 'CARTEL COM. H' || formatName === 'CARTEL COM. V' || formatName === 'FANART' || formatName === 'FANART MÓVIL' || formatName === 'AMAZON LOGO' || formatName === 'AMAZON BG' || formatName === 'SONY') return false;
+      if (formatName === 'MUX4 TXT' || formatName === 'MOVIL TXT' || formatName === 'MUX4 FONDO' || formatName === 'MOVIL MUX FONDO' || formatName === 'TÍTULO FICHA' || formatName === 'CARÁTULA H' || formatName === 'CARÁTULA V' || formatName === 'CARTEL COM. H' || formatName === 'CARTEL COM. V' || formatName === 'FANART' || formatName === 'FANART MÓVIL' || formatName === 'FANART DEST.' || formatName === 'AMAZON LOGO' || formatName === 'AMAZON BG' || formatName === 'SONY' || formatName === 'XIAOMI BANNER' || formatName === 'DEST. DOBLE 4' || formatName === 'DEST. DOBLE 4 SIL' || formatName === 'DEST. DOBLE 1' || formatName === 'DEST. DOBLE 1 SIL' || formatName === 'DEST. DOBLE 2' || formatName === 'DEST. DOBLE 2 SIL' || formatName === 'MOD N' || formatName === 'FANART MOD N' || formatName === 'MOD N SIL' || formatName === 'PERFIL') return false;
       const fmtVisible = State.formatParams?.[formatName]?.[layer.id]?.visible;
       return fmtVisible !== undefined ? fmtVisible : true;
     }
@@ -377,20 +626,120 @@ const Export = (() => {
     if (layer.isComposicionAmazon) return false;
     if (layer.isMarcaSony) return formatName === 'SONY';
     if (layer.isMarcaIplus) return formatName === 'IPLUS PUBLI';
+    if (layer.isMolduraFanart) {
+      if (formatName !== 'FANART MOD N') return false;
+      const fmtVisible = State.formatParams?.[formatName]?.[layer.id]?.visible;
+      return fmtVisible !== undefined ? fmtVisible : true;
+    }
+    if (layer.isMascaraBlur) {
+      if (formatName !== 'FANART MOD N') return false;
+      const fmtVisible = State.formatParams?.[formatName]?.[layer.id]?.visible;
+      return fmtVisible !== undefined ? fmtVisible : true;
+    }
     if (layer.exclusiveFormat) return layer.exclusiveFormat === formatName;
-    if (formatName === 'MUX4 TXT' || formatName === 'MOVIL TXT' || formatName === 'TÍTULO FICHA' || formatName === 'AMAZON LOGO') return false;
+    if ((formatName === 'MUX4 TXT' || formatName === 'MOVIL TXT' || formatName === 'TÍTULO FICHA' || formatName === 'AMAZON LOGO') && !layer._layoutGenerated) return false;
     const fmtVisible = State.formatParams?.[formatName]?.[layer.id]?.visible;
     return fmtVisible !== undefined ? fmtVisible : layer.visible !== false;
   }
 
   // ── DIBUJAR CAPA ──────────────────────────────────────────
 
+
+  // ── RUIDO — usa el mismo SVG filter del DOM que el editor ──
+  async function _applyNoiseSVG(cv, noiseLevel) {
+    if (!noiseLevel || noiseLevel <= 0) return;
+    const filterId  = `mp-noise-${Math.round(noiseLevel)}`;
+    const svgEl     = document.getElementById('mp-noise-svg');
+    if (!svgEl) return;
+    const filterDef = svgEl.querySelector(`#${filterId}`)?.outerHTML;
+    if (!filterDef) return;
+
+    const W = cv.width, H = cv.height;
+    const dataURL = cv.toDataURL('image/png');
+    const svgStr  = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}"><defs>${filterDef}</defs><image href="${dataURL}" width="${W}" height="${H}" filter="url(#${filterId})"/></svg>`;
+    const url     = URL.createObjectURL(new Blob([svgStr], { type: 'image/svg+xml' }));
+
+    await new Promise((res) => {
+      const img = new Image();
+      img.onload = () => {
+        cv.getContext('2d').drawImage(img, 0, 0);
+        URL.revokeObjectURL(url);
+        res();
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); res(); };
+      img.src = url;
+    });
+  }
+
+  // ── MÁSCARA BLUR (Canvas 2D backdrop-blur emulado) ───────
+  // Snapshot del canvas actual → blur en tmp → mascara alfa via destination-in → volcar.
+  async function _drawMascaraBlur(ctx, layer, formatName, W, H) {
+    if (!layer.src) return;
+    const cv = ctx.canvas;
+    const physW = cv.width;
+    const physH = cv.height;
+    const physScale = physW / W; // factor de supersampling (1 ó 2)
+
+    // tmp1: lo dibujado hasta ahora
+    const tmp1 = document.createElement('canvas');
+    tmp1.width  = physW;
+    tmp1.height = physH;
+    tmp1.getContext('2d').drawImage(cv, 0, 0);
+
+    // tmp2: copia con blur aplicado. 14px @ 3840 → escala con physW
+    const tmp2 = document.createElement('canvas');
+    tmp2.width  = physW;
+    tmp2.height = physH;
+    const t2 = tmp2.getContext('2d');
+    const blurPx = 14 * (physW / 3840);
+    t2.filter = `blur(${blurPx}px)`;
+    t2.drawImage(tmp1, 0, 0);
+    t2.filter = 'none';
+
+    // Cargar máscara y aplicar destination-in para recortar el blur a la zona alfa
+    const p = State.formatParams?.[formatName]?.[layer.id] || {};
+    const sx = (p.scaleX ?? 100) / 100;
+    const sy = (p.scaleY ?? 100) / 100;
+    const iw = (layer.naturalWidth  || 200) * sx;
+    const ih = (layer.naturalHeight || 200) * sy;
+    const cx = W / 2 + (p.x ?? 0);
+    const cy = H / 2 + (p.y ?? 0);
+    const maskX = (cx - iw / 2) * physScale;
+    const maskY = (cy - ih / 2) * physScale;
+    const maskW = iw * physScale;
+    const maskH = ih * physScale;
+
+    await new Promise(res => {
+      const maskImg = new Image();
+      maskImg.onload = () => {
+        t2.globalCompositeOperation = 'destination-in';
+        t2.drawImage(maskImg, maskX, maskY, maskW, maskH);
+        res();
+      };
+      maskImg.onerror = () => res();
+      maskImg.src = layer.src;
+    });
+
+    // Volcar el resultado al canvas principal con transform identidad
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.drawImage(tmp2, 0, 0);
+    ctx.restore();
+  }
+
   async function _drawLayer(ctx, layer, formatName, W, H) {
+    // Capa MÁSCARA BLUR: snapshot + blur + mask alfa (backdrop-filter equivalente)
+    if (layer.isMascaraBlur) {
+      return await _drawMascaraBlur(ctx, layer, formatName, W, H);
+    }
+
     const p   = State.formatParams?.[formatName]?.[layer.id] || {};
     const sx  = (p.scaleX  ?? 100) / 100;
     const sy  = (p.scaleY  ?? 100) / 100;
     const rot = ((p.rotation ?? 0) * Math.PI) / 180;
     const op  = (layer.params?.opacity ?? 100) / 100;
+    // Blend mode: 'normal' en CSS = 'source-over' en canvas
+    const blend = (!layer.blendMode || layer.blendMode === 'normal') ? 'source-over' : layer.blendMode;
 
     // ── MÁSCARA SIL ───────────────────────────────────────
     const fmtSize    = State.formatSizes[formatName];
@@ -424,15 +773,19 @@ const Export = (() => {
       const compSrc = (formatName === 'MUX4 FONDO' && layer.srcFondo) ? layer.srcFondo : layer.src;
       ctx.save();
       ctx.globalAlpha = op;
+      ctx.globalCompositeOperation = blend;
       await _drawImage(ctx, compSrc, posX, posY, drawW, drawH);
       ctx.restore();
       return;
     }
 
-    const cx = W / 2 + (p.x ?? 0);
-    const cy = H / 2 + (p.y ?? 0);
+    let cx = W / 2 + (p.x ?? 0);
+    let cy = H / 2 + (p.y ?? 0);
+    // Para texto: forzar coordenadas enteras y evitar subpixel positioning blur
+    if (layer.type === 'text') { cx = Math.round(cx); cy = Math.round(cy); }
     ctx.save();
     ctx.globalAlpha = Math.max(0, Math.min(1, op));
+    ctx.globalCompositeOperation = blend;
 
     const filters = [];
     const g = layer.params || {};
@@ -460,16 +813,25 @@ const Export = (() => {
       const c1 = _rgba(gp.color1, gp.alpha1);
       const c2 = _rgba(gp.color2, gp.alpha2);
       let grad;
+      let s1 = 0, s2 = 100;
       if (gp.type === 'radial') {
-        grad = ctx.createRadialGradient(0, 0, 0, 0, 0, Math.max(gw, gh) / 2);
+        const offX = ((gp.cx ?? 50) - 50) / 100 * gw;
+        const offY = ((gp.cy ?? 50) - 50) / 100 * gh;
+        const rPx  = (gp.radius ?? 100) / 100 * Math.max(gw, gh);
+        grad = ctx.createRadialGradient(offX, offY, 0, offX, offY, rPx);
       } else {
         const ang = ((gp.angle - 90) * Math.PI) / 180;
         const dx  = Math.cos(ang) * gw / 2;
         const dy  = Math.sin(ang) * gh / 2;
         grad = ctx.createLinearGradient(-dx, -dy, dx, dy);
+        if (typeof Canvas !== 'undefined' && Canvas.calcGradientStops) {
+          const stops = Canvas.calcGradientStops(gp, layer.naturalWidth || W, layer.naturalHeight || H);
+          s1 = stops.s1;
+          s2 = stops.s2;
+        }
       }
-      grad.addColorStop(0, c1);
-      grad.addColorStop(1, c2);
+      grad.addColorStop(Math.max(0, Math.min(1, s1/100)), c1);
+      grad.addColorStop(Math.max(0, Math.min(1, s2/100)), c2);
       ctx.fillStyle = grad;
       ctx.fillRect(-gw/2, -gh/2, gw, gh);
 
@@ -484,9 +846,13 @@ const Export = (() => {
       const lineRuns = (typeof TextLayers !== 'undefined') ? TextLayers.buildLineRuns(runs) : [runs];
       const N        = lineRuns.length;
       ctx.save();
+      // Para texto: evitar subpixel positioning que produce desenfoque/aliasing.
+      // Reset rotación intermedia y forzar coordenadas enteras.
       ctx.scale(sx, sy);
       ctx.textBaseline  = 'middle';
       ctx.letterSpacing = tracking + 'em';
+      // En navegadores que lo soporten, mejora la nitidez del texto
+      if ('textRendering' in ctx) ctx.textRendering = 'geometricPrecision';
       // Calcular lineH por línea (tamaño mayor de cada línea * leading)
       const lineHeights = lineRuns.map(lr => {
         const maxSz = lr.length > 0 ? Math.max(...lr.map(r => r.size || sz)) : sz;
@@ -508,7 +874,7 @@ const Export = (() => {
 
       lineRuns.forEach((lr, i) => {
         const lh   = lineHeights[i];
-        const lineY = currentY + lh / 2;
+        const lineY = Math.round(currentY + lh / 2);
         currentY += lh;
         const lw     = lineWidths[i];
         // xStart: ajustar según alineación para coincidir con viewport
@@ -516,6 +882,7 @@ const Export = (() => {
         let   xStart = align === 'center' ? -lw / 2
                       : align === 'right'  ? -lw
                       : 0;
+        xStart = Math.round(xStart);
         for (const r of lr) {
           const rsz = r.size || sz;
           ctx.font      = `${r.style||'normal'} ${r.weight||'400'} ${rsz}px '${r.family||'Apercu Movistar'}', Arial, sans-serif`;
@@ -544,6 +911,7 @@ const Export = (() => {
         ctx.restore();
         ctx.save();
         ctx.globalAlpha = op;
+        ctx.globalCompositeOperation = blend;
         if (filters.length) ctx.filter = filters.join(' ');
         ctx.drawImage(tmp, 0, 0, W, H, 0, 0, W, H);
       } else {
@@ -586,7 +954,19 @@ const Export = (() => {
     return new Promise(res => {
       const img = new Image();
       img.crossOrigin = 'anonymous';
-      img.onload  = () => { ctx.drawImage(img, x, y, w, h); res(); };
+      img.onload  = () => {
+        const prevSmoothing = ctx.imageSmoothingEnabled;
+        // Si se dibuja a tamaño natural o mayor, desactivar smoothing para máxima nitidez
+        if (w >= img.naturalWidth && h >= img.naturalHeight) {
+          ctx.imageSmoothingEnabled = false;
+        } else {
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = 'high';
+        }
+        ctx.drawImage(img, x, y, w, h);
+        ctx.imageSmoothingEnabled = prevSmoothing;
+        res();
+      };
       img.onerror = () => res();
       img.src = src;
     });
@@ -610,5 +990,170 @@ const Export = (() => {
     ctx.closePath();
   }
 
-  return { init };
+  // Construye el "base name" del fichero para cada formato.
+  // Caso especial: MOD N y FANART MOD N intercalan fecha (MES3+AA, ej. ENE26) entre nombre y suffix.
+  function _buildBaseName(nombre, formatName) {
+    if (formatName === 'FANART MOD N' || formatName === 'MOD N') {
+      const meses = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
+      const now = new Date();
+      const tag = meses[now.getMonth()] + String(now.getFullYear()).slice(-2);
+      return `${nombre}_${tag}`;
+    }
+    return nombre;
+  }
+
+  // ── MODAL GENERAR MOCKUP ──────────────────────────────────
+
+  function _showMockupModal(formatName) {
+    if (!isMockupFormat(formatName)) return;
+
+    document.getElementById('mockup-modal')?.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'mockup-modal';
+    overlay.style.cssText = `
+      position:fixed;inset:0;background:rgba(0,0,0,0.75);
+      z-index:99000;display:flex;align-items:center;justify-content:center;
+    `;
+    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+
+    const modal = document.createElement('div');
+    modal.style.cssText = `
+      background:#161616;border:1px solid #2e2e2e;border-radius:4px;
+      width:380px;padding:0;overflow:hidden;
+      box-shadow:0 16px 48px rgba(0,0,0,0.7);
+    `;
+
+    const header = document.createElement('div');
+    header.style.cssText = `
+      padding:14px 16px;background:#111;border-bottom:1px solid #2e2e2e;
+      font-family:var(--font);font-size:13px;font-weight:700;
+      letter-spacing:0.12em;text-transform:uppercase;color:var(--col-yellow);
+    `;
+    header.textContent = 'GENERAR MOCKUP';
+
+    const body = document.createElement('div');
+    body.style.cssText = 'padding:16px;display:flex;flex-direction:column;gap:12px;';
+
+    const desc = document.createElement('p');
+    desc.style.cssText = 'font-family:var(--font);font-size:11px;color:#777;margin:0;line-height:1.6;';
+    desc.textContent = `Formato: ${formatName}. Introduce el nombre del archivo:`;
+
+    const inputWrap = document.createElement('div');
+    inputWrap.style.cssText = 'display:flex;flex-direction:column;gap:4px;';
+
+    const label = document.createElement('label');
+    label.style.cssText = 'font-family:var(--font);font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#555;';
+    label.textContent = 'Nombre del contenido';
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.placeholder = 'ej: TRIGGER_POINT';
+    input.value = State.projectName || '';
+    input.style.cssText = `
+      height:32px;padding:0 10px;background:#0e0e0e;border:1px solid #333;
+      border-radius:2px;font-family:var(--font);font-size:12px;color:#ddd;
+      outline:none;transition:border-color 0.15s;
+    `;
+    input.addEventListener('focus', () => input.style.borderColor = 'var(--col-yellow)');
+    input.addEventListener('blur',  () => input.style.borderColor = '#333');
+
+    inputWrap.appendChild(label);
+    inputWrap.appendChild(input);
+
+    const cfg = FORMAT_CONFIG[formatName];
+    const previewName = document.createElement('div');
+    previewName.style.cssText = 'font-family:var(--font);font-size:10px;color:#444;background:#0e0e0e;border:1px solid #222;border-radius:2px;padding:8px 10px;';
+    const updatePreview = () => {
+      const raw = (input.value.trim().replace(/[^a-zA-Z0-9_\-áéíóúüñÁÉÍÓÚÜÑ ]/g, '_').replace(/\s+/g, '_')) || 'EXPORT';
+      previewName.textContent = `${raw}_${cfg?.suffix || formatName}_MOCKUP.jpg`;
+    };
+    input.addEventListener('input', updatePreview);
+    updatePreview();
+
+    const btnRow = document.createElement('div');
+    btnRow.style.cssText = 'display:flex;justify-content:flex-end;gap:8px;margin-top:4px;';
+
+    const btnCancel = document.createElement('button');
+    btnCancel.textContent = 'CANCELAR';
+    btnCancel.style.cssText = `
+      height:28px;padding:0 16px;border-radius:2px;
+      font-family:var(--font);font-size:10px;font-weight:700;
+      letter-spacing:0.08em;text-transform:uppercase;cursor:pointer;
+      background:transparent;border:1px solid #444;color:#777;
+      transition:color 0.15s,border-color 0.15s;
+    `;
+    btnCancel.addEventListener('mouseenter', () => { btnCancel.style.color='#ccc'; btnCancel.style.borderColor='#666'; });
+    btnCancel.addEventListener('mouseleave', () => { btnCancel.style.color='#777'; btnCancel.style.borderColor='#444'; });
+    btnCancel.addEventListener('click', () => overlay.remove());
+
+    const btnOk = document.createElement('button');
+    btnOk.textContent = 'GENERAR';
+    btnOk.style.cssText = `
+      height:28px;padding:0 20px;border-radius:2px;
+      font-family:var(--font);font-size:10px;font-weight:700;
+      letter-spacing:0.08em;text-transform:uppercase;cursor:pointer;
+      background:var(--col-yellow);border:1px solid var(--col-yellow);color:#000;
+      transition:opacity 0.15s;
+    `;
+    btnOk.addEventListener('mouseenter', () => btnOk.style.opacity = '0.85');
+    btnOk.addEventListener('mouseleave', () => btnOk.style.opacity = '1');
+    btnOk.addEventListener('click', () => {
+      const nombre = (input.value.trim().replace(/[^a-zA-Z0-9_\-áéíóúüñÁÉÍÓÚÜÑ ]/g, '_').replace(/\s+/g, '_')) || 'EXPORT';
+      overlay.remove();
+      _exportMockupBlob(formatName, nombre);
+    });
+
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter') btnOk.click();
+      if (e.key === 'Escape') overlay.remove();
+    });
+
+    btnRow.appendChild(btnCancel);
+    btnRow.appendChild(btnOk);
+    body.appendChild(desc);
+    body.appendChild(inputWrap);
+    body.appendChild(previewName);
+    body.appendChild(btnRow);
+    modal.appendChild(header);
+    modal.appendChild(body);
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+
+    setTimeout(() => { input.focus(); input.select(); }, 50);
+  }
+
+  async function _exportMockupBlob(formatName, baseName) {
+    const progress = _showProgress(1);
+    progress.update(1, formatName);
+
+    try {
+      const cv = await _renderMockupCanvas(formatName);
+      if (!cv) { progress.close(); alert('No se pudo generar el mockup.'); return; }
+
+      // JPG hasta 5MB (mockups son sólo visualización, no entrega final)
+      const blob = await _jpgWithMaxSize(cv, 5);
+      progress.close();
+      if (!blob) { alert('No se pudo codificar el JPG del mockup.'); return; }
+
+      const cfg = FORMAT_CONFIG[formatName] || { suffix: formatName.replace(/\s+/g, '_') };
+      const filename = `${baseName}_${cfg.suffix}_MOCKUP.jpg`;
+      const url = URL.createObjectURL(blob);
+      const a   = Object.assign(document.createElement('a'), { href: url, download: filename });
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      progress.close();
+      console.error('[Export] Error generando mockup:', err);
+      alert('Error generando mockup: ' + (err?.message || err));
+    }
+  }
+
+  return {
+    init,
+    exportAll: _showExportModal,
+    isMockupFormat,
+    isPngFormat: (name) => FORMAT_CONFIG[name]?.type === 'png',
+    generateMockup: _showMockupModal,
+  };
 })();

@@ -106,14 +106,17 @@ const Formats = (() => {
       const optionsEl = document.getElementById('modality-options');
       if (valueEl) valueEl.textContent = targetModality.label;
       if (optionsEl) {
-        optionsEl.querySelectorAll('.modality-option').forEach(opt => {
-          opt.classList.toggle('active', opt.dataset.id === targetModality.id);
+        // Usar la clase real que crea _buildDropdown — antes apuntaba a una
+        // clase inexistente (.modality-option) y el highlight nunca cambiaba.
+        optionsEl.querySelectorAll('.custom-select-option').forEach(opt => {
+          opt.classList.toggle('selected', opt.dataset.id === targetModality.id);
         });
       }
     }
 
     if (typeof GradientLayers !== 'undefined') GradientLayers.stopPickMode();
-    if (typeof SystemLayers !== 'undefined') SystemLayers.invalidate();
+    if (typeof SystemLayers   !== 'undefined') SystemLayers.invalidate();
+    if (typeof Layout         !== 'undefined') Layout.onFormatActivated(formatName);
 
     _renderFormatGrid();
 

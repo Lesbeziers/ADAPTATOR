@@ -16,6 +16,7 @@ const State = {
   projectName: 'Sin título',
   dirty: false,
   _multiOrigins: {},
+  layerRoles: {}, // { layerId: 'background'|'subject'|'title'|null }
 
   pastillaConfig: {
     variant: 'negra',        // fallback global (compatibilidad proyectos antiguos)
@@ -66,12 +67,24 @@ const State = {
     'DEST. DOBLE 4':    { w: 386,  h: 548,  maxMB: 1    },
     'DEST. DOBLE 4 SIL':{ w: 386,  h: 630,  maxMB: 1,   maskRect: { x: 0, y: 41,  w: 385,  h: 548, r: 4 } },
     'MOD N':            { w: 386,  h: 217,  maxMB: 0.6  },
+    'FANART MOD N':     { w: 1920, h: 1080, maxMB: 10   },
     'MOD N SIL':        { w: 449,  h: 300,  maxMB: 0.6, maskRect: { x: 0, y: 42,  w: 385,  h: 217, r: 4 } },
     'AMAZON BG':        { w: 1920, h: 720,  maxMB: 0.45, displayContext: { w: 1920, h: 1080, contentX: 0, contentY: 0, contentW: 1920, contentH: 720 } },
     'AMAZON LOGO':      { w: 640,  h: 260,  maxMB: 0.45 },
     'PERFIL':           { w: 425,  h: 479,  maxMB: 10, maskCircle: { cx: 0, cy: 26, r: 195 }, maskRect: { x: 0, y: -110, w: 390, h: 260, r: 0 } },
     'SONY':             { w: 204,  h: 306,  maxMB: 10   },
     'XIAOMI BANNER':    { w: 1280, h: 360,  maxMB: 10   },
+  },
+
+  // ── MAQUETACIÓN AUTOMÁTICA ───────────────────────────────
+  layoutConfig: {
+    type:    null,   // 'cine' | 'deportes' | null
+    version: null,   // 'normal' | 'freemium' | 'horecas' | null
+  },
+
+  // ── PASTILLA FREEMIUM ────────────────────────────────────
+  pastillaFreemiumConfig: {
+    variant: 'generica',   // 'generica' | 'cap1' | 'gratis'
   },
 
   // ── CAPAS DE SISTEMA ─────────────────────────────────────
@@ -175,7 +188,7 @@ const State = {
       formats: [
         'DEST. DOBLE 1', 'DEST. DOBLE 1 SIL', 'DEST. DOBLE 2',
         'DEST. DOBLE 2 SIL', 'DEST. DOBLE 4', 'DEST. DOBLE 4 SIL',
-        'MOD N', 'MOD N SIL'
+        'MOD N', 'FANART MOD N', 'MOD N SIL'
       ]
     },
     {

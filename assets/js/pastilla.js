@@ -201,10 +201,146 @@ const Pastilla = (() => {
     State.pastillaConfig.locked  = data.locked  || {};
   }
 
+  // ── PASTILLA FREEMIUM ─────────────────────────────────────
+
+  const FREEMIUM_VARIANTS = [
+    { id: 'generica', label: 'Genérica',   src: 'assets/img/pastilla_freemium.svg'        },
+    { id: 'cap1',     label: 'Capítulo 1', src: 'assets/img/pastilla_freemium_cap1.svg'   },
+    { id: 'gratis',   label: 'Gratis',     src: 'assets/img/pastilla_freemium_gratis.svg' },
+  ];
+
+  let _freemiumPanelOpen   = false;
+  let _freemiumDragging    = false;
+  let _freemiumPanelOffX   = 0;
+  let _freemiumPanelOffY   = 0;
+
+  function getFreemiumVariant() {
+    return State.pastillaFreemiumConfig?.variant || 'generica';
+  }
+
+  function setFreemiumVariant(id) {
+    if (!State.pastillaFreemiumConfig) State.pastillaFreemiumConfig = {};
+    State.pastillaFreemiumConfig.variant = id;
+    State.dirty = true;
+  }
+
+  function getFreemiumSrc() {
+    const v = FREEMIUM_VARIANTS.find(v => v.id === getFreemiumVariant());
+    return v ? v.src : FREEMIUM_VARIANTS[0].src;
+  }
+
+  function openFreemiumPanel() {
+    let panel = document.getElementById('pastilla-freemium-panel');
+    if (!panel) _createFreemiumPanel();
+    panel = document.getElementById('pastilla-freemium-panel');
+    _refreshFreemiumPanel(panel);
+    panel.classList.add('visible');
+    _freemiumPanelOpen = true;
+  }
+
+  function closeFreemiumPanel() {
+    const panel = document.getElementById('pastilla-freemium-panel');
+    if (panel) panel.classList.remove('visible');
+    _freemiumPanelOpen = false;
+  }
+
+  let _freemiumDragBound = false;
+
+  function _createFreemiumPanel() {
+    const panel = document.createElement('div');
+    panel.id = 'pastilla-freemium-panel';
+    panel.className = 'floating-editor-panel';
+    panel.style.width = '340px';
+    panel.innerHTML = `
+      <div id="pastilla-freemium-header" class="floating-editor-header">
+        <span>Pastilla Freemium</span>
+        <button id="pastilla-freemium-close">&#x2715;</button>
+      </div>
+      <div style="padding:12px;display:flex;flex-direction:column;gap:10px;">
+        <div style="font-family:var(--font);font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#777;">Modelo</div>
+        <div id="pastilla-freemium-options" style="display:flex;gap:8px;"></div>
+      </div>
+    `;
+    document.body.appendChild(panel);
+    document.getElementById('pastilla-freemium-close').addEventListener('click', closeFreemiumPanel);
+
+    // Drag — registramos los listeners en `document` una sola vez aunque el
+    // panel se recree (idempotente). Y usamos getElementById dentro del listener
+    // para no quedar atados a la referencia `panel` antigua si se reconstruye.
+    if (!_freemiumDragBound) {
+      _freemiumDragBound = true;
+      document.addEventListener('mousedown', e => {
+        const header = e.target.closest('#pastilla-freemium-header');
+        if (!header || e.target.id === 'pastilla-freemium-close') return;
+        const p = document.getElementById('pastilla-freemium-panel');
+        if (!p) return;
+        _freemiumDragging = true;
+        _freemiumPanelOffX = e.clientX - p.offsetLeft;
+        _freemiumPanelOffY = e.clientY - p.offsetTop;
+        document.body.classList.add('layer-dragging');
+      });
+      document.addEventListener('mousemove', e => {
+        if (!_freemiumDragging) return;
+        const p = document.getElementById('pastilla-freemium-panel');
+        if (!p) return;
+        p.style.left  = (e.clientX - _freemiumPanelOffX) + 'px';
+        p.style.top   = (e.clientY - _freemiumPanelOffY) + 'px';
+        p.style.right = 'auto';
+      });
+      document.addEventListener('mouseup', () => {
+        if (_freemiumDragging) { _freemiumDragging = false; document.body.classList.remove('layer-dragging'); }
+      });
+    }
+  }
+
+  function _refreshFreemiumPanel(panel) {
+    const container = panel.querySelector('#pastilla-freemium-options');
+    if (!container) return;
+    const current = getFreemiumVariant();
+    container.innerHTML = '';
+    FREEMIUM_VARIANTS.forEach(v => {
+      const btn = document.createElement('div');
+      btn.className = 'pastilla-variant-btn' + (current === v.id ? ' active' : '');
+      btn.dataset.variant = v.id;
+      btn.style.cssText = 'cursor:pointer;border:2px solid transparent;border-radius:4px;padding:8px;background:#1e1e1e;display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;';
+      btn.innerHTML = `
+        <img src="${v.src}" style="width:100%;height:auto;display:block;" alt="${v.label}" />
+        <span style="font-family:var(--font);font-size:9px;color:#999;letter-spacing:0.05em;">${v.label.toUpperCase()}</span>
+      `;
+      btn.addEventListener('click', () => {
+        if (typeof History !== 'undefined') History.push();
+        setFreemiumVariant(v.id);
+        container.querySelectorAll('.pastilla-variant-btn').forEach(b => {
+          b.classList.toggle('active', b.dataset.variant === v.id);
+        });
+        if (typeof Canvas !== 'undefined') Canvas.render();
+        if (typeof Layers !== 'undefined') Layers.render();
+      });
+      container.appendChild(btn);
+    });
+  }
+
+  // ── SERIALIZACIÓN FREEMIUM ────────────────────────────────
+
+  function serializeFreemium() {
+    return { variant: getFreemiumVariant() };
+  }
+
+  function restoreFreemium(data) {
+    if (!data) return;
+    if (!State.pastillaFreemiumConfig) State.pastillaFreemiumConfig = {};
+    State.pastillaFreemiumConfig.variant = data.variant || 'generica';
+  }
+
   return {
     init, hasFormat, isVisible, isLocked, isFixed, setVisible, setLocked,
     getVariant, setVariant, getSrc, getDefaults, getOffsetX, setOffsetX, getPosition,
     openPanel, closePanel, serialize, restore,
+    // Freemium
+    getFreemiumVariant, setFreemiumVariant, getFreemiumSrc,
+    openFreemiumPanel, closeFreemiumPanel,
+    serializeFreemium, restoreFreemium,
+    FREEMIUM_VARIANTS,
     FORMATS,
   };
 })();

@@ -40,7 +40,10 @@ const UI = (() => {
       const range = document.getElementById('slider-' + key);
       const label = document.getElementById('label-' + key);
       if (range) range.value = val;
-      if (label) label.value = val + unit;
+      if (label) {
+        label.value = val + unit;
+        if (key === 'scale') _updateScaleLabel(label, val);
+      }
     });
 
     // Actualizar swatch color tint
@@ -96,7 +99,9 @@ const UI = (() => {
       clearTimeout(timer);
       timer = setTimeout(() => {
         tooltip.textContent = el.dataset.tooltip;
-        tooltip.style.left = (e.clientX - tooltip.offsetWidth / 2) + 'px';
+        const ttW = tooltip.offsetWidth;
+        const ttX = Math.max(6, Math.min(e.clientX - ttW / 2, window.innerWidth - ttW - 6));
+        tooltip.style.left = ttX + 'px';
         tooltip.style.top  = (e.clientY - 32) + 'px';
         tooltip.classList.add('visible');
       }, 300);
@@ -104,7 +109,9 @@ const UI = (() => {
 
     document.addEventListener('mousemove', e => {
       if (!tooltip.classList.contains('visible')) return;
-      tooltip.style.left = (e.clientX - tooltip.offsetWidth / 2) + 'px';
+      const ttW2 = tooltip.offsetWidth;
+      const ttX2 = Math.max(6, Math.min(e.clientX - ttW2 / 2, window.innerWidth - ttW2 - 6));
+      tooltip.style.left = ttX2 + 'px';
       tooltip.style.top  = (e.clientY - 32) + 'px';
     });
 
@@ -214,6 +221,7 @@ const UI = (() => {
       range.addEventListener('input', e => {
         const newVal = +e.target.value;
         label.value = newVal + unit;
+        if (key === 'scale') _updateScaleLabel(label, newVal);
         if (!State.selectedLayerIds.length) return;
 
         // ── Tint ──────────────────────────────────────────────
@@ -285,6 +293,7 @@ const UI = (() => {
         val = Math.max(min, Math.min(max, val));
         range.value = val;
         label.value = val + unit;
+        if (key === 'scale') _updateScaleLabel(label, val);
 
         if (!State.selectedLayerIds.length) return;
         if (typeof History !== 'undefined') History.push();
@@ -386,5 +395,19 @@ const UI = (() => {
     });
   }
 
-  return { init, updateSliders, showConfirm };
+  function _updateScaleLabel(label, val) {
+    if (!label) return;
+    if (val > 125) {
+      label.style.color      = '#ff4444';
+      label.style.fontWeight = '700';
+    } else if (val > 100) {
+      label.style.color      = '#ff9900';
+      label.style.fontWeight = '700';
+    } else {
+      label.style.color      = '';
+      label.style.fontWeight = '';
+    }
+  }
+
+  return { init, updateSliders, showConfirm, updateScaleLabel: _updateScaleLabel };
 })();
