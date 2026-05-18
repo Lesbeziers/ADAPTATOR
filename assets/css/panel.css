@@ -157,23 +157,21 @@
   height: 22px;
   min-width: 127px;
   padding: 0 10px;
-  background: #2a2a2a;
+  background: #383838;
   border: none;
   border-radius: 2px;
-  color: #bbb;
+  color: #ddd;
   font-family: var(--font);
   font-size: var(--font-size-xs);
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   cursor: pointer;
+  display: none;
   transition: color 0.15s, background 0.15s;
 }
 
-#canvas-ok-btn:hover {
-  color: var(--col-text);
-  background: #333;
-}
+#canvas-ok-btn:hover { color: #fff; background: #444; }
 
 #canvas-ok-btn.done {
   background: #1a3d2e;
@@ -206,6 +204,31 @@
   color: var(--col-text);
   background: #333;
 }
+
+#canvas-mockup-btn {
+  position: absolute;
+  top: 7px;
+  z-index: 8000;
+  height: 22px;
+  padding: 0 10px;
+  background: #383838;
+  border: none;
+  border-radius: 2px;
+  color: #ddd;
+  font-family: var(--font);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  transition: color 0.15s, background 0.15s;
+}
+
+#canvas-mockup-btn:hover { color: var(--col-yellow); background: #444; }
 
 #modality-select option {
   font-weight: 700;
@@ -596,7 +619,7 @@ body.layer-dragging * {
 
 /* ── CAPAS DE SISTEMA ─────────────────────────────────────── */
 .layer-item-system {
-  background: rgba(255, 0, 0, 0.10); /* rojo al 10% */
+  background: rgba(255, 0, 0, 0.10);
 }
 
 .layer-item-system:hover {
@@ -1200,4 +1223,81 @@ body.layer-dragging * {
 
 .layer-item.key-layer .btn-eye svg {
   color: #ff4444 !important;
+}
+
+/* ── MENÚ CONTEXTUAL DE CAPA ──────────────────────────────── */
+.layer-ctx-menu {
+  box-shadow: 0 4px 16px rgba(0,0,0,0.6);
+  animation: ctx-appear 0.08s ease;
+}
+
+@keyframes ctx-appear {
+  from { opacity: 0; transform: scale(0.96); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+/* ── BOTONES AUTO / FIT / MIRROR ──────────────────────────── */
+/* Contenedor de botones de maquetación automática */
+#canvas-auto-controls {
+  position: absolute;
+  top: 7px;
+  right: 147px;
+  z-index: 8000;
+  display: none;
+  align-items: center;
+  gap: 4px;
+}
+
+#canvas-auto-controls.visible { display: flex; }
+
+#canvas-auto-btn,
+#canvas-fit-btn,
+#canvas-variant-btn {
+  height: 22px;
+  padding: 0 12px;
+  background: #383838;
+  border: none;
+  border-radius: 2px;
+  color: #ddd;
+  font-family: var(--font);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 0.15s, background 0.15s;
+  flex: 1;
+}
+
+#canvas-auto-btn:hover,
+#canvas-fit-btn:hover,
+#canvas-variant-btn:hover { color: #fff; background: #444; }
+
+#canvas-fit-btn.done { background: #1a2a3d; color: #6af; }
+
+/* Wrapper del dropdown de variantes — no se estira */
+#canvas-variant-wrap {
+  position: relative;
+  flex: 1;
+  display: flex;
+}
+
+#canvas-variant-btn {
+  width: 100%;
+  flex: 1;
+}
+
+#canvas-variant-menu {
+  position: absolute;
+  top: 26px;
+  right: 0;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 3px;
+  display: none;
+  flex-direction: column;
+  min-width: 220px;
+  z-index: 9000;
+  overflow: hidden;
 }

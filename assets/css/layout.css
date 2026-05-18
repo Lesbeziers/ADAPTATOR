@@ -165,7 +165,7 @@
   border: 1px solid #333;
   border-radius: 4px;
   box-shadow: 0 8px 24px rgba(0,0,0,0.5);
-  z-index: 8500;
+  z-index: 99000;
   display: none;
   flex-direction: column;
   gap: 0;
@@ -345,66 +345,6 @@
   text-align: left;
 }
 
-/* ── PANEL FLOTANTE DE SÓLIDO ─────────────────────────────── */
-#solid-editor-panel {
-  position: fixed;
-  top: 100px;
-  left: 350px;
-  width: 220px;
-  background: #1c1c1c;
-  border: 1px solid #333;
-  border-radius: 4px;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
-  z-index: 8500;
-  display: none;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-#solid-editor-panel.visible {
-  display: flex;
-}
-
-#solid-editor-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 12px;
-  background: #161616;
-  border-bottom: 1px solid #333;
-  cursor: move;
-  user-select: none;
-}
-
-#solid-editor-title {
-  font-family: var(--font);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--col-yellow);
-}
-
-#solid-editor-close {
-  background: transparent;
-  border: none;
-  color: #666;
-  font-size: 14px;
-  cursor: pointer;
-  line-height: 1;
-  padding: 0;
-  transition: color 0.15s;
-}
-
-#solid-editor-close:hover { color: #fff; }
-
-#solid-editor-body {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 12px;
-}
-
 /* ── CAPA SÓLIDO EN VIEWPORT ──────────────────────────────── */
 .canvas-solid-layer {
   position: absolute;
@@ -422,7 +362,7 @@
   border: 1px solid #333;
   border-radius: 4px;
   box-shadow: 0 8px 24px rgba(0,0,0,0.5);
-  z-index: 8500;
+  z-index: 99000;
   display: none;
   flex-direction: column;
   overflow: hidden;
@@ -509,7 +449,7 @@
   border: 1px solid #333;
   border-radius: 4px;
   box-shadow: 0 8px 24px rgba(0,0,0,0.5);
-  z-index: 8500;
+  z-index: 99000;
   display: none;
   flex-direction: column;
   overflow: hidden;
@@ -657,6 +597,7 @@ body.view-all #sidebar        { width: 0; border-color: transparent; }
 body.view-all #btn-collapse   { display: none; }
 body.view-all #canvas-area    { display: none; }
 body.view-all #canvas-ok-btn  { display: none !important; }
+body.view-all #canvas-mockup-btn { display: none !important; }
 
 #ver-todas-area {
   display: none;
@@ -810,7 +751,7 @@ body.view-all #ver-todas-area {
   border: 1px solid #333;
   border-radius: 4px;
   box-shadow: 0 8px 24px rgba(0,0,0,0.5);
-  z-index: 8500;
+  z-index: 99000;
   display: none;
   flex-direction: column;
   gap: 0;
@@ -862,4 +803,388 @@ body.view-all #ver-todas-area {
 
 .pastilla-variant-btn.active {
   border-color: var(--col-yellow) !important;
+}
+
+/* Alinear botones de auto-layout con el borde izquierdo del topbar */
+#canvas-auto-controls {
+  left: 10px !important;
+}
+
+/* ============================================================
+   MODAL DE MAQUETACIÓN AUTOMÁTICA
+   ============================================================ */
+
+.layout-modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  z-index: 9000;
+  align-items: center;
+  justify-content: center;
+}
+
+.layout-modal-overlay.visible {
+  display: flex;
+}
+
+.layout-modal-box {
+  background: #1a1a1a;
+  border: 1px solid #2e2e2e;
+  border-radius: 6px;
+  width: 380px;
+  display: flex;
+  flex-direction: column;
+}
+
+.layout-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-bottom: 1px solid #2e2e2e;
+}
+
+.layout-modal-title {
+  font-family: var(--font);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--col-text);
+}
+
+.layout-modal-close {
+  background: none;
+  border: none;
+  color: #666;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+
+.layout-modal-close:hover {
+  color: #ccc;
+}
+
+.layout-modal-body {
+  padding: 16px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.layout-modal-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.layout-modal-label {
+  font-family: var(--font);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #777;
+}
+
+.layout-modal-pills {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.layout-pill {
+  height: 28px;
+  padding: 0 14px;
+  background: #242424;
+  border: 1px solid #333;
+  border-radius: 3px;
+  color: #999;
+  font-family: var(--font);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+
+.layout-pill:hover {
+  color: var(--col-text);
+  border-color: #555;
+  background: #2a2a2a;
+}
+
+.layout-pill.active {
+  color: var(--col-yellow);
+  border-color: var(--col-yellow);
+  background: #2a2a2a;
+}
+
+.layout-modal-footer {
+  padding: 0 14px 16px;
+}
+
+.layout-modal-btn-apply {
+  width: 100%;
+  height: 32px;
+  background: var(--col-yellow);
+  border: none;
+  border-radius: 3px;
+  color: #000;
+  font-family: var(--font);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.layout-modal-btn-apply:hover {
+  opacity: 0.85;
+}
+
+.layout-modal-btn-apply:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* Indicador de maquetación activa en el panel */
+.layout-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: #1e1e1e;
+  border: 1px solid #2e2e2e;
+  border-radius: 3px;
+  margin: 6px 10px 0;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.layout-indicator:hover {
+  border-color: #555;
+}
+
+.layout-indicator-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--col-yellow);
+  flex-shrink: 0;
+}
+
+.layout-indicator-text {
+  font-family: var(--font);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--col-text-muted);
+  flex: 1;
+}
+
+.layout-indicator-edit {
+  font-family: var(--font);
+  font-size: 9px;
+  color: #555;
+  letter-spacing: 0.04em;
+}
+
+.layout-indicator:hover .layout-indicator-edit {
+  color: #888;
+}
+
+/* Panel freemium — reutiliza floating-editor-panel de pastilla */
+#pastilla-freemium-close {
+  background: none;
+  border: none;
+  color: #666;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+
+#pastilla-freemium-close:hover {
+  color: #ccc;
+}
+
+#pastilla-freemium-panel {
+  position: fixed;
+  top: 100px;
+  left: 350px;
+  background: #1c1c1c;
+  border: 1px solid #333;
+  border-radius: 4px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  z-index: 99000;
+  display: none;
+  flex-direction: column;
+  gap: 0;
+  overflow: hidden;
+}
+
+#pastilla-freemium-panel.visible {
+  display: flex;
+}
+
+#pastilla-freemium-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  background: #222;
+  border-bottom: 1px solid #333;
+  font-family: var(--font);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #ccc;
+  cursor: move;
+  user-select: none;
+}
+
+
+
+/* Custom dropdown de versión en modal de maquetación */
+#layout-version-dropdown {
+  width: 100%;
+  position: relative;
+}
+
+#layout-version-dropdown .custom-select-options {
+  position: absolute;
+  z-index: 999999;
+  width: 100%;
+  left: 0;
+}
+
+/* ── MOD N — Botón "EDITAR COLECCIÓN" y caja flotante ───── */
+#canvas-modn-btn {
+  height: 22px;
+  padding: 0 12px;
+  background: #383838;
+  border: none;
+  border-radius: 2px;
+  color: #ddd;
+  font-family: var(--font);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 0.15s, background 0.15s;
+  flex: 1;
+}
+#canvas-modn-btn:hover { color: #fff; background: #444; }
+
+#mod-n-editor-box {
+  display: none;
+  position: fixed;
+  z-index: 9000;
+  width: 320px;
+  background: #1a1a1a;
+  border: 1px solid #2e2e2e;
+  border-radius: 6px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.6);
+}
+.mod-n-box-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid #2e2e2e;
+}
+.mod-n-box-title {
+  font-family: var(--font);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--col-text);
+}
+.mod-n-box-close {
+  background: none;
+  border: none;
+  color: #666;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+.mod-n-box-close:hover { color: #ccc; }
+.mod-n-box-body { padding: 8px 14px; }
+
+.mod-n-edit-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid #222;
+}
+.mod-n-edit-row:last-child { border-bottom: none; }
+.mod-n-edit-label {
+  font-family: var(--font);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #ddd;
+}
+.mod-n-edit-label-clickable {
+  cursor: pointer;
+  transition: color 0.15s;
+  user-select: none;
+}
+.mod-n-edit-label-clickable:hover { color: var(--col-yellow, #f0c020); }
+.mod-n-edit-color {
+  width: 48px;
+  height: 24px;
+  border: 1px solid #444;
+  border-radius: 3px;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+}
+
+.mod-n-hue-row { gap: 10px; }
+.mod-n-hue-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+  min-width: 0;
+  background: linear-gradient(
+    to right,
+    #ff0000 0%, #ffff00 17%, #00ff00 33%,
+    #00ffff 50%, #0000ff 67%, #ff00ff 83%, #ff0000 100%
+  );
+}
+.mod-n-hue-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #fff;
+  border: 1px solid #222;
+  cursor: pointer;
+}
+.mod-n-hue-value {
+  font-family: var(--font);
+  font-size: 10px;
+  color: #aaa;
+  min-width: 32px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
 }

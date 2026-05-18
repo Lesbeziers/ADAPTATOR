@@ -95,6 +95,13 @@
   font-style: normal;
 }
 
+@font-face {
+  font-family: 'Abolition';
+  src: url('../fonts/abolition-regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+}
+
 /* ── VARIABLES ────────────────────────────────────────────── */
 :root {
   /* Colores */
