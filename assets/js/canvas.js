@@ -245,6 +245,333 @@ const Canvas = (() => {
 
   // ── LIENZO ────────────────────────────────────────────────
 
+  // TÍTULO FICHA: la imagen de título va a 300px de alto, pegada a la izquierda; el ANCHO del
+  // formato = ancho de la imagen (tope 2172, mín 10) salvo override manual del tirador.
+  function _layoutTituloFicha() {
+    const fs = State.formatSizes['TÍTULO FICHA'];
+    if (!fs) return;
+    const title = State.layers.find(l => l.isTitleLayer);
+    if (!title || !title.naturalWidth || !title.naturalHeight) return;
+    const H = 300, MAXW = 2172, MINW = 10;
+    const s  = H / title.naturalHeight;
+    const dw = Math.round(title.naturalWidth * s);
+    if (!State.tituloFichaManual) fs.w = Math.max(MINW, Math.min(dw, MAXW));
+    const W = fs.w;
+    if (!State.formatParams['TÍTULO FICHA']) State.formatParams['TÍTULO FICHA'] = {};
+    State.formatParams['TÍTULO FICHA'][title.id] = {
+      x: Math.round(dw / 2 - W / 2),
+      y: 0,
+      scaleX: Math.round(s * 1000) / 10,
+      scaleY: Math.round(s * 1000) / 10,
+      rotation: 0,
+      visible: true,
+    };
+  }
+
+  // ── REGLAS Y GUÍAS ─────────────────────────────────────────
+  // Reglas (top + left) fuera del lienzo. Drag desde una regla crea una guía.
+  // Drag sobre una guía la mueve. Drag de vuelta a la regla la borra.
+  const RULER_SIZE = 10; // px
+  function _updateRulersAndGuides() {
+    // Asegurar que los elementos existen
+    let rulerH = document.getElementById('canvas-ruler-h');
+    let rulerV = document.getElementById('canvas-ruler-v');
+    let guidesLayer = document.getElementById('canvas-guides-layer');
+    if (!rulerH) {
+      rulerH = document.createElement('div');
+      rulerH.id = 'canvas-ruler-h';
+      _area.appendChild(rulerH);
+      _bindRuler(rulerH, 'h');
+    }
+    if (!rulerV) {
+      rulerV = document.createElement('div');
+      rulerV.id = 'canvas-ruler-v';
+      _area.appendChild(rulerV);
+      _bindRuler(rulerV, 'v');
+    }
+    if (!guidesLayer) {
+      guidesLayer = document.createElement('div');
+      guidesLayer.id = 'canvas-guides-layer';
+      _area.appendChild(guidesLayer);
+    }
+    if (!State.activeFormat) {
+      rulerH.style.display = rulerV.style.display = guidesLayer.style.display = 'none';
+      return;
+    }
+
+    // Posicionar las reglas alrededor del lienzo
+    const lx = parseFloat(_lienzo.style.left) || 0;
+    const ly = parseFloat(_lienzo.style.top)  || 0;
+    rulerH.style.display = 'block';
+    rulerH.style.left    = lx + 'px';
+    rulerH.style.top     = (ly - RULER_SIZE) + 'px';
+    rulerH.style.width   = _lienzoW + 'px';
+    rulerH.style.height  = RULER_SIZE + 'px';
+
+    rulerV.style.display = 'block';
+    rulerV.style.left    = (lx - RULER_SIZE) + 'px';
+    rulerV.style.top     = ly + 'px';
+    rulerV.style.width   = RULER_SIZE + 'px';
+    rulerV.style.height  = _lienzoH + 'px';
+
+    // Render de las guías existentes
+    guidesLayer.innerHTML = '';
+    guidesLayer.style.cssText = `position:absolute;left:${lx}px;top:${ly}px;width:${_lienzoW}px;height:${_lienzoH}px;pointer-events:none;z-index:8200;`;
+    const fid = State.activeFormat;
+    const visible = Formats.areGuidesVisible(fid);
+    if (!visible) return;
+    const locked = Formats.areGuidesLocked(fid);
+    const guides = Formats.getGuides(fid);
+    guides.forEach(g => {
+      const el = document.createElement('div');
+      el.className = 'canvas-guide' + (locked ? ' is-locked' : '');
+      el.dataset.id = g.id;
+      el.dataset.orient = g.orient;
+      if (g.orient === 'v') {
+        // pos en px del formato → píxeles del lienzo
+        const x = Math.round(g.pos * _scale * (_contentScaleX || 1));
+        el.style.cssText = `position:absolute;left:${x}px;top:0;width:1px;height:100%;background:#00BFFF;pointer-events:${locked ? 'none' : 'auto'};cursor:${locked ? 'default' : 'ew-resize'};`;
+        // Zona de hit más ancha para facilitar el agarre
+        const hit = document.createElement('div');
+        hit.style.cssText = `position:absolute;left:-4px;top:0;width:9px;height:100%;`;
+        el.appendChild(hit);
+      } else {
+        const y = Math.round(g.pos * _scale * (_contentScaleY || 1));
+        el.style.cssText = `position:absolute;left:0;top:${y}px;width:100%;height:1px;background:#00BFFF;pointer-events:${locked ? 'none' : 'auto'};cursor:${locked ? 'default' : 'ns-resize'};`;
+        const hit = document.createElement('div');
+        hit.style.cssText = `position:absolute;left:0;top:-4px;width:100%;height:9px;`;
+        el.appendChild(hit);
+      }
+      if (!locked) _bindGuideDrag(el, g);
+      guidesLayer.appendChild(el);
+    });
+  }
+
+  // Drag desde una regla → crear guía nueva. Mientras arrastras se ve una línea fantasma.
+  function _bindRuler(rulerEl, orient) {
+    rulerEl.addEventListener('mousedown', e => {
+      if (!State.activeFormat) return;
+      if (Formats.areGuidesLocked(State.activeFormat)) return;
+      e.preventDefault();
+      const ghost = _makeGhostGuide(orient);
+      const onMove = ev => _positionGhost(ghost, orient, ev);
+      const onUp = ev => {
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+        // Calcular posición en coords del formato
+        const pos = _ghostToFormatPos(orient, ev);
+        ghost.remove();
+        // Si soltó fuera del lienzo (en zona de reglas o más allá), no crear
+        if (pos === null) return;
+        Formats.addGuide(State.activeFormat, orient, pos);
+      };
+      _positionGhost(ghost, orient, e);
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
+  }
+
+  // Drag sobre una guía existente: moverla; si sale del lienzo a la regla, eliminarla.
+  function _bindGuideDrag(el, guide) {
+    el.addEventListener('mousedown', e => {
+      e.stopPropagation();
+      e.preventDefault();
+      const fid = State.activeFormat;
+      const onMove = ev => {
+        const pos = _ghostToFormatPos(guide.orient, ev, /*allowOutside=*/true);
+        if (pos === null) {
+          // Marcar como "se va a borrar"
+          el.style.opacity = '0.3';
+          el.style.background = '#ff4444';
+        } else {
+          el.style.opacity = '1';
+          el.style.background = '#00BFFF';
+          // Reposicionar visualmente
+          if (guide.orient === 'v') {
+            el.style.left = Math.round(pos * _scale * (_contentScaleX || 1)) + 'px';
+          } else {
+            el.style.top  = Math.round(pos * _scale * (_contentScaleY || 1)) + 'px';
+          }
+        }
+      };
+      const onUp = ev => {
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+        const pos = _ghostToFormatPos(guide.orient, ev, /*allowOutside=*/true);
+        if (pos === null) {
+          Formats.deleteGuide(fid, guide.id);
+        } else {
+          Formats.moveGuide(fid, guide.id, pos);
+        }
+      };
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
+  }
+
+  function _makeGhostGuide(orient) {
+    const g = document.createElement('div');
+    g.style.cssText = `position:absolute;background:#00BFFF;z-index:8300;pointer-events:none;${orient === 'v' ? 'width:1px;height:100%;top:0;' : 'height:1px;width:100%;left:0;'}`;
+    _area.appendChild(g);
+    return g;
+  }
+  function _positionGhost(ghost, orient, ev) {
+    const r = _area.getBoundingClientRect();
+    if (orient === 'v') {
+      ghost.style.left = (ev.clientX - r.left) + 'px';
+    } else {
+      ghost.style.top  = (ev.clientY - r.top)  + 'px';
+    }
+  }
+  // Devuelve la posición en coords del FORMATO (px) o null si está fuera del lienzo.
+  // allowOutside=true: permite estar fuera (devuelve null si pasa la regla → borrar).
+  function _ghostToFormatPos(orient, ev, allowOutside) {
+    const lr = _lienzo.getBoundingClientRect();
+    if (orient === 'v') {
+      const xPx = ev.clientX - lr.left;
+      if (xPx < 0 || xPx > _lienzoW) return null;
+      return (xPx / _scale) / (_contentScaleX || 1);
+    } else {
+      const yPx = ev.clientY - lr.top;
+      if (yPx < 0 || yPx > _lienzoH) return null;
+      return (yPx / _scale) / (_contentScaleY || 1);
+    }
+  }
+
+  // ── SNAP: cálculo del ajuste hacia la guía más cercana ─────
+  // Devuelve {dx, dy} a SUMAR al delta de arrastre actual para que algún borde/centro
+  // de las capas seleccionadas quede pegado a una guía si está dentro del radio.
+  // Radio en PÍXELES DE PANTALLA → convertido a px del formato dividiendo por _scale.
+  const SNAP_RADIUS_PX = 6;
+  function _calcSnapAdjustment(dx, dy) {
+    const fid = State.activeFormat;
+    if (!fid) return { dx: 0, dy: 0 };
+    const guides = Formats.getGuides(fid);
+    if (!guides.length) return { dx: 0, dy: 0 };
+    if (!Formats.areGuidesVisible(fid)) return { dx: 0, dy: 0 };
+
+    const guidesV = guides.filter(g => g.orient === 'v').map(g => g.pos);
+    const guidesH = guides.filter(g => g.orient === 'h').map(g => g.pos);
+    if (!guidesV.length && !guidesH.length) return { dx: 0, dy: 0 };
+
+    // Radio en coords del formato (el snap es por píxel de pantalla, no de formato)
+    const radiusX = SNAP_RADIUS_PX / (_scale * (_contentScaleX || 1));
+    const radiusY = SNAP_RADIUS_PX / (_scale * (_contentScaleY || 1));
+
+    // El sistema coloca las capas con el CENTRO en el CENTRO del lienzo + p.x/p.y.
+    // Las guías están en coords absolutas del formato (0..W para v, 0..H para h).
+    // Para comparar: punto de la capa en coords del formato = W/2 + p.x (horizontal),
+    //                                                          H/2 + p.y (vertical).
+    const fmtSize = State.formatSizes[fid];
+    const W = fmtSize?.w || 0;
+    const H = fmtSize?.h || 0;
+
+    // Buscar el menor ajuste (snap más cercano) en X y en Y, considerando TODOS los puntos
+    // de TODAS las capas seleccionadas (centro + 4 bordes) contra TODAS las guías.
+    let bestAdjX = null;
+    let bestAdjY = null;
+
+    State.selectedLayerIds.forEach(lid => {
+      const origin = _dragOrigins[lid];
+      if (!origin) return;
+      const layer = State.layers.find(l => l.id === lid);
+      if (!layer) return;
+      const p = _getParams(lid);
+      // Posición tentativa (con dx/dy actuales aplicados al origen del drag)
+      const px = origin.x + dx;
+      const py = origin.y + dy;
+
+      // Bounding box visual de la capa (ancho/alto en coords del formato)
+      const nw = layer.naturalWidth  || (layer.solidParams?.width)  || 0;
+      const nh = layer.naturalHeight || (layer.solidParams?.height) || 0;
+      const sx = (p.scaleX ?? 100) / 100;
+      const sy = (p.scaleY ?? 100) / 100;
+      const halfW = (nw * sx) / 2;
+      const halfH = (nh * sy) / 2;
+
+      // Puntos candidatos en coords del formato (centro + 4 bordes)
+      const cx = W / 2 + px;
+      const cy = H / 2 + py;
+      const xPoints = [cx, cx - halfW, cx + halfW];
+      const yPoints = [cy, cy - halfH, cy + halfH];
+
+      // X: comparar puntos verticales de la capa con guías verticales
+      xPoints.forEach(pt => {
+        guidesV.forEach(gp => {
+          const diff = gp - pt;
+          if (Math.abs(diff) <= radiusX) {
+            if (bestAdjX === null || Math.abs(diff) < Math.abs(bestAdjX)) bestAdjX = diff;
+          }
+        });
+      });
+      // Y: comparar puntos horizontales de la capa con guías horizontales
+      yPoints.forEach(pt => {
+        guidesH.forEach(gp => {
+          const diff = gp - pt;
+          if (Math.abs(diff) <= radiusY) {
+            if (bestAdjY === null || Math.abs(diff) < Math.abs(bestAdjY)) bestAdjY = diff;
+          }
+        });
+      });
+    });
+
+    return { dx: bestAdjX || 0, dy: bestAdjY || 0 };
+  }
+
+  // Manejador para ajustar a mano el ancho de TÍTULO FICHA (borde derecho del lienzo)
+  function _updateTituloFichaHandle() {
+    let h = document.getElementById('titulo-ficha-handle');
+    if (State.activeFormat !== 'TÍTULO FICHA') { if (h) h.style.display = 'none'; return; }
+    if (!h) {
+      h = document.createElement('div');
+      h.id = 'titulo-ficha-handle';
+      h.dataset.tooltip = 'Arrastra para ajustar el ancho';
+      _area.appendChild(h);
+      _bindTituloFichaHandle(h);
+    }
+    const lx = parseFloat(_lienzo.style.left) || 0;
+    const ly = parseFloat(_lienzo.style.top)  || 0;
+    h.style.display = 'block';
+    h.style.left    = Math.round(lx + _lienzoW - 3) + 'px';
+    h.style.top     = Math.round(ly) + 'px';
+    h.style.height  = _lienzoH + 'px';
+  }
+
+  function _bindTituloFichaHandle(h) {
+    let startX = 0, startW = 0, dragging = false;
+    const onMove = e => {
+      if (!dragging) return;
+      const delta = (e.clientX - startX) / (_scale || 1);
+      const w = Math.max(10, Math.min(Math.round(startW + delta), 2172));
+      State.formatSizes['TÍTULO FICHA'].w = w;
+      State.tituloFichaManual = true;
+      State.dirty = true;
+      render();
+    };
+    const onUp = () => {
+      dragging = false;
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    };
+    h.addEventListener('mousedown', e => {
+      e.preventDefault(); e.stopPropagation();
+      dragging = true;
+      startX = e.clientX;
+      startW = State.formatSizes['TÍTULO FICHA'].w;
+      if (typeof History !== 'undefined') History.push();
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
+    // Doble clic: volver al ancho automático (= ancho de la imagen de título)
+    h.addEventListener('dblclick', e => {
+      e.stopPropagation();
+      if (typeof History !== 'undefined') History.push();
+      State.tituloFichaManual = false;
+      State.dirty = true;
+      render();
+    });
+  }
+
   function _updateLienzo() {
     if (!State.activeFormat) {
       _lienzo.style.display = 'none';
@@ -252,6 +579,8 @@ const Canvas = (() => {
       if (mb) mb.style.display = 'none';
       return;
     }
+
+    if (State.activeFormat === 'TÍTULO FICHA') _layoutTituloFicha();
 
     const size = State.formatSizes[State.activeFormat];
     if (!size) {
@@ -320,6 +649,9 @@ const Canvas = (() => {
     _lienzo.style.height  = _lienzoH + 'px';
     _lienzo.style.left    = Math.round((_area.clientWidth  - _lienzoW) / 2) + 'px';
     _lienzo.style.top     = Math.round((_area.clientHeight - _lienzoH) / 2) + 'px';
+
+    _updateTituloFichaHandle();
+    _updateRulersAndGuides();
 
     // Fondo verde "chivato" — solo cuando no hay displayContext (con dc lo lleva _contentClip)
     // y solo para formatos que se exportan como JPG (los PNG llevan transparencia).
@@ -439,8 +771,96 @@ const Canvas = (() => {
     }
     _updateMockupBtn();
 
+    // Botón ATRIBUTOS A <pareja> — solo en los 4 maestros de texto
+    let attrsBtn = document.getElementById('canvas-attrs-btn');
+    if (!attrsBtn) {
+      attrsBtn = document.createElement('button');
+      attrsBtn.id = 'canvas-attrs-btn';
+      _area.appendChild(attrsBtn);
+      attrsBtn.addEventListener('click', () => {
+        if (!State.activeFormat || typeof Formats === 'undefined') return;
+        const pair = Formats.getTextPair(State.activeFormat);
+        if (!pair) return;
+        const lbl = Formats.displayLabel ? Formats.displayLabel(pair) : pair;
+        _confirmDialog(
+          'Copiar atributos',
+          `¿Copiar los atributos de este formato a "${lbl}"? Se reemplazará su contenido actual (se puede deshacer con Ctrl+Z).`,
+          'Copiar',
+          () => Formats.propagateTextAttributes(State.activeFormat)
+        );
+      });
+    }
+    _updateAttrsBtn();
+
     const label = document.getElementById('lienzo-label');
     if (label) label.textContent = `${size.w} × ${size.h} px`;
+  }
+
+  function _updateAttrsBtn() {
+    const btn = document.getElementById('canvas-attrs-btn');
+    if (!btn) return;
+    const fmt  = State.activeFormat;
+    const pair = (fmt && typeof Formats !== 'undefined' && Formats.getTextPair) ? Formats.getTextPair(fmt) : null;
+    if (!pair) { btn.style.display = 'none'; return; }
+    const lbl = (typeof Formats !== 'undefined' && Formats.displayLabel) ? Formats.displayLabel(pair) : pair;
+    btn.textContent = 'ATRIBUTOS A ' + lbl;
+    btn.style.display = 'inline-flex';
+  }
+
+  // Modal de confirmación con el estilo de la app (sustituye al confirm() nativo)
+  function _confirmDialog(title, message, confirmLabel, onConfirm) {
+    document.querySelectorAll('.app-confirm-overlay').forEach(o => o.remove());
+    const overlay = document.createElement('div');
+    overlay.className = 'app-confirm-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:99000;display:flex;align-items:center;justify-content:center;';
+
+    let onKey;
+    const close = () => { overlay.remove(); if (onKey) document.removeEventListener('keydown', onKey); };
+    overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+
+    const modal = document.createElement('div');
+    modal.style.cssText = 'background:#161616;border:1px solid #2e2e2e;border-radius:4px;width:400px;overflow:hidden;box-shadow:0 16px 48px rgba(0,0,0,0.7);';
+
+    const header = document.createElement('div');
+    header.style.cssText = 'padding:14px 16px;background:#111;border-bottom:1px solid #2e2e2e;font-family:var(--font);font-size:13px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--col-yellow);';
+    header.textContent = title;
+
+    const body = document.createElement('div');
+    body.style.cssText = 'padding:18px 16px;display:flex;flex-direction:column;gap:18px;';
+
+    const desc = document.createElement('p');
+    desc.style.cssText = 'font-family:var(--font);font-size:12px;color:#aaa;margin:0;line-height:1.6;';
+    desc.textContent = message;
+
+    const btnRow = document.createElement('div');
+    btnRow.style.cssText = 'display:flex;justify-content:flex-end;gap:8px;';
+
+    const btnCancel = document.createElement('button');
+    btnCancel.textContent = 'Cancelar';
+    btnCancel.style.cssText = 'height:30px;padding:0 16px;border-radius:2px;font-family:var(--font);font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer;background:transparent;border:1px solid #444;color:#999;';
+    btnCancel.addEventListener('mouseenter', () => { btnCancel.style.color = '#ddd'; btnCancel.style.borderColor = '#666'; });
+    btnCancel.addEventListener('mouseleave', () => { btnCancel.style.color = '#999'; btnCancel.style.borderColor = '#444'; });
+    btnCancel.addEventListener('click', close);
+
+    const btnOk = document.createElement('button');
+    btnOk.textContent = confirmLabel || 'Aceptar';
+    btnOk.style.cssText = 'height:30px;padding:0 18px;border-radius:2px;font-family:var(--font);font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer;background:var(--col-yellow);border:1px solid var(--col-yellow);color:#111;';
+    btnOk.addEventListener('click', () => { close(); if (onConfirm) onConfirm(); });
+
+    btnRow.appendChild(btnCancel);
+    btnRow.appendChild(btnOk);
+    body.appendChild(desc);
+    body.appendChild(btnRow);
+    modal.appendChild(header);
+    modal.appendChild(body);
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+
+    onKey = e => {
+      if (e.key === 'Escape') close();
+      else if (e.key === 'Enter') { close(); if (onConfirm) onConfirm(); }
+    };
+    document.addEventListener('keydown', onKey);
   }
 
   function _updateMockupBtn() {
@@ -820,44 +1240,37 @@ const Canvas = (() => {
       let isVisible;
 
       if (layer.isTitleLayer) {
-        if (State.activeFormat === 'MUX4 TXT' || State.activeFormat === 'MOVIL TXT' || State.activeFormat === 'TÍTULO FICHA' || State.activeFormat === 'CARÁTULA H' || State.activeFormat === 'CARÁTULA V' || State.activeFormat === 'CARTEL COM. H' || State.activeFormat === 'CARTEL COM. V' || State.activeFormat === 'AMAZON LOGO' || State.activeFormat === 'SONY' || State.activeFormat === 'XIAOMI BANNER' || State.activeFormat === 'DEST. DOBLE 4' || State.activeFormat === 'DEST. DOBLE 4 SIL' || State.activeFormat === 'DEST. DOBLE 1' || State.activeFormat === 'DEST. DOBLE 1 SIL' || State.activeFormat === 'DEST. DOBLE 2' || State.activeFormat === 'DEST. DOBLE 2 SIL' || State.activeFormat === 'MOD N SIL') {
+        // El título "vivo" se ve en maestros de texto y TÍTULO FICHA. Si hay 2 títulos
+        // (H y V), cada formato muestra solo el activo (con fallback).
+        const inHost = ['MUX4 TXT','MOVIL TXT','TEXTO HORIZONTAL','TEXTO VERTICAL','AMAZON LOGO','TÍTULO FICHA'].includes(State.activeFormat);
+        const isActive = typeof Formats !== 'undefined' && Formats.isActiveTitleForFormat
+          ? Formats.isActiveTitleForFormat(layer, State.activeFormat) : true;
+        if (inHost && isActive) {
           const fmtVisible = State.formatParams?.[State.activeFormat]?.[layer.id]?.visible;
           isVisible = fmtVisible !== undefined ? fmtVisible : true;
         } else {
           isVisible = false;
         }
+      } else if (layer.isComposicionTextoH || layer.isComposicionTextoV) {
+        // Enrutado por variante: cada formato muestra su composición H o V
+        const _v = (typeof Formats !== 'undefined' && Formats.getTextVariant) ? Formats.getTextVariant(State.activeFormat) : null;
+        isVisible = (layer.isComposicionTextoH && _v === 'H') || (layer.isComposicionTextoV && _v === 'V');
+        if (isVisible) {
+          const fmtVisible = State.formatParams?.[State.activeFormat]?.[layer.id]?.visible;
+          isVisible = fmtVisible !== undefined ? fmtVisible : true;
+        }
       } else if (layer.isComposicion) {
-        isVisible = State.activeFormat !== 'MUX4 TXT'
-                 && State.activeFormat !== 'MOVIL TXT'
-                 && State.activeFormat !== 'MOVIL MUX FONDO'
-                 && State.activeFormat !== 'TÍTULO FICHA'
-                 && State.activeFormat !== 'CARÁTULA H'
-                 && State.activeFormat !== 'CARÁTULA V'
-                 && State.activeFormat !== 'CARTEL COM. H'
-                 && State.activeFormat !== 'CARTEL COM. V'
-                 && State.activeFormat !== 'FANART'
-                 && State.activeFormat !== 'FANART MÓVIL'
-                 && State.activeFormat !== 'FANART DEST.'
-                 && State.activeFormat !== 'AMAZON LOGO'
-                 && State.activeFormat !== 'AMAZON BG'
-                 && State.activeFormat !== 'SONY'
-                 && State.activeFormat !== 'XIAOMI BANNER'
-                 && State.activeFormat !== 'DEST. DOBLE 4'
-                 && State.activeFormat !== 'DEST. DOBLE 4 SIL'
-                 && State.activeFormat !== 'DEST. DOBLE 1'
-                 && State.activeFormat !== 'DEST. DOBLE 1 SIL'
-                 && State.activeFormat !== 'DEST. DOBLE 2'
-                 && State.activeFormat !== 'DEST. DOBLE 2 SIL'
-                 && State.activeFormat !== 'MOD N'
-                 && State.activeFormat !== 'FANART MOD N'
-                 && State.activeFormat !== 'MOD N SIL'
-                 && State.activeFormat !== 'PERFIL';
+        // Composición MUX4: en su mockup (MUX4 FONDO) o donde el formato elija la variante 'MUX4'
+        isVisible = (State.activeFormat === 'MUX4 FONDO') ||
+          (typeof Formats !== 'undefined' && Formats.getTextVariant && Formats.getTextVariant(State.activeFormat) === 'MUX4');
         if (isVisible) {
           const fmtVisible = State.formatParams?.[State.activeFormat]?.[layer.id]?.visible;
           isVisible = fmtVisible !== undefined ? fmtVisible : true;
         }
       } else if (layer.isComposicionMovil) {
-        isVisible = State.activeFormat === 'MOVIL MUX FONDO';
+        // Composición MOVIL: en su mockup (MOVIL MUX FONDO) o donde el formato elija 'MOVIL'
+        isVisible = (State.activeFormat === 'MOVIL MUX FONDO') ||
+          (typeof Formats !== 'undefined' && Formats.getTextVariant && Formats.getTextVariant(State.activeFormat) === 'MOVIL');
         if (isVisible) {
           const fmtVisible = State.formatParams?.[State.activeFormat]?.[layer.id]?.visible;
           isVisible = fmtVisible !== undefined ? fmtVisible : true;
@@ -899,7 +1312,14 @@ const Canvas = (() => {
           isVisible = fmtVisible !== undefined ? fmtVisible : layer.visible;
         }
       } else {
-        if (!layer._layoutGenerated && (State.activeFormat === 'MUX4 TXT' || State.activeFormat === 'MOVIL TXT' || State.activeFormat === 'TÍTULO FICHA' || State.activeFormat === 'AMAZON LOGO')) {
+        const _fanV = (typeof Formats !== 'undefined' && Formats.fanartRoleVisibility) ? Formats.fanartRoleVisibility(layer.id, State.activeFormat) : null;
+        if (_fanV !== null) {
+          isVisible = _fanV;
+          if (isVisible) {
+            const fmtVisible = State.formatParams?.[State.activeFormat]?.[layer.id]?.visible;
+            isVisible = fmtVisible !== undefined ? fmtVisible : layer.visible;
+          }
+        } else if (!layer._layoutGenerated && (State.activeFormat === 'MUX4 TXT' || State.activeFormat === 'MOVIL TXT' || State.activeFormat === 'TÍTULO FICHA' || State.activeFormat === 'AMAZON LOGO' || State.activeFormat === 'TEXTO HORIZONTAL' || State.activeFormat === 'TEXTO VERTICAL')) {
           isVisible = false;
         } else {
           const fmtVisible = State.activeFormat && State.formatParams?.[State.activeFormat]?.[layer.id]?.visible;
@@ -1022,6 +1442,15 @@ const Canvas = (() => {
     }
     if (State.activeFormat === 'AMAZON LOGO' && typeof ComposicionAmazon !== 'undefined') {
       ComposicionAmazon.generate();
+    }
+    // Composiciones H/V: regenerar en vivo mientras se edita su formato maestro
+    if (State.activeFormat === 'TEXTO HORIZONTAL' && typeof ComposicionTexto !== 'undefined') {
+      ComposicionTexto.generate('TEXTO HORIZONTAL', 'COMPOSICIÓN TEXTO HORIZONTAL', 'isComposicionTextoH')
+        .then(() => { const c = State.layers.find(l => l.isComposicionTextoH); if (c && typeof AutoLayout !== 'undefined') AutoLayout.repositionTextComp(c, 'H'); });
+    }
+    if (State.activeFormat === 'TEXTO VERTICAL' && typeof ComposicionTexto !== 'undefined') {
+      ComposicionTexto.generate('TEXTO VERTICAL', 'COMPOSICIÓN TEXTO VERTICAL', 'isComposicionTextoV')
+        .then(() => { const c = State.layers.find(l => l.isComposicionTextoV); if (c && typeof AutoLayout !== 'undefined') AutoLayout.repositionTextComp(c, 'V'); });
     }
     if (State.activeFormat === 'MOVIL MUX FONDO' && typeof ComposicionMovil !== 'undefined') {
       if (!State.layers.find(l => l.isComposicionMovil)) ComposicionMovil.generate();
@@ -1470,23 +1899,8 @@ const Canvas = (() => {
           layer.naturalWidth  = el.offsetWidth  / _scale || 100;
           layer.naturalHeight = el.offsetHeight / _scale || 50;
 
-          // Sincronizar contenido entre MUX4 TXT y MOVIL TXT
-          if (layer._layoutGenerated && layer.exclusiveFormat) {
-            const otherFormat = layer.exclusiveFormat === 'MUX4 TXT' ? 'MOVIL TXT' : 'MUX4 TXT';
-            const mirror = State.layers.find(l =>
-              l._layoutGenerated &&
-              l.exclusiveFormat === otherFormat &&
-              l.name === layer.name
-            );
-            if (mirror && mirror.textParams && layer.textParams) {
-              // Copiar solo el contenido (texto de cada run), no el estilo
-              const srcRuns  = layer.textParams.runs || [];
-              const dstRuns  = mirror.textParams.runs || [];
-              srcRuns.forEach((r, i) => {
-                if (dstRuns[i]) dstRuns[i].text = r.text;
-              });
-            }
-          }
+          // Sin sincronización de texto entre formatos: los 4 maestros (MUX4 TXT,
+          // MOVIL TXT, TEXTO HORIZONTAL, TEXTO VERTICAL) son totalmente independientes.
         }
         render();
         // Compensar deriva vertical: si el alto cambió, ajustar p.y para preservar el top visual
@@ -1596,6 +2010,14 @@ const Canvas = (() => {
         if (ev.shiftKey) {
           if (Math.abs(dx) >= Math.abs(dy)) dy = 0;
           else                               dx = 0;
+        }
+
+        // ── SNAP A GUÍAS (si el imán está activo) ─────────────
+        // Sustituye dx/dy por el "ajuste" hacia la guía más cercana (si entra en el radio).
+        if (Formats.isSnapEnabled && Formats.isSnapEnabled()) {
+          const adj = _calcSnapAdjustment(dx, dy);
+          dx += adj.dx;
+          dy += adj.dy;
         }
 
         State.selectedLayerIds.forEach(lid => {
@@ -1762,9 +2184,9 @@ const Canvas = (() => {
     const fid = State.activeFormat;
     let el = _lienzo.querySelector('#canvas-pastilla-freemium');
 
-    // Solo visible en MUX4 TXT o MOVIL TXT cuando la versión es Freemium
-    const isFreemium = typeof Layout !== 'undefined' && Layout.isFreemium();
-    const isTextFormat = fid === 'MUX4 TXT' || fid === 'MOVIL TXT';
+    // Solo visible en formatos de texto cuando la versión es Freemium
+    const isFreemium = typeof Layout !== 'undefined' && Layout.isFreemium(fid);
+    const isTextFormat = fid === 'MUX4 TXT' || fid === 'MOVIL TXT' || fid === 'TEXTO HORIZONTAL' || fid === 'TEXTO VERTICAL';
 
     if (!isFreemium || !isTextFormat || typeof Pastilla === 'undefined') {
       if (el) el.remove();
@@ -1872,9 +2294,24 @@ const Canvas = (() => {
       return { cx, cy, w: nw, h: nh, left, right: left + nw, top, bottom: top + nh };
     }
 
+    // Área de diseño real para alinear:
+    //  - maskRect (SIL/PERFIL): ya define el área visible recortada.
+    //  - safeArea (IPLUS): zona útil definida solo para alinear, sin recortar visualmente.
+    // Coords del sistema: relativas al CENTRO del lienzo. x/y son el CENTRO del rect.
+    // displayContext NO afecta — formatos con dc ya posicionan capas en coords del formato.
+    function _designAreaBox() {
+      const area = fmtSize?.maskRect || fmtSize?.safeArea;
+      if (area) {
+        const cx = area.x;
+        const cy = area.y;
+        return { left: cx - area.w / 2, right: cx + area.w / 2, top: cy - area.h / 2, bottom: cy + area.h / 2, cx, cy, w: area.w, h: area.h };
+      }
+      return { left: -W/2, right: W/2, top: -H/2, bottom: H/2, cx: 0, cy: 0, w: W, h: H };
+    }
+
     let refBox;
     if (ids.length === 1) {
-      refBox = { left: -W/2, right: W/2, top: -H/2, bottom: H/2, cx: 0, cy: 0, w: W, h: H };
+      refBox = _designAreaBox();
     } else if (_keyLayerId && ids.includes(_keyLayerId)) {
       refBox = _getBox(_keyLayerId);
     } else {

@@ -69,6 +69,11 @@ const Formats = (() => {
 
   // ── GRID DE FORMATOS ──────────────────────────────────────
 
+  // ── ETIQUETAS VISIBLES ────────────────────────────────────
+  // Nombre que ve el usuario. La clave INTERNA del formato no cambia (evita romper refs).
+  const DISPLAY_LABELS = { 'MOVIL TXT': 'Smartphone TEXT', 'MUX4 TXT': 'MUX4 TEXT' };
+  function displayLabel(name) { return DISPLAY_LABELS[name] || name; }
+
   function _renderFormatGrid() {
     const grid = document.getElementById('formats-grid');
     if (!grid) return;
@@ -79,10 +84,14 @@ const Formats = (() => {
     const modality = State.modalities.find(m => m.id === State.activeModality);
     if (!modality) return;
 
+    // Los 4 maestros de texto se muestran anchos (2 por fila → rejilla 2×2 en "Textos")
+    const WIDE_FORMATS = ['TEXTO HORIZONTAL', 'TEXTO VERTICAL', 'MUX4 TXT', 'MOVIL TXT'];
+
     modality.formats.forEach(formatName => {
       const btn = document.createElement('button');
       btn.className = 'btn-format';
-      btn.textContent = formatName;
+      if (WIDE_FORMATS.includes(formatName)) btn.classList.add('btn-format--wide');
+      btn.textContent = displayLabel(formatName);
       btn.dataset.format = formatName;
       if (State.activeFormat === formatName) btn.classList.add('active');
       if (State.formatOk[formatName])        btn.classList.add('done');
@@ -133,6 +142,28 @@ const Formats = (() => {
     // Al salir de AMAZON LOGO, generar la composición Amazon
     if (previous === 'AMAZON LOGO' && formatName !== 'AMAZON LOGO') {
       if (typeof ComposicionAmazon !== 'undefined') ComposicionAmazon.generate();
+    }
+
+    // Al salir de TEXTO HORIZONTAL, generar su composición y reposicionarla en los formatos H
+    if (previous === 'TEXTO HORIZONTAL' && formatName !== 'TEXTO HORIZONTAL') {
+      if (typeof ComposicionTexto !== 'undefined') {
+        ComposicionTexto.generate('TEXTO HORIZONTAL', 'COMPOSICIÓN TEXTO HORIZONTAL', 'isComposicionTextoH').then(() => {
+          const comp = State.layers.find(l => l.isComposicionTextoH);
+          if (comp && typeof AutoLayout !== 'undefined') AutoLayout.repositionTextComp(comp, 'H');
+          if (typeof Canvas !== 'undefined') Canvas.render();
+        });
+      }
+    }
+
+    // Al salir de TEXTO VERTICAL, generar su composición y reposicionarla en los formatos V
+    if (previous === 'TEXTO VERTICAL' && formatName !== 'TEXTO VERTICAL') {
+      if (typeof ComposicionTexto !== 'undefined') {
+        ComposicionTexto.generate('TEXTO VERTICAL', 'COMPOSICIÓN TEXTO VERTICAL', 'isComposicionTextoV').then(() => {
+          const comp = State.layers.find(l => l.isComposicionTextoV);
+          if (comp && typeof AutoLayout !== 'undefined') AutoLayout.repositionTextComp(comp, 'V');
+          if (typeof Canvas !== 'undefined') Canvas.render();
+        });
+      }
     }
 
     if (typeof Canvas !== 'undefined') Canvas.render();
@@ -236,5 +267,274 @@ const Formats = (() => {
     return { scaleX: 100, scaleY: 100, rotation: 0, x: 0, y: 0 };
   }
 
-  return { init, setActiveFormat, toggleOk, getLayerParams, setLayerParam, linkLayers, unlinkLayer, refreshGrid: _renderFormatGrid };
+  // ── VARIANTE DE TEXTO POR FORMATO (H / V) ─────────────────
+  // Defaults por orientación (tabla de enrutado del plan). El lapicero (paso 5)
+  // escribe overrides en State.formatTextVariant.
+  const TEXT_VARIANT_V_DEFAULT = ['CARÁTULA V', 'CARTEL COM. V', 'DEST. DOBLE 4', 'DEST. DOBLE 4 SIL', 'SONY'];
+  // Formatos que NO reciben texto (sin variante)
+  const TEXT_VARIANT_NONE = ['FANART', 'FANART MÓVIL', 'FANART DEST.', 'FANART MOD N', 'PERFIL',
+                             'MUX4 FONDO', 'MOVIL MUX FONDO', 'AMAZON BG', 'TÍTULO FICHA',
+                             'MUX4 TXT', 'MOVIL TXT', 'AMAZON LOGO', 'TEXTO HORIZONTAL', 'TEXTO VERTICAL'];
+
+  function _defaultTextVariant(fid) {
+    if (TEXT_VARIANT_NONE.includes(fid)) return null;
+    return TEXT_VARIANT_V_DEFAULT.includes(fid) ? 'V' : 'H';
+  }
+
+  // Las 4 composiciones de texto elegibles por formato (lápiz del panel de Capas).
+  // value = variante guardada · flag = propiedad de la capa de composición · label = lo que ve el usuario.
+  const TEXT_VARIANT_OPTIONS = [
+    { value: 'H',     label: 'TEXTO HORIZONTAL', flag: 'isComposicionTextoH' },
+    { value: 'V',     label: 'TEXTO VERTICAL',   flag: 'isComposicionTextoV' },
+    { value: 'MUX4',  label: 'MUX4 TEXT',        flag: 'isComposicion'       },
+    { value: 'MOVIL', label: 'Smartphone TEXT',  flag: 'isComposicionMovil'  },
+  ];
+  const TEXT_VARIANT_VALUES = TEXT_VARIANT_OPTIONS.map(o => o.value);
+
+  // Devuelve la variante de un formato: 'H' | 'V' | 'MUX4' | 'MOVIL' | null (override del usuario o default)
+  function getTextVariant(fid) {
+    const v = State.formatTextVariant?.[fid];
+    if (TEXT_VARIANT_VALUES.includes(v)) return v;
+    return _defaultTextVariant(fid);
+  }
+
+  function getTextVariantOptions() { return TEXT_VARIANT_OPTIONS; }
+
+  function setTextVariant(fid, variant) {
+    if (typeof History !== 'undefined') History.push();
+    State.formatTextVariant[fid] = variant;
+    State.dirty = true;
+
+    const opt = TEXT_VARIANT_OPTIONS.find(o => o.value === variant);
+
+    const _finish = () => {
+      const comp = opt && State.layers.find(l => l[opt.flag]);
+      if (comp && typeof AutoLayout !== 'undefined' && AutoLayout.repositionTextComp) {
+        AutoLayout.repositionTextComp(comp, variant);
+      }
+      if (typeof Canvas !== 'undefined') Canvas.render();
+      if (typeof Layers !== 'undefined') Layers.render();
+    };
+
+    // Si la composición elegida aún no existe (sin contenido), generarla VACÍA para que su
+    // capa siga apareciendo en el panel (con su lápiz) y se pueda volver a cambiar o rellenar.
+    const exists = opt && State.layers.find(l => l[opt.flag]);
+    if (opt && !exists) {
+      let p = null;
+      if (variant === 'H' && typeof ComposicionTexto !== 'undefined')
+        p = ComposicionTexto.generate('TEXTO HORIZONTAL', 'COMPOSICIÓN TEXTO HORIZONTAL', 'isComposicionTextoH');
+      else if (variant === 'V' && typeof ComposicionTexto !== 'undefined')
+        p = ComposicionTexto.generate('TEXTO VERTICAL', 'COMPOSICIÓN TEXTO VERTICAL', 'isComposicionTextoV');
+      else if (variant === 'MUX4' && typeof Composicion !== 'undefined')
+        p = Composicion.generate();
+      else if (variant === 'MOVIL' && typeof ComposicionMovil !== 'undefined')
+        p = ComposicionMovil.generate();
+      if (p && typeof p.then === 'function') { p.then(_finish); return; }
+    }
+    _finish();
+  }
+
+  // ── COPIAR ATRIBUTOS ENTRE PARES DE TEXTO ─────────────────
+  // HORIZONTAL ⇄ MUX4 TXT · VERTICAL ⇄ MOVIL TXT
+  const TEXT_PAIRS = {
+    'TEXTO HORIZONTAL': 'MUX4 TXT',
+    'MUX4 TXT':         'TEXTO HORIZONTAL',
+    'TEXTO VERTICAL':   'MOVIL TXT',
+    'MOVIL TXT':        'TEXTO VERTICAL',
+  };
+  function getTextPair(fid) { return TEXT_PAIRS[fid] || null; }
+
+  // ── ROL FANART ────────────────────────────────────────────
+  const FANART_FORMATS = ['FANART', 'FANART MÓVIL', 'FANART DEST.', 'FANART MOD N'];
+  function isFanartFormat(fid) { return FANART_FORMATS.includes(fid); }
+
+  // ── ELEGIR TÍTULO ACTIVO POR FORMATO ──────────────────────
+  // Devuelve la capa de título (isTitleLayerH/V) que debe mostrarse en este formato.
+  // Con fallback: si solo hay uno, se usa para los dos.
+  function _formatNeedsTitleOrient(fid) {
+    if (fid === 'MUX4 TXT' || fid === 'TEXTO HORIZONTAL' || fid === 'AMAZON LOGO' || fid === 'TÍTULO FICHA') return 'H';
+    if (fid === 'MOVIL TXT' || fid === 'TEXTO VERTICAL') return 'V';
+    // Receptores no-maestros: según la variante de texto que tengan
+    const v = getTextVariant(fid);
+    if (v === 'H' || v === 'MUX4') return 'H';
+    if (v === 'V' || v === 'MOVIL') return 'V';
+    return null;
+  }
+  function getActiveTitleForFormat(fid) {
+    const orient = _formatNeedsTitleOrient(fid);
+    if (!orient) return null;
+    const titleH = State.layers.find(l => l.isTitleLayerH);
+    const titleV = State.layers.find(l => l.isTitleLayerV);
+    if (orient === 'H') return titleH || titleV || null;
+    if (orient === 'V') return titleV || titleH || null;
+    return null;
+  }
+  // Devuelve la lista de orientaciones que necesita un formato (para visibilidad)
+  function isActiveTitleForFormat(layer, fid) {
+    return getActiveTitleForFormat(fid) === layer;
+  }
+
+  // ── GUÍAS DE COMPOSICIÓN ──────────────────────────────────
+  function getGuides(fid) { return State.guides[fid] || []; }
+  function hasGuides(fid) { return getGuides(fid).length > 0; }
+  function areGuidesVisible(fid) {
+    const v = State.guidesVisible?.[fid];
+    return v === undefined ? true : !!v;
+  }
+  function areGuidesLocked(fid) { return !!State.guidesLocked?.[fid]; }
+  function isSnapEnabled() { return !!State.snapEnabled; }
+
+  function _refreshUI() {
+    if (typeof Canvas !== 'undefined' && Canvas.render) Canvas.render();
+    if (typeof Layers !== 'undefined' && Layers.render) Layers.render();
+  }
+  function addGuide(fid, orient, pos) {
+    if (areGuidesLocked(fid)) return null;
+    if (typeof History !== 'undefined') History.push();
+    if (!State.guides[fid]) State.guides[fid] = [];
+    const guide = { id: 'guide_' + Date.now() + '_' + Math.random().toString(36).slice(2), orient, pos: Math.round(pos) };
+    State.guides[fid].push(guide);
+    State.dirty = true;
+    _refreshUI();
+    return guide;
+  }
+  function moveGuide(fid, guideId, pos) {
+    if (areGuidesLocked(fid)) return;
+    const g = (State.guides[fid] || []).find(x => x.id === guideId);
+    if (!g) return;
+    g.pos = Math.round(pos);
+    State.dirty = true;
+    _refreshUI();
+  }
+  function deleteGuide(fid, guideId) {
+    if (areGuidesLocked(fid)) return;
+    if (typeof History !== 'undefined') History.push();
+    State.guides[fid] = (State.guides[fid] || []).filter(g => g.id !== guideId);
+    State.dirty = true;
+    _refreshUI();
+  }
+  function toggleGuidesVisible(fid) {
+    if (typeof History !== 'undefined') History.push();
+    State.guidesVisible[fid] = !areGuidesVisible(fid);
+    State.dirty = true;
+    _refreshUI();
+  }
+  function toggleGuidesLocked(fid) {
+    if (typeof History !== 'undefined') History.push();
+    State.guidesLocked[fid] = !areGuidesLocked(fid);
+    State.dirty = true;
+    _refreshUI();
+  }
+  function toggleSnap() {
+    if (typeof History !== 'undefined') History.push();
+    State.snapEnabled = !State.snapEnabled;
+    State.dirty = true;
+    _refreshUI();
+  }
+
+  // Visibilidad por rol fanart. Devuelve: true (mostrar), false (ocultar) o null (no aplica).
+  function fanartRoleVisibility(layerId, formatName) {
+    const role = State.layerRoles?.[layerId];
+    const isF  = FANART_FORMATS.includes(formatName);
+    if (role === 'fanart') return isF;  // el fanart solo se ve en formatos FANART
+    if (isF && (role === 'subject' || role === 'background')) {
+      const hasFanart = State.layers.some(l => State.layerRoles?.[l.id] === 'fanart');
+      if (hasFanart) return false;      // subject/fondo tapados por el fanart
+    }
+    return null;                         // no aplica regla fanart
+  }
+
+  function _cloneLayerToFormat(layer, destFormat, fy) {
+    const c = { ...layer };
+    c.id = 'layer_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+    c.exclusiveFormat = destFormat;
+    if (layer.params)         c.params = { ...layer.params };
+    if (layer.solidParams)    c.solidParams = { ...layer.solidParams };
+    if (layer.gradientParams) c.gradientParams = { ...layer.gradientParams };
+    if (layer.textParams) {
+      c.textParams = { ...layer.textParams, runs: (layer.textParams.runs || []).map(r => ({ ...r })) };
+      if (typeof c.textParams.size === 'number') c.textParams.size = Math.round(c.textParams.size * fy);
+      c.textParams.runs.forEach(r => { if (typeof r.size === 'number') r.size = Math.round(r.size * fy); });
+    }
+    return c;
+  }
+
+  function _scaleParamsForCopy(p, isText, fx, fy) {
+    // scaleX/scaleY usan UN ÚNICO factor uniforme (mín) → no deforma capas.
+    const fScale = Math.min(fx, fy);
+    const out = {
+      x: Math.round((p.x ?? 0) * fx),
+      y: Math.round((p.y ?? 0) * fy),
+      rotation: p.rotation ?? 0,
+      scaleX: isText ? (p.scaleX ?? 100) : Math.round((p.scaleX ?? 100) * fScale * 10) / 10,
+      scaleY: isText ? (p.scaleY ?? 100) : Math.round((p.scaleY ?? 100) * fScale * 10) / 10,
+    };
+    if (p.visible !== undefined) out.visible = p.visible;
+    return out;
+  }
+
+  // Copia TODOS los atributos del formato actual a su pareja, reescalados a su tamaño.
+  function propagateTextAttributes(source) {
+    const dest = TEXT_PAIRS[source];
+    if (!dest) return;
+    const srcSize = State.formatSizes[source], destSize = State.formatSizes[dest];
+    if (!srcSize || !destSize) return;
+    if (typeof History !== 'undefined') History.push();
+
+    const fx = destSize.w / srcSize.w;
+    const fy = destSize.h / srcSize.h;
+
+    // 1. Maquetación
+    if (State.layoutConfig[source]) State.layoutConfig[dest] = { ...State.layoutConfig[source] };
+    else delete State.layoutConfig[dest];
+
+    // 2. Quitar capas exclusivas actuales del destino y sus params
+    const removed = State.layers.filter(l => l.exclusiveFormat === dest).map(l => l.id);
+    State.layers = State.layers.filter(l => l.exclusiveFormat !== dest);
+    if (State.formatParams[dest]) removed.forEach(id => { delete State.formatParams[dest][id]; });
+
+    // 3. Punto de inserción (tras sistema / composiciones / título)
+    let insertIdx = 0;
+    while (insertIdx < State.layers.length && (
+      State.layers[insertIdx].isComposicion || State.layers[insertIdx].isComposicionMovil ||
+      State.layers[insertIdx].isComposicionAmazon || State.layers[insertIdx].isComposicionTextoH ||
+      State.layers[insertIdx].isComposicionTextoV || State.layers[insertIdx].isMarcaIplus ||
+      State.layers[insertIdx].isMarcaSony || State.layers[insertIdx].isTitleLayer
+    )) insertIdx++;
+
+    // 4. Clonar capas exclusivas del origen → destino (escaladas), conservando el orden
+    if (!State.formatParams[dest]) State.formatParams[dest] = {};
+    const srcLayers = State.layers.filter(l => l.exclusiveFormat === source);
+    [...srcLayers].reverse().forEach(srcLayer => {
+      const clone = _cloneLayerToFormat(srcLayer, dest, fy);
+      State.layers.splice(insertIdx, 0, clone);
+      const sp = State.formatParams[source]?.[srcLayer.id] || _defaultParams();
+      State.formatParams[dest][clone.id] = _scaleParamsForCopy(sp, srcLayer.type === 'text', fx, fy);
+    });
+
+    // 5. Imagen de título (capa compartida): copiar sus params escalados
+    const titleLayer = State.layers.find(l => l.isTitleLayer);
+    if (titleLayer) {
+      const sp = State.formatParams[source]?.[titleLayer.id];
+      if (sp) State.formatParams[dest][titleLayer.id] = _scaleParamsForCopy(sp, false, fx, fy);
+    }
+    State.dirty = true;
+
+    // 6. Regenerar la composición del destino y refrescar
+    const _done = () => {
+      if (typeof Canvas !== 'undefined') Canvas.render();
+      if (typeof Layers !== 'undefined') Layers.render();
+    };
+    let p = null;
+    if (dest === 'MUX4 TXT' && typeof Composicion !== 'undefined') p = Composicion.generate();
+    else if (dest === 'MOVIL TXT' && typeof ComposicionMovil !== 'undefined') p = ComposicionMovil.generate();
+    else if (dest === 'TEXTO HORIZONTAL' && typeof ComposicionTexto !== 'undefined') p = ComposicionTexto.generate('TEXTO HORIZONTAL', 'COMPOSICIÓN TEXTO HORIZONTAL', 'isComposicionTextoH');
+    else if (dest === 'TEXTO VERTICAL' && typeof ComposicionTexto !== 'undefined') p = ComposicionTexto.generate('TEXTO VERTICAL', 'COMPOSICIÓN TEXTO VERTICAL', 'isComposicionTextoV');
+    if (p && typeof p.then === 'function') p.then(_done); else _done();
+  }
+
+  return { init, setActiveFormat, toggleOk, getLayerParams, setLayerParam, linkLayers, unlinkLayer, refreshGrid: _renderFormatGrid, getTextVariant, setTextVariant, getTextVariantOptions, displayLabel, getTextPair, propagateTextAttributes, isFanartFormat, fanartRoleVisibility,
+    getActiveTitleForFormat, isActiveTitleForFormat,
+    getGuides, hasGuides, areGuidesVisible, areGuidesLocked, isSnapEnabled,
+    addGuide, moveGuide, deleteGuide, toggleGuidesVisible, toggleGuidesLocked, toggleSnap };
 })();

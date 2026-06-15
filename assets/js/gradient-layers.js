@@ -3,7 +3,7 @@
 // ============================================================
 
 const GradientLayers = (() => {
-  const SPECIAL_FORMATS = ['MUX4 TXT', 'MOVIL TXT', 'AMAZON LOGO'];
+  const SPECIAL_FORMATS = ['MUX4 TXT', 'MOVIL TXT', 'AMAZON LOGO', 'TEXTO HORIZONTAL', 'TEXTO VERTICAL'];
 
   let _activeLayerId = null;
   let _draggingPanel = false;

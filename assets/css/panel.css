@@ -101,12 +101,14 @@
 /* ── GRID DE FORMATOS ─────────────────────────────────────── */
 #formats-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(6, 1fr);
   gap: 4px;
   margin-top: 8px;
 }
 
+/* Botón normal: ocupa 2 de 6 columnas → 3 por fila */
 .btn-format {
+  grid-column: span 2;
   height: 26px;
   padding: 0 4px;
   background: #222222;
@@ -124,6 +126,11 @@
   text-overflow: ellipsis;
   cursor: pointer;
   transition: color 0.12s, border-color 0.12s, background 0.12s;
+}
+
+/* Botones de texto maestro (TEXTO HORIZONTAL / VERTICAL): ocupan 3 de 6 → 2 por fila */
+.btn-format--wide {
+  grid-column: span 3;
 }
 
 .btn-format:hover {
@@ -172,6 +179,74 @@
 }
 
 #canvas-ok-btn:hover { color: #fff; background: #444; }
+
+/* Botón "ATRIBUTOS A <pareja>" — copiar atributos al formato de texto pareja */
+#canvas-attrs-btn {
+  position: absolute;
+  top: 7px;
+  left: 10px;
+  z-index: 8000;
+  height: 22px;
+  padding: 0 10px;
+  background: #2a2a2a;
+  border: none;
+  border-radius: 2px;
+  color: #bbb;
+  font-family: var(--font);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  display: none;
+  align-items: center;
+  transition: color 0.15s, background 0.15s;
+}
+#canvas-attrs-btn:hover { color: var(--col-yellow); background: #383838; }
+
+/* Manejador de ancho de TÍTULO FICHA (borde derecho del lienzo) */
+#titulo-ficha-handle {
+  position: absolute;
+  width: 8px;
+  z-index: 8500;
+  background: rgba(240, 192, 32, 0.45);
+  border-radius: 2px;
+  cursor: ew-resize;
+  display: none;
+}
+#titulo-ficha-handle:hover { background: var(--col-yellow); }
+
+/* Reglas y guías */
+#canvas-ruler-h, #canvas-ruler-v {
+  position: absolute;
+  background-color: #1a1a1a;
+  z-index: 8100;
+  display: none;
+  user-select: none;
+}
+/* Regla horizontal: ticks finos cada 20px, marca alta cada 100px */
+#canvas-ruler-h {
+  cursor: ns-resize;
+  background-image:
+    repeating-linear-gradient(to right, transparent 0, transparent 19px, #444 19px, #444 20px),
+    repeating-linear-gradient(to right, transparent 0, transparent 99px, #777 99px, #777 100px);
+  background-size: 20px 4px, 100px 100%;
+  background-position: bottom left, bottom left;
+  background-repeat: repeat-x, repeat-x;
+}
+/* Regla vertical: igual pero rotado */
+#canvas-ruler-v {
+  cursor: ew-resize;
+  background-image:
+    repeating-linear-gradient(to bottom, transparent 0, transparent 19px, #444 19px, #444 20px),
+    repeating-linear-gradient(to bottom, transparent 0, transparent 99px, #777 99px, #777 100px);
+  background-size: 4px 20px, 100% 100px;
+  background-position: top right, top right;
+  background-repeat: repeat-y, repeat-y;
+}
+
+.canvas-guide:hover { background: #5BC0EB !important; }
+.canvas-guide.is-locked { opacity: 0.6; }
 
 #canvas-ok-btn.done {
   background: #1a3d2e;
@@ -918,6 +993,29 @@ body.layer-dragging * {
 .layer-chain-btn:hover {
   color: #888;
 }
+
+/* Botón de imán (capa GUÍAS) — mismo patrón que la chincheta (up=inactivo, down=activo) */
+.layer-snap-btn {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border-radius: 2px;
+  position: relative;
+}
+.layer-snap-btn img { display: block; width: 14px; height: 14px; pointer-events: none; }
+.layer-snap-btn .snap-icon-down { display: none; }
+.layer-snap-btn .snap-icon-up   { display: block; opacity: 0.25; }
+
+.layer-snap-btn:hover .snap-icon-up   { display: none; }
+.layer-snap-btn:hover .snap-icon-down { display: block; }
+
+.layer-snap-btn.snapped .snap-icon-up   { display: none; }
+.layer-snap-btn.snapped .snap-icon-down { display: block; opacity: 1; }
+.layer-snap-btn.snapped:hover .snap-icon-down { opacity: 1; }
 
 .layer-chain-btn.linked {
   color: var(--col-yellow);

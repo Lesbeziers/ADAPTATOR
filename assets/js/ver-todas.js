@@ -104,7 +104,7 @@ var VerTodas = (() => {
     // Nombre del formato debajo
     const name = document.createElement('div');
     name.className = 'vt-card-name';
-    name.textContent = formatName;
+    name.textContent = (typeof Formats !== 'undefined' && Formats.displayLabel) ? Formats.displayLabel(formatName) : formatName;
 
     card.appendChild(cv);
     card.appendChild(name);
@@ -153,11 +153,8 @@ var VerTodas = (() => {
     await _drawFormat(ctx, formatName, size.w, size.h);
     ctx.restore();
 
-    // Ruido: aplicar con el mismo SVG filter del editor, sobre el área física del formato
-    const maxNoise = State.layers
-      .filter(l => _isLayerVisible(l, formatName) && (l.params?.noise ?? 0) > 0)
-      .reduce((mx, l) => Math.max(mx, l.params.noise), 0);
-    if (maxNoise > 0) await _applyNoiseSVG(cv, maxNoise, ox, oy, rw, rh);
+    // El ruido se aplica por capa dentro de _drawLayer, igual que en el editor
+    // y en el export. Ya no se aplica un ruido global sobre toda la composición.
   }
 
   // ── DIBUJAR UN FORMATO ────────────────────────────────────
@@ -198,9 +195,9 @@ var VerTodas = (() => {
     }
 
     // Pastilla Freemium (solo en MUX4 TXT y MOVIL TXT cuando versión es Freemium)
-    if (typeof Layout !== 'undefined' && Layout.isFreemium() &&
+    if (typeof Layout !== 'undefined' && Layout.isFreemium(formatName) &&
         typeof Pastilla !== 'undefined' &&
-        (formatName === 'MUX4 TXT' || formatName === 'MOVIL TXT')) {
+        (formatName === 'MUX4 TXT' || formatName === 'MOVIL TXT' || formatName === 'TEXTO HORIZONTAL' || formatName === 'TEXTO VERTICAL')) {
       const src = Pastilla.getFreemiumSrc();
       const _presetPF = typeof Layout !== 'undefined' && Layout.getPreset && Layout.getPreset(formatName);
       const posY = (_presetPF && _presetPF['PASTILLA_FREEMIUM']?.y) ?? 95;
@@ -239,19 +236,39 @@ var VerTodas = (() => {
   }
 
   function _isLayerVisible(layer, formatName) {
+    // Rol FANART: el fanart solo en formatos FANART; subject/fondo ocultos en FANART si hay fanart
+    if (typeof Formats !== 'undefined' && Formats.fanartRoleVisibility &&
+        Formats.fanartRoleVisibility(layer.id, formatName) === false) return false;
     if (layer.isTitleLayer) {
-      const inTextFormat = (formatName === 'MUX4 TXT' || formatName === 'MOVIL TXT' || formatName === 'TÍTULO FICHA' || formatName === 'CARÁTULA H' || formatName === 'CARÁTULA V' || formatName === 'CARTEL COM. H' || formatName === 'CARTEL COM. V' || formatName === 'AMAZON LOGO' || formatName === 'SONY' || formatName === 'XIAOMI BANNER' || formatName === 'DEST. DOBLE 1' || formatName === 'DEST. DOBLE 1 SIL' || formatName === 'DEST. DOBLE 2' || formatName === 'DEST. DOBLE 2 SIL' || formatName === 'DEST. DOBLE 4' || formatName === 'DEST. DOBLE 4 SIL' || formatName === 'MOD N SIL') && formatName !== 'FANART' && formatName !== 'FANART MÓVIL';
+      const inTextFormat = (formatName === 'MUX4 TXT' || formatName === 'MOVIL TXT' || formatName === 'TEXTO HORIZONTAL' || formatName === 'TEXTO VERTICAL' || formatName === 'AMAZON LOGO' || formatName === 'TÍTULO FICHA');
       if (!inTextFormat) return false;
-      // Respetar visible:false puesto por el preset
+      if (typeof Formats !== 'undefined' && Formats.isActiveTitleForFormat &&
+          !Formats.isActiveTitleForFormat(layer, formatName)) return false;
       const fmtVisible = State.formatParams?.[formatName]?.[layer.id]?.visible;
       return fmtVisible !== false;
     }
-    if (layer.isComposicion) {
-      if (formatName === 'MUX4 TXT' || formatName === 'MOVIL TXT' || formatName === 'MUX4 FONDO' || formatName === 'MOVIL MUX FONDO' || formatName === 'TÍTULO FICHA' || formatName === 'CARÁTULA H' || formatName === 'CARÁTULA V' || formatName === 'CARTEL COM. H' || formatName === 'CARTEL COM. V' || formatName === 'FANART' || formatName === 'FANART MÓVIL' || formatName === 'FANART DEST.' || formatName === 'AMAZON LOGO' || formatName === 'AMAZON BG' || formatName === 'SONY' || formatName === 'XIAOMI BANNER' || formatName === 'DEST. DOBLE 1' || formatName === 'DEST. DOBLE 1 SIL' || formatName === 'DEST. DOBLE 2' || formatName === 'DEST. DOBLE 2 SIL' || formatName === 'DEST. DOBLE 4' || formatName === 'DEST. DOBLE 4 SIL' || formatName === 'MOD N' || formatName === 'FANART MOD N' || formatName === 'MOD N SIL' || formatName === 'PERFIL') return false;
+    // Composiciones H/V: según la variante del formato
+    if (layer.isComposicionTextoH || layer.isComposicionTextoV) {
+      const _v = (typeof Formats !== 'undefined' && Formats.getTextVariant) ? Formats.getTextVariant(formatName) : null;
+      const _match = (layer.isComposicionTextoH && _v === 'H') || (layer.isComposicionTextoV && _v === 'V');
+      if (!_match) return false;
       const fmtVisible = State.formatParams?.[formatName]?.[layer.id]?.visible;
       return fmtVisible !== undefined ? fmtVisible : true;
     }
-    if (layer.isComposicionMovil) return false;
+    if (layer.isComposicion) {
+      // Composición MUX4: en su mockup o donde el formato elija 'MUX4'
+      const _mv = (typeof Formats !== 'undefined' && Formats.getTextVariant) ? Formats.getTextVariant(formatName) : null;
+      if (formatName !== 'MUX4 FONDO' && _mv !== 'MUX4') return false;
+      const fmtVisible = State.formatParams?.[formatName]?.[layer.id]?.visible;
+      return fmtVisible !== undefined ? fmtVisible : true;
+    }
+    if (layer.isComposicionMovil) {
+      // Composición MOVIL: en los formatos que la elijan ('MOVIL'); el mockup usa su propia vía
+      const _mv = (typeof Formats !== 'undefined' && Formats.getTextVariant) ? Formats.getTextVariant(formatName) : null;
+      if (_mv !== 'MOVIL') return false;
+      const fmtVisible = State.formatParams?.[formatName]?.[layer.id]?.visible;
+      return fmtVisible !== undefined ? fmtVisible : true;
+    }
     if (layer.isComposicionAmazon) return false;
     if (layer.isMarcaSony) return formatName === 'SONY';
     if (layer.isMarcaIplus) return formatName === 'IPLUS PUBLI';
@@ -268,7 +285,7 @@ var VerTodas = (() => {
     if (layer.exclusiveFormat) {
       return layer.exclusiveFormat === formatName;
     }
-    if ((formatName === 'MUX4 TXT' || formatName === 'MOVIL TXT' || formatName === 'TÍTULO FICHA' || formatName === 'AMAZON LOGO') && !layer._layoutGenerated) {
+    if ((formatName === 'MUX4 TXT' || formatName === 'MOVIL TXT' || formatName === 'TÍTULO FICHA' || formatName === 'AMAZON LOGO' || formatName === 'TEXTO HORIZONTAL' || formatName === 'TEXTO VERTICAL') && !layer._layoutGenerated) {
       return false;
     }
     const fmtVisible = State.formatParams?.[formatName]?.[layer.id]?.visible;
@@ -425,10 +442,13 @@ var VerTodas = (() => {
     ctx.globalAlpha = Math.max(0, Math.min(1, op));
     ctx.globalCompositeOperation = blend;
 
-    // Filtros CSS → canvas (solo blur, brightness, contrast, saturation)
+    // Filtros CSS → canvas
     const filters = [];
     const g = layer.params || {};
     if (g.blur       > 0)   filters.push(`blur(${g.blur}px)`);
+    // Ruido por capa con el mismo filtro SVG del editor (canvas.js:_injectNoiseFilter).
+    // Antes se aplicaba como capa global de grano sobre toda la composición.
+    if (g.noise      > 0)   filters.push(`url(#mp-noise-${Math.round(g.noise)})`);
     if (g.brightness !== 0) filters.push(`brightness(${100 + g.brightness}%)`);
     if (g.contrast   !== 0) filters.push(`contrast(${100 + g.contrast}%)`);
     if (g.saturation !== 0) filters.push(`saturate(${100 + g.saturation}%)`);
@@ -628,7 +648,7 @@ var VerTodas = (() => {
 
     const name = document.createElement('span');
     name.className = 'vt-lightbox-name';
-    name.textContent = formatName;
+    name.textContent = (typeof Formats !== 'undefined' && Formats.displayLabel) ? Formats.displayLabel(formatName) : formatName;
 
     header.appendChild(name);
 

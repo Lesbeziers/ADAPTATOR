@@ -182,6 +182,13 @@ const Project = (() => {
       pastilla:          typeof Pastilla !== 'undefined' ? Pastilla.serialize() : null,
       pastillaFreemium:  typeof Pastilla !== 'undefined' ? Pastilla.serializeFreemium() : null,
       layout:            typeof Layout   !== 'undefined' ? Layout.serialize()   : null,
+      formatTextVariant: State.formatTextVariant ? { ...State.formatTextVariant } : {},
+      tituloFichaManual: !!State.tituloFichaManual,
+      tituloFichaW:      State.formatSizes?.['TÍTULO FICHA']?.w || null,
+      guides:            State.guides        ? { ...State.guides }        : {},
+      guidesVisible:     State.guidesVisible ? { ...State.guidesVisible } : {},
+      guidesLocked:      State.guidesLocked  ? { ...State.guidesLocked }  : {},
+      snapEnabled:       !!State.snapEnabled,
       layers,
     };
   }
@@ -214,10 +221,18 @@ const Project = (() => {
       const baseName  = _sanitizeFilename(filename) || _sanitizeFilename(State.projectName) || 'proyecto';
 
       for (const layer of data.layers) {
-        if (layer.srcType === 'data' && layer.src && layer.srcFilename) {
+        if (layer.srcType === 'data' && layer.srcFilename) {
+          // Siempre que exista, guardamos el original (4K). Si solo había proxy
+          // — caso raro de proyecto cargado sin original — usamos lo que haya.
+          const sourceUrl = layer.srcOriginal || layer.src;
+          if (!sourceUrl) continue;
           try {
-            const blob = await (await fetch(layer.src)).blob();
+            const blob = await (await fetch(sourceUrl)).blob();
             imgFolder.file(layer.srcFilename, blob);
+            // El binario en imagenes/ es la fuente canónica; no duplicamos
+            // base64 dentro del JSON (ahorra >20 MB por capa 4K).
+            delete layer.src;
+            delete layer.srcOriginal;
           } catch (e) {
             console.warn('[Project] No se pudo añadir al ZIP:', layer.srcFilename, e);
           }
@@ -381,6 +396,15 @@ const Project = (() => {
     State.layerRoles       = data.layerRoles       ?? {};
     State.systemVisibility = data.systemVisibility ?? {};
     State.overlays         = data.overlays         ?? { mockup: true, txt: true, foco: false };
+    State.formatTextVariant = data.formatTextVariant ?? {};
+    State.tituloFichaManual = !!data.tituloFichaManual;
+    if (State.tituloFichaManual && data.tituloFichaW && State.formatSizes['TÍTULO FICHA']) {
+      State.formatSizes['TÍTULO FICHA'].w = data.tituloFichaW;
+    }
+    State.guides        = data.guides        ?? {};
+    State.guidesVisible = data.guidesVisible ?? {};
+    State.guidesLocked  = data.guidesLocked  ?? {};
+    State.snapEnabled   = !!data.snapEnabled;
     State.dirty            = false;
 
     // Restaurar pastilla
@@ -419,11 +443,25 @@ const Project = (() => {
     // DOM con el mismo src, el navegador las sirve de caché y naturalWidth/Height
     // están disponibles inmediatamente. Esto sustituye al antiguo setTimeout(300)
     // que era frágil con imágenes pesadas o redes lentas.
+    //
+    // Además, si la imagen cargada es grande y la capa todavía no tiene proxy
+    // (proyectos antiguos o cargas desde ZIP donde el binario es el original),
+    // generamos el proxy y conmutamos layer.src → proxy / layer.srcOriginal → 4K.
     const otherImgPromises = State.layers
       .filter(l => !l.isLogo && l.src && typeof l.src === 'string')
       .map(layer => new Promise(res => {
         const img = new Image();
-        img.onload  = () => res();
+        img.onload  = () => {
+          if (!layer.srcOriginal && typeof Layers !== 'undefined' && Layers.makeProxy) {
+            const mime  = layer.originalMimeType || 'image/png';
+            const proxy = Layers.makeProxy(img, mime);
+            if (proxy) {
+              layer.srcOriginal = layer.src;
+              layer.src         = proxy;
+            }
+          }
+          res();
+        };
         img.onerror = () => res(); // resolvemos siempre para no bloquear la carga
         img.src = layer.src;
       }));

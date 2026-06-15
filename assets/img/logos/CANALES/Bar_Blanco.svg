@@ -1,23 +1,32 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg id="CONTENIDO" xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 72 49.1">
-  <!-- Generator: Adobe Illustrator 29.0.0, SVG Export Plug-In . SVG Version: 2.1.0 Build 186)  -->
+  <!-- Generator: Adobe Illustrator 30.2.1, SVG Export Plug-In . SVG Version: 2.1.1 Build 1)  -->
   <defs>
     <style>
-      .st0, .st1 {
+      .st0 {
         isolation: isolate;
       }
 
       .st1 {
         fill: #fff;
-        font-family: ApercuMovistar-Bold, 'Apercu Movistar';
-        font-size: 44px;
-        font-weight: 700;
       }
     </style>
   </defs>
   <g class="st0">
-    <text class="st1" transform="translate(0 37.4)"><tspan x="0" y="0">B</tspan></text>
-    <text class="st1" transform="translate(27.9 37.4)"><tspan x="0" y="0">a</tspan></text>
-    <text class="st1" transform="translate(54.2 37.4)"><tspan x="0" y="0">r</tspan></text>
+    <g class="st0">
+      <g class="st0">
+        <path class="st1" d="M14.65,6.6c5.24,0,8.8,2.73,8.8,8.32,0,2.51-1.1,4.67-3.04,5.68,2.9,1.19,4.62,3.61,4.62,7.53,0,5.98-3.87,9.29-10.17,9.29H3.39V6.6h11.27ZM9.11,11.88v6.69h5.24c2.29,0,3.61-.84,3.61-3.34s-1.32-3.34-3.74-3.34h-5.1ZM9.11,23.85v8.27h5.24c3.56,0,4.97-1.5,4.97-4.14s-1.41-4.14-4.97-4.14h-5.24Z"/>
+      </g>
+    </g>
+    <g class="st0">
+      <g class="st0">
+        <path class="st1" d="M40.09,14.87c2.46,0,4.84,1.23,5.81,2.46v-2.11h5.46v22.18h-5.46v-2.29c-1.06,1.45-3.08,2.64-5.81,2.64-6.69,0-10.56-4.62-10.56-11.44s3.87-11.44,10.56-11.44ZM40.84,33.09c2.86,0,5.54-2.38,5.54-6.78s-2.68-6.78-5.54-6.78-5.59,2.38-5.59,6.78,2.73,6.78,5.59,6.78Z"/>
+      </g>
+    </g>
+    <g class="st0">
+      <g class="st0">
+        <path class="st1" d="M57.19,37.4V15.22h5.46v3.61c1.58-2.6,4.05-3.96,6.56-3.96.48,0,1.14.04,1.67.18v5.33c-.66-.4-1.36-.62-2.29-.62-3.17,0-5.94,2.6-5.94,9.77v7.88h-5.46Z"/>
+      </g>
+    </g>
   </g>
 </svg>

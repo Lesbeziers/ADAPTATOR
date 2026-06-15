@@ -495,39 +495,7 @@ const Logos = (() => {
       oldLayer.naturalWidth  = natW;
       oldLayer.naturalHeight = natH;
 
-      // Sincronizar logo con la capa equivalente del otro formato (mismo índice)
-      if (oldLayer._layoutGenerated && oldLayerExclusive && logoIdx >= 0) {
-        const otherFormat = oldLayerExclusive === 'MUX4 TXT' ? 'MOVIL TXT' : 'MUX4 TXT';
-        const logosOtherFormat = State.layers.filter(l => l._layoutGenerated && l.isLogo && l.exclusiveFormat === otherFormat);
-        const mirrorLogo = logosOtherFormat[logoIdx];
-        if (mirrorLogo) {
-          // Guardar dimensiones originales antes de sobreescribir
-          const mirrorOldNatW = mirrorLogo.naturalWidth  || natW;
-          const mirrorOldNatH = mirrorLogo.naturalHeight || natH;
-          mirrorLogo.src           = src;
-          mirrorLogo.logoPath      = logo.path;
-          mirrorLogo.naturalWidth  = natW;
-          mirrorLogo.naturalHeight = natH;
-          const mirrorFmt = State.formatParams[otherFormat]?.[mirrorLogo.id];
-          if (mirrorFmt) {
-            const mirrorOldScaledH  = (mirrorFmt.scaleX / 100) * mirrorOldNatH;
-            const newMirrorScalePct = Math.round((mirrorOldScaledH / natH) * 1000) / 10;
-            mirrorFmt.scaleX = newMirrorScalePct;
-            mirrorFmt.scaleY = newMirrorScalePct;
-            if (otherFormat === 'MOVIL TXT') {
-              mirrorFmt.x = 0;
-            } else {
-              // MUX4 TXT: recalcular x para mantener el borde izquierdo original
-              const mirrorFmtW       = State.formatSizes[otherFormat]?.w || 784;
-              const mirrorOldScaledW = mirrorOldNatW * (mirrorFmt.scaleX / 100);
-              const mirrorOldCx      = mirrorFmtW / 2 + mirrorFmt.x;
-              const mirrorLeftEdge   = mirrorOldCx - mirrorOldScaledW / 2;
-              const newMirrorScaledW = natW * (newMirrorScalePct / 100);
-              mirrorFmt.x = Math.round(mirrorLeftEdge + newMirrorScaledW / 2 - mirrorFmtW / 2);
-            }
-          }
-        }
-      }
+      // Sin sincronización de logo entre formatos: los 4 maestros de texto son independientes.
 
       // Actualizar formatParams solo en el formato activo
       if (State.formatParams[fid]?.[targetId]) {

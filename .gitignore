@@ -1,0 +1,6 @@
+# macOS metadata
+.DS_Store
+._*
+
+# Claude Code local config (no se versiona)
+.claude/

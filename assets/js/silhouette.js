@@ -81,8 +81,19 @@ const Silhouette = (() => {
       const resultBlob = await response.blob();
       const dataUrl    = await _blobToDataUrl(resultBlob);
 
-      // 4 — Actualizar la copia con el resultado
+      // 4 — Actualizar la copia con el resultado de remove.bg.
+      //
+      // La copia hereda srcOriginal del spread inicial, pero ese original
+      // contiene el FONDO; aquí el bitmap canónico de la capa pasa a ser el
+      // resultado de remove.bg, así que eliminamos srcOriginal para que el
+      // export use directamente layer.src (la silueta).
+      //
+      // Limitación conocida (Fase 1): la silueta se procesa sobre el proxy
+      // (max 1920×1080), por lo que el export saldrá a esa resolución para
+      // esta capa concreta. Fase 2 enviará srcOriginal a remove.bg para
+      // recuperar 4K reales.
       copy.src = dataUrl;
+      delete copy.srcOriginal;
       State.selectedLayerId  = copyId;
       State.selectedLayerIds = [copyId];
 

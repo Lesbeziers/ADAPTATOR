@@ -22,6 +22,8 @@ const Export = (() => {
     'MUX4 TXT':           { suffix: 'MUX4_TXT_PUBLI',               type: 'png', maxMB: 0.6   },
     'MOVIL MUX FONDO':    { suffix: 'SMARTPHONE_MUX_FONDO_PUBLI',   type: 'jpg', maxMB: 1.5   },
     'MOVIL TXT':          { suffix: 'SMARTPHONE_MUX_TXT_PUBLI',     type: 'png', maxMB: 0.6   },
+    'TEXTO HORIZONTAL':   { suffix: 'TEXTO_HORIZONTAL',             type: 'png', maxMB: 0.6   },
+    'TEXTO VERTICAL':     { suffix: 'TEXTO_VERTICAL',               type: 'png', maxMB: 0.6   },
     'WEB PUBLI':          { suffix: 'WEB_PUBLI',                    type: 'jpg', maxMB: 1     },
     'WOW PUBLI':          { suffix: 'WOW_PUBLI',                    type: 'jpg', maxMB: 0.25  },
     'TÍTULO FICHA':       { suffix: 'TITULO_FICHA',                 type: 'png', maxMB: 0.6   },
@@ -219,6 +221,10 @@ const Export = (() => {
     const warnings = [];
     let exportedCount = 0;
 
+    // Cache de Image() compartida por todos los formatos del export. Un fanart
+    // 4K que aparezca en 40 formatos se decodifica una sola vez.
+    _imgCache = new Map();
+
     try {
       for (let i = 0; i < okFormats.length; i++) {
         const formatName = okFormats[i];
@@ -279,6 +285,8 @@ const Export = (() => {
       progress.close();
       console.error('[Export] Error global durante export:', err);
       alert('Error durante la exportación.\n\n' + (err?.message || err) + (warnings.length ? '\n\nAvisos previos:\n' + warnings.join('\n') : ''));
+    } finally {
+      _imgCache = null;
     }
   }
 
@@ -343,9 +351,9 @@ const Export = (() => {
     }
 
     // Pastilla Freemium (solo en MUX4 TXT y MOVIL TXT cuando versión es Freemium)
-    if (typeof Layout !== 'undefined' && Layout.isFreemium() &&
+    if (typeof Layout !== 'undefined' && Layout.isFreemium(formatName) &&
         typeof Pastilla !== 'undefined' &&
-        (formatName === 'MUX4 TXT' || formatName === 'MOVIL TXT')) {
+        (formatName === 'MUX4 TXT' || formatName === 'MOVIL TXT' || formatName === 'TEXTO HORIZONTAL' || formatName === 'TEXTO VERTICAL')) {
       const src = Pastilla.getFreemiumSrc();
       const _presetPF = typeof Layout !== 'undefined' && Layout.getPreset && Layout.getPreset(formatName);
       const posY = (_presetPF && _presetPF['PASTILLA_FREEMIUM']?.y) ?? 95;
@@ -392,12 +400,12 @@ const Export = (() => {
     finalCtx.imageSmoothingQuality = 'high';
     finalCtx.drawImage(cv, 0, 0, cv.width, cv.height, 0, 0, W, H);
 
-    // Ruido: nivel máximo entre capas visibles — se aplica después del downsample
-    // para que el patrón de ruido tenga el grano correcto a tamaño nativo.
-    const maxNoise = State.layers
-      .filter(l => _isLayerVisible(l, formatName) && (l.params?.noise ?? 0) > 0)
-      .reduce((mx, l) => Math.max(mx, l.params.noise), 0);
-    if (maxNoise > 0) await _applyNoiseSVG(finalCv, maxNoise);
+    // El ruido se aplica por capa dentro de _drawLayer (mismo comportamiento
+    // que el editor). Ya no se aplica un ruido global sobre toda la composición.
+
+    // El canvas supersampled ya no se usa: liberar su buffer GPU antes de
+    // que el siguiente formato lo presione contra el de los demás formatos.
+    cv.width = 0; cv.height = 0;
 
     return finalCv;
   }
@@ -406,11 +414,16 @@ const Export = (() => {
     const finalCv = await _renderFormatCanvas(formatName);
     if (!finalCv) return null;
 
+    let blob;
     if (cfg.type === 'png') {
-      return await new Promise(res => finalCv.toBlob(res, 'image/png'));
+      blob = await new Promise(res => finalCv.toBlob(res, 'image/png'));
+    } else {
+      blob = await _jpgWithMaxSize(finalCv, cfg.maxMB);
     }
-
-    return await _jpgWithMaxSize(finalCv, cfg.maxMB);
+    // Liberar canvas final antes de devolver el blob — así el siguiente
+    // formato arranca con memoria limpia.
+    finalCv.width = 0; finalCv.height = 0;
+    return blob;
   }
 
   // ── MOCKUP: diseño + capas de sistema visibles (sin zona de seguridad) ──
@@ -519,6 +532,7 @@ const Export = (() => {
 
   async function _drawSystemMockupLayer(ctx, layer, W, H, dc) {
     if (!layer?.src) return;
+    const _layerSrc = layer.srcOriginal || layer.src;
     let dx = 0, dy = 0, dw = W, dh = H;
     if (dc && layer.contentArea) {
       dx = dc.contentX;
@@ -535,11 +549,11 @@ const Export = (() => {
           res();
         };
         img.onerror = () => res();
-        img.src = layer.src;
+        img.src = _layerSrc;
       });
       return;
     }
-    await _drawImage(ctx, layer.src, dx, dy, dw, dh);
+    await _drawImage(ctx, _layerSrc, dx, dy, dw, dh);
   }
 
   // ── JPG QUALITY BINARY SEARCH ─────────────────────────────
@@ -600,7 +614,7 @@ const Export = (() => {
       update: (n, name) => {
         const infoEl = document.getElementById('export-progress-info');
         const fillEl = document.getElementById('export-progress-fill');
-        if (infoEl) infoEl.textContent = `${n} / ${total} — ${name}`;
+        if (infoEl) infoEl.textContent = `${n} / ${total} — ${(typeof Formats !== 'undefined' && Formats.displayLabel) ? Formats.displayLabel(name) : name}`;
         if (fillEl) fillEl.style.width = `${(n / total) * 100}%`;
       },
       close: () => setTimeout(() => document.getElementById('export-progress')?.remove(), 800),
@@ -610,19 +624,39 @@ const Export = (() => {
   // ── VISIBILIDAD ───────────────────────────────────────────
 
   function _isLayerVisible(layer, formatName) {
+    // Rol FANART: el fanart solo en formatos FANART; subject/fondo ocultos en FANART si hay fanart
+    if (typeof Formats !== 'undefined' && Formats.fanartRoleVisibility &&
+        Formats.fanartRoleVisibility(layer.id, formatName) === false) return false;
     if (layer.isTitleLayer) {
-      const inTextFormat = (formatName === 'MUX4 TXT' || formatName === 'MOVIL TXT' || formatName === 'TÍTULO FICHA' || formatName === 'CARÁTULA H' || formatName === 'CARÁTULA V' || formatName === 'CARTEL COM. H' || formatName === 'CARTEL COM. V' || formatName === 'AMAZON LOGO' || formatName === 'SONY' || formatName === 'XIAOMI BANNER' || formatName === 'DEST. DOBLE 4' || formatName === 'DEST. DOBLE 4 SIL' || formatName === 'DEST. DOBLE 1' || formatName === 'DEST. DOBLE 1 SIL' || formatName === 'DEST. DOBLE 2' || formatName === 'DEST. DOBLE 2 SIL' || formatName === 'MOD N SIL') && formatName !== 'FANART' && formatName !== 'FANART MÓVIL';
+      const inTextFormat = (formatName === 'MUX4 TXT' || formatName === 'MOVIL TXT' || formatName === 'TEXTO HORIZONTAL' || formatName === 'TEXTO VERTICAL' || formatName === 'AMAZON LOGO' || formatName === 'TÍTULO FICHA');
       if (!inTextFormat) return false;
-      // Respetar visible:false puesto por el preset
+      if (typeof Formats !== 'undefined' && Formats.isActiveTitleForFormat &&
+          !Formats.isActiveTitleForFormat(layer, formatName)) return false;
       const fmtVisible = State.formatParams?.[formatName]?.[layer.id]?.visible;
       return fmtVisible !== false;
     }
-    if (layer.isComposicion) {
-      if (formatName === 'MUX4 TXT' || formatName === 'MOVIL TXT' || formatName === 'MUX4 FONDO' || formatName === 'MOVIL MUX FONDO' || formatName === 'TÍTULO FICHA' || formatName === 'CARÁTULA H' || formatName === 'CARÁTULA V' || formatName === 'CARTEL COM. H' || formatName === 'CARTEL COM. V' || formatName === 'FANART' || formatName === 'FANART MÓVIL' || formatName === 'FANART DEST.' || formatName === 'AMAZON LOGO' || formatName === 'AMAZON BG' || formatName === 'SONY' || formatName === 'XIAOMI BANNER' || formatName === 'DEST. DOBLE 4' || formatName === 'DEST. DOBLE 4 SIL' || formatName === 'DEST. DOBLE 1' || formatName === 'DEST. DOBLE 1 SIL' || formatName === 'DEST. DOBLE 2' || formatName === 'DEST. DOBLE 2 SIL' || formatName === 'MOD N' || formatName === 'FANART MOD N' || formatName === 'MOD N SIL' || formatName === 'PERFIL') return false;
+    // Composiciones H/V: según la variante del formato
+    if (layer.isComposicionTextoH || layer.isComposicionTextoV) {
+      const _v = (typeof Formats !== 'undefined' && Formats.getTextVariant) ? Formats.getTextVariant(formatName) : null;
+      const _match = (layer.isComposicionTextoH && _v === 'H') || (layer.isComposicionTextoV && _v === 'V');
+      if (!_match) return false;
       const fmtVisible = State.formatParams?.[formatName]?.[layer.id]?.visible;
       return fmtVisible !== undefined ? fmtVisible : true;
     }
-    if (layer.isComposicionMovil) return false;
+    if (layer.isComposicion) {
+      // Composición MUX4: en su mockup o donde el formato elija 'MUX4'
+      const _mv = (typeof Formats !== 'undefined' && Formats.getTextVariant) ? Formats.getTextVariant(formatName) : null;
+      if (formatName !== 'MUX4 FONDO' && _mv !== 'MUX4') return false;
+      const fmtVisible = State.formatParams?.[formatName]?.[layer.id]?.visible;
+      return fmtVisible !== undefined ? fmtVisible : true;
+    }
+    if (layer.isComposicionMovil) {
+      // Composición MOVIL: en los formatos que la elijan ('MOVIL'); el mockup usa _drawCompositionOverlay
+      const _mv = (typeof Formats !== 'undefined' && Formats.getTextVariant) ? Formats.getTextVariant(formatName) : null;
+      if (_mv !== 'MOVIL') return false;
+      const fmtVisible = State.formatParams?.[formatName]?.[layer.id]?.visible;
+      return fmtVisible !== undefined ? fmtVisible : true;
+    }
     if (layer.isComposicionAmazon) return false;
     if (layer.isMarcaSony) return formatName === 'SONY';
     if (layer.isMarcaIplus) return formatName === 'IPLUS PUBLI';
@@ -637,7 +671,7 @@ const Export = (() => {
       return fmtVisible !== undefined ? fmtVisible : true;
     }
     if (layer.exclusiveFormat) return layer.exclusiveFormat === formatName;
-    if ((formatName === 'MUX4 TXT' || formatName === 'MOVIL TXT' || formatName === 'TÍTULO FICHA' || formatName === 'AMAZON LOGO') && !layer._layoutGenerated) return false;
+    if ((formatName === 'MUX4 TXT' || formatName === 'MOVIL TXT' || formatName === 'TÍTULO FICHA' || formatName === 'AMAZON LOGO' || formatName === 'TEXTO HORIZONTAL' || formatName === 'TEXTO VERTICAL') && !layer._layoutGenerated) return false;
     const fmtVisible = State.formatParams?.[formatName]?.[layer.id]?.visible;
     return fmtVisible !== undefined ? fmtVisible : layer.visible !== false;
   }
@@ -675,6 +709,9 @@ const Export = (() => {
   // Snapshot del canvas actual → blur en tmp → mascara alfa via destination-in → volcar.
   async function _drawMascaraBlur(ctx, layer, formatName, W, H) {
     if (!layer.src) return;
+    // En export usamos siempre la imagen original (4K) si existe; en edición
+    // se trabaja con un proxy bajado almacenado en layer.src.
+    const _layerSrc = layer.srcOriginal || layer.src;
     const cv = ctx.canvas;
     const physW = cv.width;
     const physH = cv.height;
@@ -717,7 +754,7 @@ const Export = (() => {
         res();
       };
       maskImg.onerror = () => res();
-      maskImg.src = layer.src;
+      maskImg.src = _layerSrc;
     });
 
     // Volcar el resultado al canvas principal con transform identidad
@@ -732,6 +769,10 @@ const Export = (() => {
     if (layer.isMascaraBlur) {
       return await _drawMascaraBlur(ctx, layer, formatName, W, H);
     }
+
+    // En export usamos la imagen original (4K) si existe. La edición usa un
+    // proxy bajado guardado en layer.src; el original vive en layer.srcOriginal.
+    const _layerSrc = layer.srcOriginal || layer.src;
 
     const p   = State.formatParams?.[formatName]?.[layer.id] || {};
     const sx  = (p.scaleX  ?? 100) / 100;
@@ -790,6 +831,11 @@ const Export = (() => {
     const filters = [];
     const g = layer.params || {};
     if (g.blur       > 0)   filters.push(`blur(${g.blur}px)`);
+    // El ruido se aplica POR CAPA con el mismo filtro SVG que usa el editor
+    // (canvas.js:_injectNoiseFilter). Reemplaza al antiguo render global de
+    // _applyNoiseSVG sobre todo el canvas, que pintaba grano por toda la
+    // composición aunque solo una capa lo tuviera activado.
+    if (g.noise      > 0)   filters.push(`url(#mp-noise-${Math.round(g.noise)})`);
     if (g.brightness !== 0) filters.push(`brightness(${100 + g.brightness}%)`);
     if (g.contrast   !== 0) filters.push(`contrast(${100 + g.contrast}%)`);
     if (g.saturation !== 0) filters.push(`saturate(${100 + g.saturation}%)`);
@@ -902,7 +948,7 @@ const Export = (() => {
         tctx.save();
         tctx.translate(W / 2 + (p.x ?? 0), H / 2 + (p.y ?? 0));
         tctx.rotate(((p.rotation ?? 0) * Math.PI) / 180);
-        await _drawImage(tctx, layer.src, -iw/2, -ih/2, iw, ih);
+        await _drawImage(tctx, _layerSrc, -iw/2, -ih/2, iw, ih);
         tctx.globalCompositeOperation = 'source-atop';
         tctx.globalAlpha = layer.params.tintAmount / 100;
         tctx.fillStyle   = layer.params.tintColor || '#000000';
@@ -915,7 +961,7 @@ const Export = (() => {
         if (filters.length) ctx.filter = filters.join(' ');
         ctx.drawImage(tmp, 0, 0, W, H, 0, 0, W, H);
       } else {
-        await _drawImage(ctx, layer.src, -iw/2, -ih/2, iw, ih);
+        await _drawImage(ctx, _layerSrc, -iw/2, -ih/2, iw, ih);
       }
     }
 
@@ -950,26 +996,38 @@ const Export = (() => {
     ctx.clip();
   }
 
-  function _drawImage(ctx, src, x, y, w, h) {
-    return new Promise(res => {
+  // Cache de Image() por src. Activa solo durante un export (_exportZip /
+  // _exportMockupBlob). Evita decodificar el mismo bitmap 40 veces cuando un
+  // fanart 4K aparece en muchos formatos. Reset entre exports para no retener
+  // memoria indefinidamente.
+  let _imgCache = null;
+
+  function _loadImage(src) {
+    if (_imgCache && _imgCache.has(src)) return _imgCache.get(src);
+    const p = new Promise(res => {
       const img = new Image();
       img.crossOrigin = 'anonymous';
-      img.onload  = () => {
-        const prevSmoothing = ctx.imageSmoothingEnabled;
-        // Si se dibuja a tamaño natural o mayor, desactivar smoothing para máxima nitidez
-        if (w >= img.naturalWidth && h >= img.naturalHeight) {
-          ctx.imageSmoothingEnabled = false;
-        } else {
-          ctx.imageSmoothingEnabled = true;
-          ctx.imageSmoothingQuality = 'high';
-        }
-        ctx.drawImage(img, x, y, w, h);
-        ctx.imageSmoothingEnabled = prevSmoothing;
-        res();
-      };
-      img.onerror = () => res();
+      img.onload  = () => res(img);
+      img.onerror = () => res(null);
       img.src = src;
     });
+    if (_imgCache) _imgCache.set(src, p);
+    return p;
+  }
+
+  async function _drawImage(ctx, src, x, y, w, h) {
+    const img = await _loadImage(src);
+    if (!img) return;
+    const prevSmoothing = ctx.imageSmoothingEnabled;
+    // Si se dibuja a tamaño natural o mayor, desactivar smoothing para máxima nitidez
+    if (w >= img.naturalWidth && h >= img.naturalHeight) {
+      ctx.imageSmoothingEnabled = false;
+    } else {
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+    }
+    ctx.drawImage(img, x, y, w, h);
+    ctx.imageSmoothingEnabled = prevSmoothing;
   }
 
   function _rgba(hex, alpha) {
@@ -1037,7 +1095,7 @@ const Export = (() => {
 
     const desc = document.createElement('p');
     desc.style.cssText = 'font-family:var(--font);font-size:11px;color:#777;margin:0;line-height:1.6;';
-    desc.textContent = `Formato: ${formatName}. Introduce el nombre del archivo:`;
+    desc.textContent = `Formato: ${(typeof Formats !== 'undefined' && Formats.displayLabel) ? Formats.displayLabel(formatName) : formatName}. Introduce el nombre del archivo:`;
 
     const inputWrap = document.createElement('div');
     inputWrap.style.cssText = 'display:flex;flex-direction:column;gap:4px;';
@@ -1127,6 +1185,7 @@ const Export = (() => {
     const progress = _showProgress(1);
     progress.update(1, formatName);
 
+    _imgCache = new Map();
     try {
       const cv = await _renderMockupCanvas(formatName);
       if (!cv) { progress.close(); alert('No se pudo generar el mockup.'); return; }
@@ -1146,6 +1205,8 @@ const Export = (() => {
       progress.close();
       console.error('[Export] Error generando mockup:', err);
       alert('Error generando mockup: ' + (err?.message || err));
+    } finally {
+      _imgCache = null;
     }
   }
 

@@ -6,10 +6,13 @@ const AutoLayout = (() => {
 
   // ── PALABRAS CLAVE PARA DETECCIÓN DE ROL ─────────────────
   const ROLE_KEYWORDS = {
+    fanart:     ['FANART'],   // prioridad: si el nombre lleva FANART, gana sobre el resto
     background: ['FONDO', 'BACKGROUND', 'BG_'],
     subject:    ['MUJER', 'HOMBRE', 'PERSONA', 'SUBJECT', 'FIGURA',
                  'ACTOR', 'ACTRIZ', 'ARTISTA', 'PROTAGONISTA', 'IMAGEN', 'IMAGE'],
-    title:      ['TITULO', 'TITLE', 'TITTLE', 'COMPOSICION_TEXTO', 'COMP_TEXTO'],
+    // Roles de título: si no se distingue por nombre, el modal pregunta.
+    title_h:    ['TITULO_H', 'TITLE_H', 'TITULO_HORIZONTAL'],
+    title_v:    ['TITULO_V', 'TITLE_V', 'TITULO_VERTICAL'],
   };
 
   // ── CONFIGURACIÓN DE ZONAS POR FORMATO ───────────────────
@@ -826,7 +829,9 @@ const AutoLayout = (() => {
     const roleOptions = [
       { value: 'background', label: 'FONDO' },
       { value: 'subject',    label: 'IMAGEN' },
-      { value: 'title',      label: 'TÍTULO' },
+      { value: 'title_h',    label: 'TÍTULO HORIZONTAL' },
+      { value: 'title_v',    label: 'TÍTULO VERTICAL' },
+      { value: 'fanart',     label: 'FANART' },
       { value: null,         label: 'NINGUNO' },
     ];
 
@@ -951,9 +956,20 @@ const AutoLayout = (() => {
     const textZone  = activeVariant?.textZone  || cfg.textZone;
     const focusZone = activeVariant?.focusZone || cfg.focusZone;
 
+    // FANART: si hay asset con rol 'fanart' y este es un formato FANART, se coloca SOLO el
+    // fanart a sangre (cover); el subject/fondo no se colocan. Las capas manuales se respetan.
+    const FANART_FORMATS = ['FANART', 'FANART MÓVIL', 'FANART DEST.', 'FANART MOD N'];
+    const fanartLayer = State.layers.find(l => State.layerRoles?.[l.id] === 'fanart');
+    const useFanart   = FANART_FORMATS.includes(formatName) && !!fanartLayer;
+    if (useFanart) {
+      _applyBackground(formatName, fanartLayer, W, H, mirrored);
+    }
+
     layers.forEach(layer => {
       const role = roles[layer.id];
       if (!role) return;
+      if (role === 'fanart') return; // el fanart se coloca aparte (y solo en formatos FANART)
+      if (useFanart && (role === 'background' || role === 'subject')) return; // tapados por el fanart
 
       if (role === 'background') {
         _applyBackground(formatName, layer, W, H, mirrored);
@@ -967,15 +983,30 @@ const AutoLayout = (() => {
         if (!scaleCfg) return; // formato sin crop/fit (ej. AMAZON LOGO — solo título)
         _applySubject(formatName, layer, W, H, cfg, scaleCfg, mirrored, focusZone);
 
-      } else if (role === 'title') {
+      } else if (role === 'title_h' || role === 'title_v' || role === 'title') {
         // Si textZone es null, el formato no tiene zona de título (ej. FANART DEST.)
         if (textZone) {
-          // cfg.useTitleLayer: formatos que usan isTitleLayer en vez de isComposicion
-          const titleLayer = cfg.useTitleLayer
-            ? (layers.find(l => l.isTitleLayer) || State.layers.find(l => l.isTitleLayer))
-            : (layers.find(l => l.isComposicion) || State.layers.find(l => l.isComposicion));
+          // cfg.useTitleLayer: formatos que usan isTitleLayer en vez de isComposicion.
+          // Para el título H/V: usar el activo del formato (con fallback) si está disponible.
+          let titleLayer;
+          if (cfg.useTitleLayer) {
+            titleLayer = (typeof Formats !== 'undefined' && Formats.getActiveTitleForFormat)
+              ? Formats.getActiveTitleForFormat(formatName) || layer
+              : layer;
+          } else {
+            titleLayer = layers.find(l => l.isComposicion) || State.layers.find(l => l.isComposicion);
+          }
           if (titleLayer) {
             _applyTitle(formatName, titleLayer, W, H, cfg, mirrored, textZone);
+          }
+          // Paso 4b-1: posicionar TAMBIÉN la composición H/V del formato (oculta hasta 4b-2).
+          // Aditivo — no altera el título visible actual.
+          const variant = (typeof Formats !== 'undefined' && Formats.getTextVariant) ? Formats.getTextVariant(formatName) : null;
+          const hvComp = variant === 'H' ? State.layers.find(l => l.isComposicionTextoH)
+                       : variant === 'V' ? State.layers.find(l => l.isComposicionTextoV)
+                       : null;
+          if (hvComp) {
+            _applyTitle(formatName, hvComp, W, H, cfg, mirrored, textZone);
           }
         }
       }
@@ -1482,21 +1513,186 @@ const AutoLayout = (() => {
   // Llamado al importar imágenes por primera vez
   function onFirstImport(layers) {
     if (_rolesAssigned) return;
-    showRoleModal(layers, roles => {
+    showRoleModal(layers, async roles => {
       // Guardar roles en State
       if (!State.layerRoles) State.layerRoles = {};
       Object.assign(State.layerRoles, roles);
+
+      // Solo la PRIMERA imagen con rol FANART cuenta; las demás pasan a imagen normal (sin rol)
+      const _fanarts = layers.filter(l => roles[l.id] === 'fanart');
+      _fanarts.slice(1).forEach(l => { roles[l.id] = null; State.layerRoles[l.id] = null; });
+
       _rolesAssigned = true;
 
-      // Aplicar maquetación a todos los formatos configurados
+      // Si el usuario marca una capa con rol 'title' desde el modal, la
+      // promovemos a capa de título "real": isTitleLayer=true (para que sea
+      // visible en MUX4 TXT / MOVIL TXT / TÍTULO FICHA y la encuentre
+      // _applyTitle en formatos como 199 PUBLI) y aplicamos las TITLE_FIT_ZONES
+      // — la misma lógica que se ejecuta cuando el upload detecta título por
+      // nombre de archivo.
+      let promotedTitle = false;
+      layers.forEach(layer => {
+        const r = roles[layer.id];
+        if (r !== 'title_h' && r !== 'title_v') return;
+        // Flag de orientación SIEMPRE (puede ya ser isTitleLayer por nombre)
+        if (r === 'title_h') layer.isTitleLayerH = true;
+        if (r === 'title_v') layer.isTitleLayerV = true;
+        // Marcar como "hay título" SIEMPRE → fuerza regenerar composiciones y posicionar
+        // en formatos receptores (199, MUX4 FONDO, etc.).
+        promotedTitle = true;
+        if (!layer.isTitleLayer) {
+          layer.isTitleLayer = true;
+          if (typeof Layers !== 'undefined' && Layers.applyTitleFitZones) {
+            Layers.applyTitleFitZones(layer);
+          }
+        }
+      });
+
       if (typeof History !== 'undefined') History.push();
+
+      // Regenerar composiciones ANTES de applyToFormat: los formatos que usan
+      // COMPOSICIÓN TÍTULO (199 PUBLI, AD PAUSE, etc. — los que no son
+      // useTitleLayer) buscan `l.isComposicion` para aplicarle textZone. Si la
+      // composición todavía no existe, _applyTitle no encuentra nada y la capa
+      // queda en el centro hasta que se reposiciona manualmente.
+      if (promotedTitle) {
+        // Limpiar overrides del lápiz: al asignar título por primera vez no queremos
+        // que se mantengan elecciones manuales viejas (de sesiones previas o pruebas).
+        State.formatTextVariant = {};
+
+        if (typeof Composicion       !== 'undefined') await Composicion.generate();
+        if (typeof ComposicionMovil  !== 'undefined') await ComposicionMovil.generate();
+        if (typeof ComposicionAmazon !== 'undefined') await ComposicionAmazon.generate();
+        // Generar TAMBIÉN las composiciones de texto H/V para que aparezcan en los
+        // formatos receptores (199 PUBLI, etc.) sin tener que visitar el maestro.
+        if (typeof ComposicionTexto !== 'undefined') {
+          await ComposicionTexto.generate('TEXTO HORIZONTAL', 'COMPOSICIÓN TEXTO HORIZONTAL', 'isComposicionTextoH');
+          await ComposicionTexto.generate('TEXTO VERTICAL',   'COMPOSICIÓN TEXTO VERTICAL',   'isComposicionTextoV');
+        }
+      }
+
+      // Aplicar maquetación a todos los formatos configurados
       Object.keys(FORMAT_CONFIG).forEach(formatName => {
         applyToFormat(formatName, roles, layers);
       });
 
+      // Reposicionar las composiciones H/V en sus formatos receptores
+      if (promotedTitle) {
+        const compH = State.layers.find(l => l.isComposicionTextoH);
+        const compV = State.layers.find(l => l.isComposicionTextoV);
+        if (compH) repositionTextComp(compH, 'H');
+        if (compV) repositionTextComp(compV, 'V');
+      }
+
+      // Ordenar capas por rol: TÍTULO arriba → SUJETO/NINGUNO → FONDO → FANART abajo.
+      // Las capas de sistema mantienen su posición al principio del array.
+      _reorderByRole();
+
       if (typeof Canvas !== 'undefined') Canvas.render();
       if (typeof Layers !== 'undefined') Layers.render();
     });
+  }
+
+  // Importaciones POSTERIORES: muestra el modal de roles SOLO con las imágenes nuevas
+  // (roles pre-detectados por nombre; el usuario confirma o cambia). Tras cerrar, aplica
+  // roles, regenera composiciones si hay nuevo título, re-maqueta y reordena.
+  function onAdditionalImport(newLayers) {
+    if (!newLayers || newLayers.length === 0) return;
+    showRoleModal(newLayers, async roles => {
+      if (!State.layerRoles) State.layerRoles = {};
+      Object.assign(State.layerRoles, roles);
+
+      // Solo la 1ª FANART cuenta; si ya hay un fanart previo, ninguna nueva sobrevive como tal
+      const prevFanart = State.layers.find(l =>
+        !newLayers.includes(l) && State.layerRoles[l.id] === 'fanart');
+      const newFanarts = newLayers.filter(l => roles[l.id] === 'fanart');
+      const keepFirstNew = !prevFanart;
+      newFanarts.forEach((l, i) => {
+        if (!(keepFirstNew && i === 0)) { roles[l.id] = null; State.layerRoles[l.id] = null; }
+      });
+
+      // Promocionar a isTitleLayer si el usuario marcó alguna como 'title_h' o 'title_v'
+      let promotedTitle = false;
+      newLayers.forEach(layer => {
+        const r = roles[layer.id];
+        if (r !== 'title_h' && r !== 'title_v') return;
+        // Flag de orientación SIEMPRE
+        if (r === 'title_h') layer.isTitleLayerH = true;
+        if (r === 'title_v') layer.isTitleLayerV = true;
+        // Marcar SIEMPRE para regenerar composiciones / re-maquetar
+        promotedTitle = true;
+        if (!layer.isTitleLayer) {
+          layer.isTitleLayer = true;
+          if (typeof Layers !== 'undefined' && Layers.applyTitleFitZones) {
+            Layers.applyTitleFitZones(layer);
+          }
+        }
+      });
+
+      if (typeof History !== 'undefined') History.push();
+
+      // Si hay nuevo título, regenerar composiciones (las que existen ya en el proyecto)
+      if (promotedTitle) {
+        if (typeof Composicion       !== 'undefined') await Composicion.generate();
+        if (typeof ComposicionMovil  !== 'undefined') await ComposicionMovil.generate();
+        if (typeof ComposicionAmazon !== 'undefined') await ComposicionAmazon.generate();
+        if (typeof ComposicionTexto  !== 'undefined') {
+          await ComposicionTexto.generate('TEXTO HORIZONTAL', 'COMPOSICIÓN TEXTO HORIZONTAL', 'isComposicionTextoH');
+          await ComposicionTexto.generate('TEXTO VERTICAL',   'COMPOSICIÓN TEXTO VERTICAL',   'isComposicionTextoV');
+        }
+      }
+
+      // Re-aplicar maquetación a todos los formatos (las nuevas capas alteran la composición)
+      const allImageLayers = State.layers.filter(l =>
+        !['text','solid','gradient'].includes(l.type) &&
+        !l.isComposicion && !l.isComposicionMovil && !l.isComposicionAmazon &&
+        !l.isMarcaIplus && !l.isMarcaSony && l.src
+      );
+      Object.keys(FORMAT_CONFIG).forEach(formatName => {
+        applyToFormat(formatName, State.layerRoles, allImageLayers);
+      });
+
+      // Reposicionar composiciones H/V en sus receptores
+      if (promotedTitle) {
+        const compH = State.layers.find(l => l.isComposicionTextoH);
+        const compV = State.layers.find(l => l.isComposicionTextoV);
+        if (compH) repositionTextComp(compH, 'H');
+        if (compV) repositionTextComp(compV, 'V');
+      }
+
+      _reorderByRole();
+
+      if (typeof Canvas !== 'undefined') Canvas.render();
+      if (typeof Layers !== 'undefined') Layers.render();
+    });
+  }
+
+  // Reordena State.layers según jerarquía de rol. Índice 0 = arriba (z-index alto).
+  // Sistema → Título → Sujetos/Sin rol → Fondos → Fanart.
+  // Dentro de cada grupo se mantiene el orden actual (= orden de importación).
+  function _reorderByRole() {
+    const isSystemLayer = l =>
+      l.isComposicion || l.isComposicionMovil || l.isComposicionAmazon ||
+      l.isComposicionTextoH || l.isComposicionTextoV ||
+      l.isMarcaIplus || l.isMarcaSony || l.isMolduraFanart || l.isMascaraBlur;
+
+    const sys      = [];
+    const title    = [];
+    const subjects = [];   // rol 'subject' o sin rol asignado
+    const bg       = [];
+    const fanart   = [];
+
+    State.layers.forEach(l => {
+      if (isSystemLayer(l))          { sys.push(l);    return; }
+      if (l.isTitleLayer)            { title.push(l);  return; }
+      const role = State.layerRoles?.[l.id];
+      if (role === 'fanart')         { fanart.push(l); return; }
+      if (role === 'background')     { bg.push(l);     return; }
+      // 'subject', sin rol o cualquier otro → grupo "imágenes"
+      subjects.push(l);
+    });
+
+    State.layers = [...sys, ...title, ...subjects, ...bg, ...fanart];
   }
 
   // Botón AUTO en un formato concreto — resetea a la sugerencia
@@ -1630,11 +1826,29 @@ const AutoLayout = (() => {
     return out;
   }
 
+  // Reposiciona una composición de texto (H/V) en todos los formatos que la usan,
+  // metiéndola en la textZone de cada uno. Se llama al (re)generar la composición.
+  function repositionTextComp(comp, variant) {
+    if (!comp) return;
+    Object.keys(State.formatSizes || {}).forEach(formatName => {
+      if (typeof Formats === 'undefined' || Formats.getTextVariant(formatName) !== variant) return;
+      const cfg = FORMAT_CONFIG[formatName];
+      if (!cfg) return;
+      const fmtSize = State.formatSizes[formatName];
+      if (!fmtSize) return;
+      const mirrored   = _mirrored[formatName] || false;
+      const variantKey = _variant[formatName] || 'A';
+      const textZone   = cfg.variants?.[variantKey]?.textZone || cfg.textZone;
+      if (!textZone) return;
+      _applyTitle(formatName, comp, fmtSize.w, fmtSize.h, cfg, mirrored, textZone);
+    });
+  }
+
   return {
-    detectRole, onFirstImport, resetFormat,
+    detectRole, onFirstImport, onAdditionalImport, resetFormat,
     toggleScaleMode, toggleMirror, setVariant, getVariant, getVariants,
     getScaleMode, getMirrored, hasConfig, resetSession,
-    showRoleModal,
+    showRoleModal, repositionTextComp,
     dump,
   };
 

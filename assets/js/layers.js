@@ -61,16 +61,29 @@ const Layers = (() => {
       if (layer) newLayers.push(layer);
       pending--;
       if (pending === 0) {
-        // Todas importadas — disparar AutoLayout si no hay roles asignados
         setTimeout(() => {
+          if (typeof AutoLayout === 'undefined') return;
           const rolesEmpty = !State.layerRoles || Object.keys(State.layerRoles).length === 0;
-          if (rolesEmpty && typeof AutoLayout !== 'undefined') {
+          if (rolesEmpty) {
+            // Primera importación: el modal de roles cubre TODAS las imágenes
             const imageLayers = State.layers.filter(l =>
               !['text','solid','gradient'].includes(l.type) &&
               !l.isComposicion && !l.isComposicionMovil && !l.isComposicionAmazon &&
               !l.isMarcaIplus && !l.isMarcaSony && l.src
             );
             if (imageLayers.length > 0) AutoLayout.onFirstImport(imageLayers);
+          } else {
+            // Importación posterior: modal de roles SOLO con las imágenes nuevas
+            // (filtradas: nada de títulos detectados por nombre — esos no entran al modal).
+            const extras = newLayers.filter(l =>
+              l && l.src && !l.isTitleLayer &&
+              !['text','solid','gradient'].includes(l.type) &&
+              !l.isComposicion && !l.isComposicionMovil && !l.isComposicionAmazon &&
+              !l.isMarcaIplus && !l.isMarcaSony
+            );
+            if (extras.length > 0 && AutoLayout.onAdditionalImport) {
+              AutoLayout.onAdditionalImport(extras);
+            }
           }
         }, 150);
       }
@@ -126,6 +139,39 @@ const Layers = (() => {
     img.src = src;
   }
 
+  // Genera una versión bajada de la imagen (max 1920x1080) para usar durante la
+  // edición. El original se guarda aparte (layer.srcOriginal) y solo se vuelve
+  // a tocar al exportar. Devuelve null si la imagen ya cabe en el target.
+  // Conserva PNG para mantener transparencia; el resto va a JPEG 0.9.
+  const PROXY_MAX_W = 1920;
+  const PROXY_MAX_H = 1080;
+  function _makeProxy(img, mimeType) {
+    const nw = img.naturalWidth;
+    const nh = img.naturalHeight;
+    if (!nw || !nh) return null;
+    if (nw <= PROXY_MAX_W && nh <= PROXY_MAX_H) return null;
+
+    const scale = Math.min(PROXY_MAX_W / nw, PROXY_MAX_H / nh);
+    const pw = Math.max(1, Math.round(nw * scale));
+    const ph = Math.max(1, Math.round(nh * scale));
+
+    const cv = document.createElement('canvas');
+    cv.width  = pw;
+    cv.height = ph;
+    const ctx = cv.getContext('2d');
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(img, 0, 0, pw, ph);
+
+    try {
+      const isPng = (mimeType || '').includes('png');
+      return isPng ? cv.toDataURL('image/png') : cv.toDataURL('image/jpeg', 0.9);
+    } catch (e) {
+      console.warn('[Layers] _makeProxy fallo:', e);
+      return null;
+    }
+  }
+
   function _importLayer(file, onDone) {
     const reader = new FileReader();
     const formatAtImport = State.activeFormat; // capturar ANTES de cualquier async
@@ -136,10 +182,15 @@ const Layers = (() => {
         const isTitleLayer = _TITLE_KEYWORDS.test(name);
         const mimeType = file.type || 'image/png';
 
+        // Proxy bajado para editar; el original se conserva en srcOriginal
+        // y solo se usa al exportar. Si la imagen ya cabe, proxy=null y
+        // todo funciona como antes (src = data URL completo).
+        const proxy = _makeProxy(img, mimeType);
+
         const layer = {
           id:               'layer_' + Date.now() + '_' + Math.random().toString(36).slice(2),
           name,
-          src:              e.target.result,
+          src:              proxy || e.target.result,
           visible:          true,
           naturalWidth:     img.naturalWidth,
           naturalHeight:    img.naturalHeight,
@@ -148,6 +199,7 @@ const Layers = (() => {
           params: { opacity: 100, blur: 0, noise: 0, brightness: 0, contrast: 0, saturation: 0, tintAmount: 0, tintColor: '#000000' },
           isTitleLayer,
         };
+        if (proxy) layer.srcOriginal = e.target.result;
 
         _detectContentBounds(e.target.result, mimeType, img.naturalWidth, img.naturalHeight, bounds => {
           if (bounds) layer.contentBounds = bounds;
@@ -181,23 +233,19 @@ const Layers = (() => {
     reader.readAsDataURL(file);
   }
 
-  function _importTitleLayer(layer) {
-    // Insertar después de todas las capas auto-generadas (isComposicion, isComposicionMovil, isMarcaIplus)
-    let _ci = 0;
-    while (_ci < State.layers.length && (State.layers[_ci].isComposicion || State.layers[_ci].isComposicionMovil || State.layers[_ci].isComposicionAmazon || State.layers[_ci].isMarcaIplus || State.layers[_ci].isMarcaSony)) {
-      _ci++;
-    }
-    if (typeof History !== 'undefined') History.push();
-    State.layers.splice(_ci, 0, layer);
+  // Zonas seguras de fit para capas de título por formato. Se aplican tanto al
+  // importar (cuando el nombre del archivo encaja con _TITLE_KEYWORDS) como
+  // cuando el modal de AutoLayout asigna manualmente el rol 'title'.
+  const TITLE_FIT_ZONES = {
+    'MUX4 TXT':         { x: 0.051, y: 0.132, w: 0.897, h: 0.739 },
+    'MOVIL TXT':        { x: 0.014, y: 0.043, w: 0.971, h: 0.912 },
+    'TÍTULO FICHA':     { x: 0.003, y: 0.020, w: 0.993, h: 0.950, alignLeft: true },
+    'TEXTO HORIZONTAL': { x: 0.051, y: 0.132, w: 0.897, h: 0.739 }, // misma zona que MUX4 TXT escalada
+    'TEXTO VERTICAL':   { x: 0.014, y: 0.043, w: 0.971, h: 0.912 }, // misma zona que MOVIL TXT escalada
+  };
 
+  function _applyTitleFitZones(layer) {
     const defaultParams = { scaleX: 100, scaleY: 100, rotation: 0, x: 0, y: 0, visible: true };
-
-    // Zonas seguras por formato para fit contenido automático al importar título
-    const TITLE_FIT_ZONES = {
-      'MUX4 TXT':      { x: 0.051, y: 0.132, w: 0.897, h: 0.739 },
-      'MOVIL TXT':     { x: 0.014, y: 0.043, w: 0.971, h: 0.912 },
-      'TÍTULO FICHA':  { x: 0.003, y: 0.020, w: 0.993, h: 0.950, alignLeft: true },
-    };
 
     Object.keys(State.formatSizes || {}).forEach(fid => {
       if (!State.formatParams[fid]) State.formatParams[fid] = {};
@@ -241,9 +289,26 @@ const Layers = (() => {
           visible:  true,
         };
       } else {
-        State.formatParams[fid][layer.id] = { ...defaultParams };
+        // Solo aplicar defaults si la capa todavía no tiene formatParams ahí.
+        // Si el modal de roles re-clasifica una capa que ya tenía posición en
+        // otro formato, no la pisamos.
+        if (!State.formatParams[fid][layer.id]) {
+          State.formatParams[fid][layer.id] = { ...defaultParams };
+        }
       }
     });
+  }
+
+  function _importTitleLayer(layer) {
+    // Insertar después de todas las capas auto-generadas (isComposicion, isComposicionMovil, isMarcaIplus)
+    let _ci = 0;
+    while (_ci < State.layers.length && (State.layers[_ci].isComposicion || State.layers[_ci].isComposicionMovil || State.layers[_ci].isComposicionAmazon || State.layers[_ci].isMarcaIplus || State.layers[_ci].isMarcaSony)) {
+      _ci++;
+    }
+    if (typeof History !== 'undefined') History.push();
+    State.layers.splice(_ci, 0, layer);
+
+    _applyTitleFitZones(layer);
 
     State.selectedLayerId  = layer.id;
     State.selectedLayerIds = [layer.id];
@@ -370,10 +435,13 @@ const Layers = (() => {
           const oldVisualH = (layer.naturalHeight || 1) * (p.scaleY ?? 100) / 100;
           const newScaleX  = (oldVisualW / img.naturalWidth)  * 100;
           const newScaleY  = (oldVisualH / img.naturalHeight) * 100;
-          layer.src           = ev.target.result;
+          const mimeType = file.type || 'image/png';
+          const proxy = _makeProxy(img, mimeType);
+          layer.src           = proxy || ev.target.result;
+          if (proxy) layer.srcOriginal = ev.target.result;
+          else       delete layer.srcOriginal;
           layer.naturalWidth  = img.naturalWidth;
           layer.naturalHeight = img.naturalHeight;
-          const mimeType = file.type || 'image/png';
           layer.originalMimeType = mimeType;
           _detectContentBounds(ev.target.result, mimeType, img.naturalWidth, img.naturalHeight, bounds => {
             layer.contentBounds = bounds || null;
@@ -548,8 +616,8 @@ const Layers = (() => {
     if (!list) return;
     list.innerHTML = '';
 
-    // Indicador de maquetación activa (solo en MUX4 TXT y MOVIL TXT)
-    if ((State.activeFormat === 'MUX4 TXT' || State.activeFormat === 'MOVIL TXT') &&
+    // Indicador de maquetación activa (en los formatos de texto)
+    if ((State.activeFormat === 'MUX4 TXT' || State.activeFormat === 'MOVIL TXT' || State.activeFormat === 'TEXTO HORIZONTAL' || State.activeFormat === 'TEXTO VERTICAL') &&
         typeof Layout !== 'undefined') {
       const tipo    = Layout.getType();
       const version = Layout.getVersion();
@@ -579,6 +647,14 @@ const Layers = (() => {
 
     // ── CABECERA: SELECTOR DE MODO DE CAPA ───────────────
     list.appendChild(_buildBlendModeHeader());
+
+    // ── CAPA "GUÍAS" (solo si hay al menos una en este formato) ──
+    if (typeof Formats !== 'undefined' && Formats.hasGuides && Formats.hasGuides(State.activeFormat)) {
+      list.appendChild(_buildGuidesItem());
+      const sep = document.createElement('div');
+      sep.className = 'layers-separator';
+      list.appendChild(sep);
+    }
 
     // En MUX4 FONDO: COMPOSICIÓN TÍTULO va primero, por encima de todo
     if (State.activeFormat === 'MUX4 FONDO') {
@@ -624,7 +700,7 @@ const Layers = (() => {
     }
 
     // Pastilla Freemium — solo si la versión activa es Freemium
-    if ((State.activeFormat === 'MUX4 TXT' || State.activeFormat === 'MOVIL TXT') &&
+    if ((State.activeFormat === 'MUX4 TXT' || State.activeFormat === 'MOVIL TXT' || State.activeFormat === 'TEXTO HORIZONTAL' || State.activeFormat === 'TEXTO VERTICAL') &&
         typeof Layout !== 'undefined' && Layout.isFreemium() &&
         typeof Pastilla !== 'undefined') {
       list.appendChild(_buildPastillaFreemiumItem());
@@ -954,21 +1030,67 @@ const Layers = (() => {
     return item;
   }
 
+  // Menú selector de variante de texto (las 4 composiciones) para el formato activo
+  function _openTextVariantMenu(anchorEl, formatName) {
+    document.querySelectorAll('.text-variant-menu').forEach(m => m.remove());
+    if (typeof Formats === 'undefined') return;
+    const opts = Formats.getTextVariantOptions();
+    const cur  = Formats.getTextVariant(formatName);
+    const menu = document.createElement('div');
+    menu.className = 'text-variant-menu';
+    const r = anchorEl.getBoundingClientRect();
+    menu.style.cssText = `position:fixed;z-index:9999;background:#222;border:1px solid #444;border-radius:4px;padding:4px;min-width:170px;box-shadow:0 6px 20px rgba(0,0,0,0.55);left:${Math.round(r.right - 170)}px;top:${Math.round(r.bottom + 4)}px;`;
+    opts.forEach(o => {
+      const it = document.createElement('div');
+      it.textContent = (o.value === cur ? '● ' : '') + o.label;
+      it.style.cssText = `font-family:var(--font);font-size:10px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:${o.value === cur ? 'var(--col-yellow)' : '#bbb'};padding:6px 8px;border-radius:3px;cursor:pointer;`;
+      it.addEventListener('mouseenter', () => { it.style.background = '#333'; });
+      it.addEventListener('mouseleave', () => { it.style.background = ''; });
+      it.addEventListener('click', ev => {
+        ev.stopPropagation();
+        menu.remove();
+        Formats.setTextVariant(formatName, o.value);
+      });
+      menu.appendChild(it);
+    });
+    document.body.appendChild(menu);
+    const close = ev => { if (!menu.contains(ev.target)) { menu.remove(); document.removeEventListener('mousedown', close); } };
+    setTimeout(() => document.addEventListener('mousedown', close), 0);
+  }
+
   function _buildItem(layer, index) {
-    // Capas title: solo en MUX4 TXT, MOVIL TXT, TÍTULO FICHA y formatos de gráfica oficial
-    if (layer.isTitleLayer && State.activeFormat !== 'MUX4 TXT' && State.activeFormat !== 'MOVIL TXT' && State.activeFormat !== 'TÍTULO FICHA' && State.activeFormat !== 'CARÁTULA H' && State.activeFormat !== 'CARÁTULA V' && State.activeFormat !== 'CARTEL COM. H' && State.activeFormat !== 'CARTEL COM. V' && State.activeFormat !== 'AMAZON LOGO' && State.activeFormat !== 'SONY' && State.activeFormat !== 'XIAOMI BANNER' && State.activeFormat !== 'DEST. DOBLE 4' && State.activeFormat !== 'DEST. DOBLE 4 SIL' && State.activeFormat !== 'DEST. DOBLE 1' && State.activeFormat !== 'DEST. DOBLE 1 SIL' && State.activeFormat !== 'DEST. DOBLE 2' && State.activeFormat !== 'DEST. DOBLE 2 SIL' && State.activeFormat !== 'MOD N SIL') return null;
+    // Rol FANART: el fanart solo en formatos FANART; subject/fondo ocultos en FANART si hay fanart
+    if (typeof Formats !== 'undefined' && Formats.fanartRoleVisibility &&
+        Formats.fanartRoleVisibility(layer.id, State.activeFormat) === false) return null;
+    // Composiciones H/V: solo se listan en los formatos cuya variante coincide
+    if (layer.isComposicionTextoH || layer.isComposicionTextoV) {
+      const _v = (typeof Formats !== 'undefined' && Formats.getTextVariant) ? Formats.getTextVariant(State.activeFormat) : null;
+      const _match = (layer.isComposicionTextoH && _v === 'H') || (layer.isComposicionTextoV && _v === 'V');
+      if (!_match) return null;
+    }
+    // Título "vivo": solo en maestros de texto + TÍTULO FICHA, y solo el activo (H/V) por formato
+    if (layer.isTitleLayer) {
+      const inHost = ['MUX4 TXT','MOVIL TXT','TEXTO HORIZONTAL','TEXTO VERTICAL','AMAZON LOGO','TÍTULO FICHA'].includes(State.activeFormat);
+      if (!inHost) return null;
+      if (typeof Formats !== 'undefined' && Formats.isActiveTitleForFormat &&
+          !Formats.isActiveTitleForFormat(layer, State.activeFormat)) return null;
+    }
     if (layer.isTitleLayer && (State.activeFormat === 'FANART' || State.activeFormat === 'FANART MÓVIL')) return null;
     if (layer.isTitleLayer && typeof Layout !== 'undefined' && Layout.isUpsell()) return null;
 
-    // Composición título: oculta en MUX4 TXT, MOVIL TXT, TÍTULO FICHA y formatos de gráfica oficial
-    if (layer.isComposicion && (State.activeFormat === 'MUX4 TXT' || State.activeFormat === 'MOVIL TXT' || State.activeFormat === 'TÍTULO FICHA' || State.activeFormat === 'CARÁTULA H' || State.activeFormat === 'CARÁTULA V' || State.activeFormat === 'CARTEL COM. H' || State.activeFormat === 'CARTEL COM. V' || State.activeFormat === 'FANART' || State.activeFormat === 'FANART MÓVIL' || State.activeFormat === 'AMAZON LOGO' || State.activeFormat === 'SONY' || State.activeFormat === 'XIAOMI BANNER' || State.activeFormat === 'DEST. DOBLE 4' || State.activeFormat === 'DEST. DOBLE 4 SIL' || State.activeFormat === 'DEST. DOBLE 1' || State.activeFormat === 'DEST. DOBLE 1 SIL' || State.activeFormat === 'DEST. DOBLE 2' || State.activeFormat === 'DEST. DOBLE 2 SIL' || State.activeFormat === 'MOD N' || State.activeFormat === 'MOD N SIL' || State.activeFormat === 'PERFIL')) return null;
+    // Composición MUX4: en su mockup (MUX4 FONDO) o donde el formato elija la variante 'MUX4'
+    if (layer.isComposicion && State.activeFormat !== 'MUX4 FONDO' &&
+        !(typeof Formats !== 'undefined' && Formats.getTextVariant && Formats.getTextVariant(State.activeFormat) === 'MUX4')) return null;
+    // Composición MOVIL: en su mockup (MOVIL MUX FONDO) o donde el formato elija 'MOVIL'
+    if (layer.isComposicionMovil && State.activeFormat !== 'MOVIL MUX FONDO' &&
+        !(typeof Formats !== 'undefined' && Formats.getTextVariant && Formats.getTextVariant(State.activeFormat) === 'MOVIL')) return null;
 
     // Capas con exclusiveFormat: solo en su formato
     if (layer.exclusiveFormat && layer.exclusiveFormat !== State.activeFormat) return null;
 
     // Capas normales importadas: ocultas en MUX4 TXT, MOVIL TXT y TÍTULO FICHA
     if (!layer.isTitleLayer && !layer.isComposicion && !layer.exclusiveFormat && !layer._layoutGenerated) {
-      if (State.activeFormat === 'MUX4 TXT' || State.activeFormat === 'MOVIL TXT' || State.activeFormat === 'TÍTULO FICHA' || State.activeFormat === 'AMAZON LOGO') return null;
+      if (State.activeFormat === 'MUX4 TXT' || State.activeFormat === 'MOVIL TXT' || State.activeFormat === 'TÍTULO FICHA' || State.activeFormat === 'AMAZON LOGO' || State.activeFormat === 'TEXTO HORIZONTAL' || State.activeFormat === 'TEXTO VERTICAL') return null;
     }
 
     const item = document.createElement('div');
@@ -1268,6 +1390,23 @@ const Layers = (() => {
       actionsWrap.appendChild(editBtn);
     }
 
+    // Lápiz para la composición de texto: elegir QUÉ texto (H/V/MUX4/MOVIL) en este formato
+    const _isTextComp = layer.isComposicionTextoH || layer.isComposicionTextoV || layer.isComposicion || layer.isComposicionMovil;
+    const _curVariant = (typeof Formats !== 'undefined' && Formats.getTextVariant) ? Formats.getTextVariant(State.activeFormat) : null;
+    if (_isTextComp && _curVariant && typeof Formats !== 'undefined' && Formats.getTextVariantOptions) {
+      const varBtn = document.createElement('div');
+      varBtn.className = 'layer-edit-btn';
+      varBtn.dataset.tooltip = 'Elegir texto del formato';
+      const vUp = document.createElement('img'); vUp.className = 'icon-up';   vUp.src = 'assets/img/ic_lapiz_up.svg';
+      const vDn = document.createElement('img'); vDn.className = 'icon-down'; vDn.src = 'assets/img/ic_lapiz_down.svg';
+      varBtn.appendChild(vUp); varBtn.appendChild(vDn);
+      varBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        _openTextVariantMenu(varBtn, State.activeFormat);
+      });
+      actionsWrap.appendChild(varBtn);
+    }
+
     // ── CANDADO editable ──
     const lockBtn = document.createElement('div');
     const _locked = () => _getLocked(layer.id);
@@ -1390,6 +1529,90 @@ const Layers = (() => {
   }
 
   // ── ITEM ESPECIAL: COMPOSICIÓN TÍTULO en MUX4 FONDO ──────
+
+  // ── ITEM "GUÍAS" — capa especial del panel ─────────────────
+  // No es una capa real de State.layers; es un item que controla las guías del formato activo.
+  // Tres iconos: ojo (ver/ocultar), candado (bloquear edición), imán (snap GLOBAL).
+  function _buildGuidesItem() {
+    const fid = State.activeFormat;
+    const item = document.createElement('div');
+    item.className = 'layer-item layer-item--guides';
+
+    // OJO
+    const eye = document.createElement('div');
+    eye.className = 'layer-eye';
+    const eyeImg = document.createElement('img');
+    eyeImg.src = Formats.areGuidesVisible(fid) ? 'assets/img/ojo_on.svg' : 'assets/img/ojo_off.svg';
+    eye.appendChild(eyeImg);
+    eye.addEventListener('click', e => {
+      e.stopPropagation();
+      Formats.toggleGuidesVisible(fid);
+      _render();
+      if (typeof Canvas !== 'undefined') Canvas.render();
+    });
+
+    // THUMB (icono guías)
+    const thumb = document.createElement('div');
+    thumb.className = 'layer-thumb';
+    thumb.style.cssText = 'display:flex;align-items:center;justify-content:center;background:#2a2a2a;border:1px solid #444;';
+    thumb.innerHTML = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><line x1="5.5" y1="1" x2="5.5" y2="15" stroke="#00BFFF" stroke-width="1.2"/><line x1="1" y1="10.5" x2="15" y2="10.5" stroke="#00BFFF" stroke-width="1.2"/></svg>';
+
+    // NOMBRE
+    const name = document.createElement('span');
+    name.className = 'layer-name';
+    name.textContent = 'GUÍAS';
+    name.style.cssText = 'color:#bbb;font-weight:700;letter-spacing:0.04em;';
+
+    // ACCIONES: candado + imán
+    const actions = document.createElement('div');
+    actions.className = 'layer-actions';
+
+    const lockBtn = document.createElement('div');
+    const _svgLocked   = '<svg width="12" height="14" viewBox="0 0 12 14" fill="none"><rect x="1" y="6" width="10" height="8" rx="1.5" fill="currentColor" opacity="0.9"/><path d="M3 6V4a3 3 0 0 1 6 0v2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
+    const _svgUnlocked = '<svg width="12" height="14" viewBox="0 0 12 14" fill="none"><rect x="1" y="6" width="10" height="8" rx="1.5" fill="currentColor" opacity="0.3"/><path d="M3 6V4a3 3 0 0 1 6 0" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.3"/></svg>';
+    const _refreshLock = () => {
+      const l = Formats.areGuidesLocked(fid);
+      lockBtn.className = 'layer-lock-btn' + (l ? ' locked' : '');
+      lockBtn.dataset.tooltip = l ? 'Desbloquear guías' : 'Bloquear guías';
+      lockBtn.innerHTML = l ? _svgLocked : _svgUnlocked;
+    };
+    _refreshLock();
+    lockBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      Formats.toggleGuidesLocked(fid);
+      _refreshLock();
+    });
+    actions.appendChild(lockBtn);
+
+    const snapBtn = document.createElement('div');
+    snapBtn.className = 'layer-snap-btn';
+    const snapImgUp   = document.createElement('img');
+    const snapImgDown = document.createElement('img');
+    snapImgUp.className   = 'snap-icon-up';
+    snapImgDown.className = 'snap-icon-down';
+    snapImgUp.src   = 'assets/img/ic_iman_up.svg';
+    snapImgDown.src = 'assets/img/ic_iman_down.svg';
+    snapBtn.appendChild(snapImgUp);
+    snapBtn.appendChild(snapImgDown);
+    const _refreshSnap = () => {
+      const on = Formats.isSnapEnabled();
+      snapBtn.classList.toggle('snapped', on);
+      snapBtn.dataset.tooltip = on ? 'Desactivar imán' : 'Activar imán';
+    };
+    _refreshSnap();
+    snapBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      Formats.toggleSnap();
+      _refreshSnap();
+    });
+    actions.appendChild(snapBtn);
+
+    item.appendChild(eye);
+    item.appendChild(thumb);
+    item.appendChild(name);
+    item.appendChild(actions);
+    return item;
+  }
 
   function _buildComposicionFondoItem(layer) {
     const item = document.createElement('div');
@@ -1794,5 +2017,5 @@ const Layers = (() => {
     }) ?? null;
   }
 
-  return { init, render: _render, getLocked: _getLocked };
+  return { init, render: _render, getLocked: _getLocked, makeProxy: _makeProxy, applyTitleFitZones: _applyTitleFitZones };
 })();

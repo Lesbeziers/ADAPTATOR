@@ -598,6 +598,10 @@ body.view-all #btn-collapse   { display: none; }
 body.view-all #canvas-area    { display: none; }
 body.view-all #canvas-ok-btn  { display: none !important; }
 body.view-all #canvas-mockup-btn { display: none !important; }
+body.view-all #canvas-attrs-btn { display: none !important; }
+body.view-all #titulo-ficha-handle { display: none !important; }
+body.view-all #canvas-ruler-h, body.view-all #canvas-ruler-v,
+body.view-all #canvas-guides-layer { display: none !important; }
 
 #ver-todas-area {
   display: none;

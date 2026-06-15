@@ -7,6 +7,7 @@ const Layout = (() => {
   // ── DEFINICIÓN DE TIPOLOGÍAS Y VERSIONES ─────────────────
 
   const TIPOS = [
+    { id: 'ninguna',   label: 'Ninguna' },
     { id: 'cine',      label: 'Cine' },
     { id: 'deportes',  label: 'Deportes' },
     { id: 'partners',  label: 'Partners' },
@@ -14,6 +15,7 @@ const Layout = (() => {
   ];
 
   const VERSIONES = {
+    ninguna:  [ { id: 'reset', label: 'Sin maquetación (solo título)' } ],
     cine:     [ { id: 'normal', label: 'Normal' }, { id: 'freemium', label: 'Freemium' } ],
     deportes: [ { id: 'normal', label: 'Normal' }, { id: 'freemium', label: 'Freemium' }, { id: 'horecas', label: 'Horecas' }, { id: 'upsell', label: 'Upsell' }, { id: 'upsell_precio', label: 'Upsell + Precio' }, { id: 'informe', label: 'Informe +' } ],
     textos: [ { id: 'canales', label: 'Textos Canales' } ],
@@ -366,7 +368,7 @@ const Layout = (() => {
   };
 
   // Formatos que activan la maquetación automática
-  const LAYOUT_FORMATS = ['MUX4 TXT', 'MOVIL TXT'];
+  const LAYOUT_FORMATS = ['MUX4 TXT', 'MOVIL TXT', 'TEXTO HORIZONTAL', 'TEXTO VERTICAL'];
 
   // ── INIT ──────────────────────────────────────────────────
 
@@ -379,7 +381,7 @@ const Layout = (() => {
   // Llamado desde formats.js al activar MUX4 TXT o MOVIL TXT
   function onFormatActivated(formatName) {
     if (!LAYOUT_FORMATS.includes(formatName)) return;
-    if (!State.layoutConfig.type) {
+    if (!_cfg(formatName).type) {
       openModal();
     }
   }
@@ -403,47 +405,124 @@ const Layout = (() => {
 
   let _dropdownOutsideClick = null;
 
-  function getType()    { return State.layoutConfig.type;    }
-  function getVersion() { return State.layoutConfig.version; }
-  function isFreemium()   { return State.layoutConfig.version === 'freemium'; }
-  function isUpsell()     { return State.layoutConfig.type === 'deportes' && (State.layoutConfig.version === 'upsell' || State.layoutConfig.version === 'upsell_precio'); }
-  function isUpsellPrecio() { return State.layoutConfig.type === 'deportes' && State.layoutConfig.version === 'upsell_precio'; }
+  // Maqueta cada formato al maestro de texto que define su maquetación.
+  // (Provisional: el resto heredan de MUX4 TXT; se afinará al construir el enrutado de títulos.)
+  function _sourceFormat(fid) {
+    if (fid === 'MOVIL TXT' || fid === 'MOVIL MUX FONDO') return 'MOVIL TXT';
+    if (fid === 'TEXTO HORIZONTAL') return 'TEXTO HORIZONTAL';
+    if (fid === 'TEXTO VERTICAL')   return 'TEXTO VERTICAL';
+    return 'MUX4 TXT';
+  }
+  function _cfg(fid) { return State.layoutConfig[fid] || {}; }
+
+  function getType(fid = State.activeFormat)    { return _cfg(_sourceFormat(fid)).type    || null; }
+  function getVersion(fid = State.activeFormat) { return _cfg(_sourceFormat(fid)).version || null; }
+  function isFreemium(fid = State.activeFormat)   { return _cfg(_sourceFormat(fid)).version === 'freemium'; }
+  function isUpsell(fid = State.activeFormat)     { const c = _cfg(_sourceFormat(fid)); return c.type === 'deportes' && (c.version === 'upsell' || c.version === 'upsell_precio'); }
+  function isUpsellPrecio(fid = State.activeFormat) { const c = _cfg(_sourceFormat(fid)); return c.type === 'deportes' && c.version === 'upsell_precio'; }
   function getPreset(fid) {
-    const key = `${State.layoutConfig.type}_${State.layoutConfig.version}`;
-    return PRESETS[key]?.[fid] || null;
+    const c = _cfg(_sourceFormat(fid));
+    if (!c.type || !c.version) return null;
+    const base = PRESETS[`${c.type}_${c.version}`];
+    if (!base) return null;
+    return _deriveBlock(base, fid) || base[fid] || null;
+  }
+
+  // ── DERIVACIÓN DE PRESETS POR ESCALA (formatos nuevos) ────
+  // TEXTO HORIZONTAL = MUX4 TXT escalado · TEXTO VERTICAL = MOVIL TXT escalado.
+  // Escala uniforme: x/scaleX por factor de ancho, y/scaleY/tamaño/zonas por factor de alto.
+  const DERIVE = {
+    'TEXTO HORIZONTAL': { from: 'MUX4 TXT',  fx: 1920 / 784,  fy: 779 / 318 },
+    'TEXTO VERTICAL':   { from: 'MOVIL TXT', fx: 1080 / 1440, fy: 350 / 466 },
+  };
+
+  function _scaleBlock(block, fx, fy) {
+    const out = {};
+    for (const [role, p] of Object.entries(block)) {
+      const np = { ...p };
+      if (typeof p.x         === 'number') np.x         = Math.round(p.x * fx);
+      if (typeof p.y         === 'number') np.y         = Math.round(p.y * fy);
+      if (typeof p.zoneY     === 'number') np.zoneY     = Math.round(p.zoneY * fy);
+      if (typeof p.zoneH     === 'number') np.zoneH     = Math.round(p.zoneH * fy);
+      if (typeof p.pastillaH === 'number') np.pastillaH = Math.round(p.pastillaH * fy);
+      // scaleX/scaleY solo para imágenes/logos; el texto escala vía text.size
+      if (!p.text) {
+        if (typeof p.scaleX === 'number') np.scaleX = Math.round(p.scaleX * fx * 10) / 10;
+        if (typeof p.scaleY === 'number') np.scaleY = Math.round(p.scaleY * fy * 10) / 10;
+      } else {
+        np.text = { ...p.text };
+        if (typeof p.text.size === 'number') np.text.size = Math.round(p.text.size * fy);
+      }
+      out[role] = np;
+    }
+    return out;
+  }
+
+  function _deriveBlock(base, fid) {
+    const d = DERIVE[fid];
+    if (!d || !base[d.from]) return null;
+    return _scaleBlock(base[d.from], d.fx, d.fy);
+  }
+
+  function _augmentPreset(base) {
+    const out = { ...base };
+    for (const fid of Object.keys(DERIVE)) {
+      const b = _deriveBlock(base, fid);
+      if (b) out[fid] = b;
+    }
+    return out;
   }
 
   // ── APLICAR PRESET ────────────────────────────────────────
 
-  function applyPreset(type, version) {
+  function applyPreset(type, version, format = State.activeFormat) {
+    // Caso especial "ninguna": resetea la maquetación a "solo título"
+    if (type === 'ninguna') {
+      if (typeof History !== 'undefined') History.push();
+      State.layoutConfig[format] = { type, version };
+      State.dirty = true;
+      // Elimina capas auto-generadas (textos, logos…) de ESTE formato
+      State.layers = State.layers.filter(l => !(l._layoutGenerated && l.exclusiveFormat === format));
+      // Reposiciona la imagen de título usando TITLE_FIT_ZONES si la hay
+      const title = (typeof Formats !== 'undefined' && Formats.getActiveTitleForFormat)
+        ? Formats.getActiveTitleForFormat(format) : State.layers.find(l => l.isTitleLayer);
+      if (title && typeof Layers !== 'undefined' && Layers.applyTitleFitZones) {
+        Layers.applyTitleFitZones(title);
+      }
+      if (typeof Canvas !== 'undefined') Canvas.render();
+      if (typeof Layers !== 'undefined') Layers.render();
+      return;
+    }
     // Validamos antes de empujar al historial — sin esto, una key desconocida
     // gasta un slot de undo en una operación que termina siendo no-op.
-    const presetKey = `${type}_${version}`;
-    const preset    = PRESETS[presetKey];
-    if (!preset) {
+    const presetKey  = `${type}_${version}`;
+    const basePreset = PRESETS[presetKey];
+    if (!basePreset) {
       console.warn(`[Layout] Preset desconocido: ${presetKey}`);
       return;
     }
+    // Opción A — paridad total: derivar por escala los presets de los formatos nuevos
+    const preset = _augmentPreset(basePreset);
 
     if (typeof History !== 'undefined') History.push();
 
-    State.layoutConfig.type    = type;
-    State.layoutConfig.version = version;
+    // Maquetación INDEPENDIENTE por formato
+    State.layoutConfig[format] = { type, version };
     State.dirty = true;
 
-    // 1. Eliminar capas de texto y logo generadas por presets anteriores
-    State.layers = State.layers.filter(l => !l._layoutGenerated);
+    // 1. Eliminar solo las capas de maquetación de ESTE formato
+    State.layers = State.layers.filter(l => !(l._layoutGenerated && l.exclusiveFormat === format));
 
-    // Versiones que solo existen en MUX4 TXT (no tienen equivalente en MOVIL TXT)
-    const MUX4_ONLY_VERSIONS = ['horecas', 'upsell', 'upsell_precio'];
-    const isMux4Only = MUX4_ONLY_VERSIONS.includes(version);
-
-    // Si la versión es exclusiva de MUX4 TXT, no tocar MOVIL TXT
-    const FORMAT_IDS = isMux4Only ? ['MUX4 TXT'] : ['MUX4 TXT', 'MOVIL TXT'];
-    // Usamos MUX4 TXT como formato maestro para crear capas
-    const masterFormat = 'MUX4 TXT';
-    const masterDefs   = preset[masterFormat];
-    if (!masterDefs) return;
+    // Solo se maqueta el formato activo
+    const FORMAT_IDS   = [format];
+    const masterFormat = format;
+    const masterDefs   = preset[format];
+    if (!masterDefs) {
+      // Esta tipología/versión no define este formato → queda limpio
+      if (typeof Canvas !== 'undefined') Canvas.render();
+      if (typeof Layers !== 'undefined') Layers.render();
+      return;
+    }
 
     // Punto de inserción: justo debajo de las capas de sistema (después de isTitleLayer)
     let insertIdx = 0;
@@ -466,6 +545,7 @@ const Layout = (() => {
     FORMAT_IDS.forEach(fid => {
       // Solo iterar MOVIL TXT si tiene definición propia
       if (fid === 'MOVIL TXT' && !hasMovilDefs) return;
+      if (fid === 'TEXTO VERTICAL' && !hasMovilDefs) return;
       const fmtDefs = preset[fid] || masterDefs;
       Object.entries(fmtDefs).forEach(([role, params]) => {
         if (role === 'IMAGEN_TITULO')     return;
@@ -546,7 +626,7 @@ const Layout = (() => {
               // Escalar para ocupar todo el alto de la zona verde
               let scale = ((zoneH - MARGIN * 2) / imgH) * 100;
               // Si con ese alto se sale del ancho seguro, reducir por ancho
-              const SAFE_MARGIN_X = fid === 'MUX4 TXT' ? 40 : 48;
+              const SAFE_MARGIN_X = fid === 'MUX4 TXT' ? 40 : fid === 'TEXTO HORIZONTAL' ? 98 : fid === 'TEXTO VERTICAL' ? 36 : 48;
               const safeW = fmtW - SAFE_MARGIN_X * 2;
               if (imgW * (scale / 100) > safeW) {
                 scale = (safeW / imgW) * 100;
@@ -563,7 +643,7 @@ const Layout = (() => {
 
             } else {
               // Cálculo dinámico estándar (cine, deportes)
-              const SAFE_MARGIN_X = fid === 'MUX4 TXT' ? 40 : 48;
+              const SAFE_MARGIN_X = fid === 'MUX4 TXT' ? 40 : fid === 'TEXTO HORIZONTAL' ? 98 : fid === 'TEXTO VERTICAL' ? 36 : 48;
               const safeW = fmtW - SAFE_MARGIN_X * 2;
               let scale = (safeW / imgW) * 100;
               let scaledH = imgH * (scale / 100);
@@ -755,8 +835,9 @@ const Layout = (() => {
     const body = document.getElementById('layout-modal-body');
     if (!body) return;
 
-    const currentType    = State.layoutConfig.type;
-    const currentVersion = State.layoutConfig.version;
+    const _modalCfg      = _cfg(State.activeFormat);
+    const currentType    = _modalCfg.type;
+    const currentVersion = _modalCfg.version;
 
     const currentVersionLabel = currentType && currentVersion
       ? (VERSIONES[currentType] || []).find(v => v.id === currentVersion)?.label || '— Selecciona —'
@@ -810,7 +891,7 @@ const Layout = (() => {
       const tipoBtn = body.querySelector('[data-tipo].active');
       const vValue  = body.querySelector('#layout-version-dropdown')?.dataset.selected;
       if (!tipoBtn || !vValue) return;
-      applyPreset(tipoBtn.dataset.tipo, vValue);
+      applyPreset(tipoBtn.dataset.tipo, vValue, State.activeFormat);
       closeModal();
     });
   }
@@ -832,7 +913,9 @@ const Layout = (() => {
       opt.addEventListener('click', () => {
         optionsEl.querySelectorAll('.custom-select-option').forEach(o => o.classList.remove('selected'));
         opt.classList.add('selected');
-        valueEl.textContent = v.label;
+        // Re-buscar el span vivo: el trigger se clona más abajo y deja huérfano a valueEl
+        const ve = document.getElementById('layout-version-value');
+        if (ve) ve.textContent = v.label;
         dropdown.dataset.selected = v.id;
         dropdown.classList.remove('open');
         document.getElementById('layout-btn-apply').disabled = false;
@@ -869,16 +952,23 @@ const Layout = (() => {
   // ── SERIALIZACIÓN ─────────────────────────────────────────
 
   function serialize() {
-    return {
-      type:    State.layoutConfig.type,
-      version: State.layoutConfig.version,
-    };
+    return { byFormat: State.layoutConfig };
   }
 
   function restore(data) {
     if (!data) return;
-    State.layoutConfig.type    = data.type    || null;
-    State.layoutConfig.version = data.version || null;
+    if (data.byFormat) {
+      // Proyecto nuevo: config por formato
+      State.layoutConfig = data.byFormat;
+    } else if (data.type) {
+      // Proyecto antiguo: config global → aplicarla a los formatos de texto del mockup
+      State.layoutConfig = {
+        'MUX4 TXT':  { type: data.type, version: data.version || null },
+        'MOVIL TXT': { type: data.type, version: data.version || null },
+      };
+    } else {
+      State.layoutConfig = {};
+    }
   }
 
   return {

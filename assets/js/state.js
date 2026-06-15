@@ -12,11 +12,19 @@ const State = {
   layers: [],
   formatParams: {},
   formatOk: {},
+  formatTextVariant: {}, // { formatId: 'H' | 'V' } — variante de texto por formato (lapicero). Defaults se cargan en el paso de enrutado.
   overlays: { mockup: true, txt: true, foco: false },
   projectName: 'Sin título',
   dirty: false,
   _multiOrigins: {},
   layerRoles: {}, // { layerId: 'background'|'subject'|'title'|null }
+
+  // ── GUÍAS DE COMPOSICIÓN ─────────────────────────────────
+  // Por formato. Cada guía: { id, orient: 'h'|'v', pos: number (px en coord del formato) }
+  guides:        {},   // { formatId: [ {id, orient, pos}, ... ] }
+  guidesVisible: {},   // { formatId: bool }  (default true)
+  guidesLocked:  {},   // { formatId: bool }  (default false)
+  snapEnabled:   false, // toggle GLOBAL del imán
 
   pastillaConfig: {
     variant: 'negra',        // fallback global (compatibilidad proyectos antiguos)
@@ -40,7 +48,7 @@ const State = {
     'AD PAUSE':         { w: 1280, h: 720,  maxMB: 0.1, displayContext: { w: 1920, h: 1080, contentX: 322, contentY: 98 } },
     'APPLE TV':         { w: 908,  h: 512,  maxMB: 1    },
     'FANART DEST.':     { w: 1920, h: 1080, maxMB: 1.5  },
-    'IPLUS PUBLI':      { w: 1280, h: 620,  maxMB: 0.15 },
+    'IPLUS PUBLI':      { w: 1280, h: 620,  maxMB: 0.15, safeArea: { x: 160, y: -54, w: 960, h: 512 } },
     'MOD DEST 1':       { w: 1636, h: 296,  maxMB: 1    },
     'MOD DEST 1 SIL':   { w: 1920, h: 400,  maxMB: 1,   maskRect: { x: 0, y: 53,  w: 1636, h: 296, r: 4 } },
     'MOD DEST 2':       { w: 803,  h: 296,  maxMB: 1    },
@@ -51,9 +59,11 @@ const State = {
     'MUX4 TXT':         { w: 784,  h: 318,  maxMB: 0.6  },
     'MOVIL MUX FONDO':  { w: 1440, h: 2986, maxMB: 1.5  },
     'MOVIL TXT':        { w: 1440, h: 466,  maxMB: 0.6  },
+    'TEXTO HORIZONTAL': { w: 1920, h: 779,  maxMB: 0.6  },
+    'TEXTO VERTICAL':   { w: 1080, h: 350,  maxMB: 0.6  },
     'WEB PUBLI':        { w: 2000, h: 465,  maxMB: 1, displayContext: { w: 1920, h: 850, contentX: 26, contentY: 115, contentW: 1868, contentH: 434 } },
     'WOW PUBLI':        { w: 1280, h: 258,  maxMB: 0.25 },
-    'TÍTULO FICHA':     { w: 724,  h: 100,  maxMB: 0.6  },
+    'TÍTULO FICHA':     { w: 2172, h: 300,  maxMB: 0.6  },
     'CARÁTULA H':       { w: 1920, h: 1080, maxMB: 5    },
     'CARÁTULA V':       { w: 1200, h: 1800, maxMB: 5    },
     'CARTEL COM. H':    { w: 3840, h: 2160, maxMB: 100  },
@@ -77,10 +87,7 @@ const State = {
   },
 
   // ── MAQUETACIÓN AUTOMÁTICA ───────────────────────────────
-  layoutConfig: {
-    type:    null,   // 'cine' | 'deportes' | null
-    version: null,   // 'normal' | 'freemium' | 'horecas' | null
-  },
+  layoutConfig: {}, // { formatId: { type, version } } — maquetación independiente por formato de texto
 
   // ── PASTILLA FREEMIUM ────────────────────────────────────
   pastillaFreemiumConfig: {
@@ -121,6 +128,8 @@ const State = {
       { key: 'seguridad', label: 'ZONA DE SEGURIDAD', src: 'assets/img/checkers/SMARTPHONE_MUX_ZONA_Checker.png' },
     ],
     'MOVIL TXT':         [ { key: 'mockup', label: 'ZONA DE SEGURIDAD', src: 'assets/img/checkers/SMARTPHONE_MUX_TXT_Check.png' } ],
+    'TEXTO HORIZONTAL':  [ { key: 'mockup', label: 'ZONA DE SEGURIDAD', src: 'assets/img/checkers/MUX4_TXT_Check.png' } ],
+    'TEXTO VERTICAL':    [ { key: 'mockup', label: 'ZONA DE SEGURIDAD', src: 'assets/img/checkers/SMARTPHONE_MUX_TXT_Check.png' } ],
     'WEB PUBLI': [
       { key: 'mockup',   label: 'MOCKUP',             src: 'assets/img/checkers/WEB_MOCKUP.png' },
       { key: 'checker',  label: 'ZONA DE SEGURIDAD',  src: 'assets/img/checkers/WEBPLAYER_PUBLI_Check.png', contentArea: true },
@@ -164,13 +173,20 @@ const State = {
   modalities: [
     { id: 'selecciona', label: 'Selecciona modalidad', formats: [] },
     {
+      id: 'textos',
+      label: 'Textos',
+      formats: [
+        'TEXTO HORIZONTAL', 'TEXTO VERTICAL', 'MUX4 TXT', 'MOVIL TXT'
+      ]
+    },
+    {
       id: 'dispositivos',
       label: 'Dispositivos',
       formats: [
         '199 PUBLI', 'AD PAUSE', 'APPLE TV', 'FANART DEST.',
         'IPLUS PUBLI', 'MOD DEST 1', 'MOD DEST 1 SIL', 'MOD DEST 2',
         'MOD DEST 2 SIL', 'MOD DEST 3', 'MOD DEST 3 SIL', 'MUX4 FONDO',
-        'MUX4 TXT', 'MOVIL MUX FONDO', 'MOVIL TXT', 'WEB PUBLI',
+        'MOVIL MUX FONDO', 'WEB PUBLI',
         'WOW PUBLI', 'TÍTULO FICHA'
       ]
     },
