@@ -24,10 +24,15 @@ const Composicion = (() => {
       const W = fmtSize.w;
       const H = fmtSize.h;
 
+      // Solo el título "activo" para este MASTER (H o V con su fallback).
+      // Si hay dos capas de título (H y V), evita que se horneen ambas superpuestas.
+      const _activeTitle = (typeof Formats !== 'undefined' && Formats.getActiveTitleForFormat)
+        ? Formats.getActiveTitleForFormat(MASTER_FORMAT) : null;
       const visibleLayers = [...State.layers]
         .reverse()
         .filter(l => {
           if (l.isTitleLayer) {
+            if (_activeTitle && l !== _activeTitle) return false;
             const fmtVisible = State.formatParams?.[MASTER_FORMAT]?.[l.id]?.visible;
             return fmtVisible !== false;
           }
@@ -252,8 +257,9 @@ const Composicion = (() => {
       // Pastilla Freemium (solo si layout es Freemium)
       if (typeof Layout !== 'undefined' && Layout.isFreemium('MUX4 TXT') && typeof Pastilla !== 'undefined') {
         const src  = Pastilla.getFreemiumSrc();
-        const _fmt = typeof State !== 'undefined' && State.activeFormat;
-      const _presetPF = typeof Layout !== 'undefined' && Layout.getPreset && Layout.getPreset(_fmt);
+        // Usar SIEMPRE el MASTER, no State.activeFormat (cambia al navegar y el disparador
+        // de "salir de MUX4 TXT" se ejecuta DESPUÉS del cambio → preset incorrecto).
+        const _presetPF = typeof Layout !== 'undefined' && Layout.getPreset && Layout.getPreset(MASTER_FORMAT);
       const posY = (_presetPF && _presetPF['PASTILLA_FREEMIUM']?.y) ?? 95;
         await new Promise(res => {
           const img = new Image();
@@ -388,10 +394,15 @@ const ComposicionMovil = (() => {
       const W = fmtSize.w;
       const H = fmtSize.h;
 
+      // Solo el título "activo" para este MASTER (H o V con su fallback).
+      // Si hay dos capas de título (H y V), evita que se horneen ambas superpuestas.
+      const _activeTitle = (typeof Formats !== 'undefined' && Formats.getActiveTitleForFormat)
+        ? Formats.getActiveTitleForFormat(MASTER_FORMAT) : null;
       const visibleLayers = [...State.layers]
         .reverse()
         .filter(l => {
           if (l.isTitleLayer) {
+            if (_activeTitle && l !== _activeTitle) return false;
             const fmtVisible = State.formatParams?.[MASTER_FORMAT]?.[l.id]?.visible;
             return fmtVisible !== false;
           }
@@ -700,10 +711,15 @@ const ComposicionAmazon = (() => {
       const W = fmtSize.w;
       const H = fmtSize.h;
 
+      // Solo el título "activo" para este MASTER (H o V con su fallback).
+      // Si hay dos capas de título (H y V), evita que se horneen ambas superpuestas.
+      const _activeTitle = (typeof Formats !== 'undefined' && Formats.getActiveTitleForFormat)
+        ? Formats.getActiveTitleForFormat(MASTER_FORMAT) : null;
       const visibleLayers = [...State.layers]
         .reverse()
         .filter(l => {
           if (l.isTitleLayer) {
+            if (_activeTitle && l !== _activeTitle) return false;
             const fmtVisible = State.formatParams?.[MASTER_FORMAT]?.[l.id]?.visible;
             return fmtVisible !== false;
           }
@@ -974,10 +990,15 @@ const ComposicionTexto = (() => {
       const W = fmtSize.w;
       const H = fmtSize.h;
 
+      // Solo el título "activo" para este MASTER (H o V con su fallback).
+      // Si hay dos capas de título (H y V), evita que se horneen ambas superpuestas.
+      const _activeTitle = (typeof Formats !== 'undefined' && Formats.getActiveTitleForFormat)
+        ? Formats.getActiveTitleForFormat(MASTER_FORMAT) : null;
       const visibleLayers = [...State.layers]
         .reverse()
         .filter(l => {
           if (l.isTitleLayer) {
+            if (_activeTitle && l !== _activeTitle) return false;
             const fmtVisible = State.formatParams?.[MASTER_FORMAT]?.[l.id]?.visible;
             return fmtVisible !== false;
           }
@@ -1202,8 +1223,9 @@ const ComposicionTexto = (() => {
       // Pastilla Freemium (solo si layout es Freemium)
       if (typeof Layout !== 'undefined' && Layout.isFreemium(MASTER_FORMAT) && typeof Pastilla !== 'undefined') {
         const src  = Pastilla.getFreemiumSrc();
-        const _fmt = typeof State !== 'undefined' && State.activeFormat;
-      const _presetPF = typeof Layout !== 'undefined' && Layout.getPreset && Layout.getPreset(_fmt);
+        // Usar SIEMPRE el MASTER, no State.activeFormat (cambia al navegar y el disparador
+        // de "salir de TEXTO HORIZONTAL/VERTICAL" se ejecuta DESPUÉS del cambio → preset incorrecto).
+        const _presetPF = typeof Layout !== 'undefined' && Layout.getPreset && Layout.getPreset(MASTER_FORMAT);
       const posY = (_presetPF && _presetPF['PASTILLA_FREEMIUM']?.y) ?? 95;
         await new Promise(res => {
           const img = new Image();

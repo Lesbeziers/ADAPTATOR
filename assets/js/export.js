@@ -29,8 +29,8 @@ const Export = (() => {
     'TÍTULO FICHA':       { suffix: 'TITULO_FICHA',                 type: 'png', maxMB: 0.6   },
     'CARÁTULA H':         { suffix: 'CARATULA_H',                   type: 'jpg', maxMB: 100   },
     'CARÁTULA V':         { suffix: 'CARATULA_V',                   type: 'jpg', maxMB: 100   },
-    'CARTEL COM. H':      { suffix: 'CC_H',                         type: 'jpg', maxMB: 100   },
-    'CARTEL COM. V':      { suffix: 'CC_V',                         type: 'jpg', maxMB: 100   },
+    'CARTEL COM. H':      { suffix: 'CC_H',                         type: 'jpg', maxMB: 100,   dpi: 300 },
+    'CARTEL COM. V':      { suffix: 'CC_V',                         type: 'jpg', maxMB: 100,   dpi: 300 },
     'FANART':             { suffix: 'FANART',                       type: 'jpg', maxMB: 3     },
     'FANART MÓVIL':       { suffix: 'FANART_MOVIL',                 type: 'jpg', maxMB: 3     },
     'DEST. DOBLE 1':      { suffix: 'MOD_DESTACADO_DOBLE1',         type: 'jpg', maxMB: 0.6   },
@@ -417,8 +417,10 @@ const Export = (() => {
     let blob;
     if (cfg.type === 'png') {
       blob = await new Promise(res => finalCv.toBlob(res, 'image/png'));
+      if (cfg.dpi && blob) blob = await _setPngDpi(blob, cfg.dpi);
     } else {
       blob = await _jpgWithMaxSize(finalCv, cfg.maxMB);
+      if (cfg.dpi && blob) blob = await _setJpegDpi(blob, cfg.dpi);
     }
     // Liberar canvas final antes de devolver el blob — así el siguiente
     // formato arranca con memoria limpia.
@@ -557,6 +559,96 @@ const Export = (() => {
   }
 
   // ── JPG QUALITY BINARY SEARCH ─────────────────────────────
+
+  // ── METADATA DPI ──────────────────────────────────────────
+  // Reescribe el chunk JFIF (APP0) de un JPEG para marcar el DPI deseado.
+  // Solo afecta al metadato: la imagen sigue siendo los mismos píxeles.
+  async function _setJpegDpi(blob, dpi) {
+    try {
+      const buf = new Uint8Array(await blob.arrayBuffer());
+      // SOI = FF D8. Buscar APP0 (FF E0) justo después.
+      if (buf[0] !== 0xFF || buf[1] !== 0xD8) return blob;
+      if (buf[2] === 0xFF && buf[3] === 0xE0 &&
+          buf[6] === 0x4A && buf[7] === 0x46 && buf[8] === 0x49 && buf[9] === 0x46 && buf[10] === 0x00) {
+        // APP0 JFIF presente — sobrescribimos los campos de densidad
+        // Offsets dentro del segmento: 13 units, 14-15 Xdensity, 16-17 Ydensity
+        buf[13] = 1; // unidades = pixels per inch
+        buf[14] = (dpi >> 8) & 0xFF; // Xdensity high
+        buf[15] = dpi & 0xFF;        // Xdensity low
+        buf[16] = (dpi >> 8) & 0xFF; // Ydensity high
+        buf[17] = dpi & 0xFF;        // Ydensity low
+        return new Blob([buf], { type: 'image/jpeg' });
+      }
+      // Si no hay APP0 JFIF, insertamos uno completo después del SOI
+      const jfif = new Uint8Array([
+        0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46, 0x49, 0x46, 0x00,
+        0x01, 0x02,                     // versión 1.02
+        0x01,                            // unidades = ppi
+        (dpi >> 8) & 0xFF, dpi & 0xFF,   // Xdensity
+        (dpi >> 8) & 0xFF, dpi & 0xFF,   // Ydensity
+        0x00, 0x00,                      // sin thumbnail
+      ]);
+      const out = new Uint8Array(buf.length + jfif.length);
+      out.set(buf.subarray(0, 2), 0);
+      out.set(jfif, 2);
+      out.set(buf.subarray(2), 2 + jfif.length);
+      return new Blob([out], { type: 'image/jpeg' });
+    } catch (e) {
+      console.warn('[Export] No se pudo escribir DPI en JPEG:', e);
+      return blob;
+    }
+  }
+
+  // Reescribe (o inserta) el chunk pHYs de un PNG para marcar el DPI deseado.
+  async function _setPngDpi(blob, dpi) {
+    try {
+      const buf = new Uint8Array(await blob.arrayBuffer());
+      // Firma PNG (8 bytes) + IHDR (longitud variable, normalmente 25 bytes).
+      // pHYs debe ir antes de IDAT. Insertamos tras IHDR.
+      const ppm = Math.round(dpi * 39.3701); // pixels per meter
+      // Calcular CRC32 del chunk pHYs (tipo + datos)
+      const crcTable = _pngCrcTable();
+      const chunkType = [0x70, 0x48, 0x59, 0x73]; // "pHYs"
+      const data = [
+        (ppm >>> 24) & 0xFF, (ppm >>> 16) & 0xFF, (ppm >>> 8) & 0xFF, ppm & 0xFF, // X ppm
+        (ppm >>> 24) & 0xFF, (ppm >>> 16) & 0xFF, (ppm >>> 8) & 0xFF, ppm & 0xFF, // Y ppm
+        1, // unidad = metros
+      ];
+      let crc = 0xFFFFFFFF;
+      [...chunkType, ...data].forEach(b => { crc = crcTable[(crc ^ b) & 0xFF] ^ (crc >>> 8); });
+      crc = (crc ^ 0xFFFFFFFF) >>> 0;
+      const chunk = new Uint8Array([
+        0, 0, 0, 9, // longitud = 9
+        ...chunkType,
+        ...data,
+        (crc >>> 24) & 0xFF, (crc >>> 16) & 0xFF, (crc >>> 8) & 0xFF, crc & 0xFF,
+      ]);
+      // Localizar fin de IHDR: firma(8) + longitud(4) + tipo(4) + datos(IHDR.length) + crc(4)
+      const ihdrLength = (buf[8] << 24) | (buf[9] << 16) | (buf[10] << 8) | buf[11];
+      const ihdrEnd = 8 + 4 + 4 + ihdrLength + 4;
+      const out = new Uint8Array(buf.length + chunk.length);
+      out.set(buf.subarray(0, ihdrEnd), 0);
+      out.set(chunk, ihdrEnd);
+      out.set(buf.subarray(ihdrEnd), ihdrEnd + chunk.length);
+      return new Blob([out], { type: 'image/png' });
+    } catch (e) {
+      console.warn('[Export] No se pudo escribir DPI en PNG:', e);
+      return blob;
+    }
+  }
+
+  // Tabla CRC32 para PNG (se cachea tras el primer uso)
+  let _crcCache = null;
+  function _pngCrcTable() {
+    if (_crcCache) return _crcCache;
+    const t = new Uint32Array(256);
+    for (let n = 0; n < 256; n++) {
+      let c = n;
+      for (let k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+      t[n] = c >>> 0;
+    }
+    return (_crcCache = t);
+  }
 
   async function _jpgWithMaxSize(cv, maxMB) {
     const maxBytes = maxMB * 1024 * 1024;

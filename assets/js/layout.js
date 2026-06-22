@@ -438,13 +438,20 @@ const Layout = (() => {
 
   function _scaleBlock(block, fx, fy) {
     const out = {};
+    // Default usado por _renderPastillaFreemium cuando el preset no especifica alto.
+    // Lo materializamos antes de escalar para que se propague a los derivados (sin
+    // esto, TEXTO HORIZONTAL/VERTICAL heredan 61 fijo en vez de 61×fy → demasiado pequeña).
+    const PASTILLA_FREEMIUM_DEFAULT_H = 61;
     for (const [role, p] of Object.entries(block)) {
       const np = { ...p };
+      if (role === 'PASTILLA_FREEMIUM' && typeof np.pastillaH !== 'number') {
+        np.pastillaH = PASTILLA_FREEMIUM_DEFAULT_H;
+      }
       if (typeof p.x         === 'number') np.x         = Math.round(p.x * fx);
       if (typeof p.y         === 'number') np.y         = Math.round(p.y * fy);
       if (typeof p.zoneY     === 'number') np.zoneY     = Math.round(p.zoneY * fy);
       if (typeof p.zoneH     === 'number') np.zoneH     = Math.round(p.zoneH * fy);
-      if (typeof p.pastillaH === 'number') np.pastillaH = Math.round(p.pastillaH * fy);
+      if (typeof np.pastillaH === 'number') np.pastillaH = Math.round(np.pastillaH * fy);
       // scaleX/scaleY solo para imágenes/logos; el texto escala vía text.size
       if (!p.text) {
         if (typeof p.scaleX === 'number') np.scaleX = Math.round(p.scaleX * fx * 10) / 10;
@@ -518,7 +525,15 @@ const Layout = (() => {
     const masterFormat = format;
     const masterDefs   = preset[format];
     if (!masterDefs) {
-      // Esta tipología/versión no define este formato → queda limpio
+      // Esta tipología/versión no define este formato → queda limpio.
+      // Ocultar TODAS las capas de título (H y V) en este formato para que no se
+      // quede una imagen colgada de la maquetación anterior.
+      State.layers.filter(l => l.isTitleLayer).forEach(tl => {
+        if (!State.formatParams[format]) State.formatParams[format] = {};
+        if (!State.formatParams[format][tl.id]) State.formatParams[format][tl.id] = { scaleX: 100, scaleY: 100, rotation: 0, x: 0, y: 0 };
+        State.formatParams[format][tl.id].visible = false;
+      });
+      console.warn(`[Layout] El preset "${type}_${version}" no define ${format} — formato queda sin maquetación.`);
       if (typeof Canvas !== 'undefined') Canvas.render();
       if (typeof Layers !== 'undefined') Layers.render();
       return;
@@ -600,8 +615,12 @@ const Layout = (() => {
         };
       });
 
-      // 4. Imagen de título — ocultar si el preset no la incluye, mostrar y escalar si sí
-      const titleLayer = State.layers.find(l => l.isTitleLayer);
+      // 4. Imagen de título — usar el ACTIVO para este formato (H o V con fallback).
+      // Si el preset no incluye IMAGEN_TITULO, ocultar TODAS las capas de título en este
+      // formato (H y V), no solo la activa, para que no quede una imagen colgada.
+      const titleLayer = (typeof Formats !== 'undefined' && Formats.getActiveTitleForFormat)
+        ? Formats.getActiveTitleForFormat(format) : State.layers.find(l => l.isTitleLayer);
+      const allTitleLayers = State.layers.filter(l => l.isTitleLayer);
       if (titleLayer) {
         if (masterDefs['IMAGEN_TITULO']) {
 
@@ -685,19 +704,51 @@ const Layout = (() => {
                 visible: true,
               };
             }
+            // Ocultar las OTRAS capas de título (no activas) en este formato
+            allTitleLayers.filter(tl => tl !== titleLayer).forEach(tl => {
+              if (!State.formatParams[fid][tl.id]) State.formatParams[fid][tl.id] = { scaleX: 100, scaleY: 100, rotation: 0, x: 0, y: 0 };
+              State.formatParams[fid][tl.id].visible = false;
+            });
           });
         } else {
-          // Ocultar imagen de título en los formatos de texto
+          // Ocultar TODAS las imágenes de título (H y V) en los formatos de texto
           FORMAT_IDS.forEach(fid => {
             if (!State.formatParams[fid]) State.formatParams[fid] = {};
-            if (!State.formatParams[fid][titleLayer.id]) State.formatParams[fid][titleLayer.id] = { scaleX: 100, scaleY: 100, rotation: 0, x: 0, y: 0 };
-            State.formatParams[fid][titleLayer.id].visible = false;
+            allTitleLayers.forEach(tl => {
+              if (!State.formatParams[fid][tl.id]) State.formatParams[fid][tl.id] = { scaleX: 100, scaleY: 100, rotation: 0, x: 0, y: 0 };
+              State.formatParams[fid][tl.id].visible = false;
+            });
           });
         }
       }
 
-      if (typeof Canvas !== 'undefined') Canvas.render();
-      if (typeof Layers !== 'undefined') Layers.render();
+      // ── Regenerar la composición horneada del formato ─────
+      // Sin esto, los formatos receptores (199 PUBLI, etc.) usan la composición
+      // VIEJA hasta que el usuario vuelve a entrar al maestro. Forzamos la
+      // regeneración aquí y reposicionamos antes de renderizar.
+      (async () => {
+        try {
+          if (format === 'MUX4 TXT' && typeof Composicion !== 'undefined') {
+            await Composicion.generate();
+          } else if (format === 'MOVIL TXT' && typeof ComposicionMovil !== 'undefined') {
+            await ComposicionMovil.generate();
+          } else if (format === 'AMAZON LOGO' && typeof ComposicionAmazon !== 'undefined') {
+            await ComposicionAmazon.generate();
+          } else if (format === 'TEXTO HORIZONTAL' && typeof ComposicionTexto !== 'undefined') {
+            await ComposicionTexto.generate('TEXTO HORIZONTAL', 'COMPOSICIÓN TEXTO HORIZONTAL', 'isComposicionTextoH');
+            const c = State.layers.find(l => l.isComposicionTextoH);
+            if (c && typeof AutoLayout !== 'undefined' && AutoLayout.repositionTextComp) AutoLayout.repositionTextComp(c, 'H');
+          } else if (format === 'TEXTO VERTICAL' && typeof ComposicionTexto !== 'undefined') {
+            await ComposicionTexto.generate('TEXTO VERTICAL', 'COMPOSICIÓN TEXTO VERTICAL', 'isComposicionTextoV');
+            const c = State.layers.find(l => l.isComposicionTextoV);
+            if (c && typeof AutoLayout !== 'undefined' && AutoLayout.repositionTextComp) AutoLayout.repositionTextComp(c, 'V');
+          }
+        } catch (e) {
+          console.warn('[Layout] Error regenerando composición tras applyPreset:', e);
+        }
+        if (typeof Canvas !== 'undefined') Canvas.render();
+        if (typeof Layers !== 'undefined') Layers.render();
+      })();
     });
   }
 
