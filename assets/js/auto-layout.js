@@ -986,21 +986,19 @@ const AutoLayout = (() => {
       } else if (role === 'title_h' || role === 'title_v' || role === 'title') {
         // Si textZone es null, el formato no tiene zona de título (ej. FANART DEST.)
         if (textZone) {
-          // cfg.useTitleLayer: formatos que usan isTitleLayer en vez de isComposicion.
-          // Para el título H/V: usar el activo del formato (con fallback) si está disponible.
-          let titleLayer;
-          if (cfg.useTitleLayer) {
-            titleLayer = (typeof Formats !== 'undefined' && Formats.getActiveTitleForFormat)
-              ? Formats.getActiveTitleForFormat(formatName) || layer
-              : layer;
-          } else {
-            titleLayer = layers.find(l => l.isComposicion) || State.layers.find(l => l.isComposicion);
-          }
-          if (titleLayer) {
-            _applyTitle(formatName, titleLayer, W, H, cfg, mirrored, textZone);
-          }
-          // Paso 4b-1: posicionar TAMBIÉN la composición H/V del formato (oculta hasta 4b-2).
-          // Aditivo — no altera el título visible actual.
+          // Pre-posicionar TODAS las posibles capas de título en la textZone, así el
+          // usuario puede cambiar la variante con el lápiz sin tener que reajustar.
+          // La visibilidad real la decide Formats.getTextVariant(formatName).
+          const candidates = [
+            State.layers.find(l => l.isComposicion),       // composición MUX4 (vieja)
+            State.layers.find(l => l.isComposicionMovil),  // composición MOVIL (vieja)
+            State.layers.find(l => l.isComposicionTextoH),
+            State.layers.find(l => l.isComposicionTextoV),
+            State.layers.find(l => l.isTitleLayerH),       // imagen título cruda H
+            State.layers.find(l => l.isTitleLayerV),       // imagen título cruda V
+          ].filter(Boolean);
+          candidates.forEach(c => _applyTitle(formatName, c, W, H, cfg, mirrored, textZone));
+          // Aditivo extra (mantenemos comportamiento anterior por compat):
           const variant = (typeof Formats !== 'undefined' && Formats.getTextVariant) ? Formats.getTextVariant(formatName) : null;
           const hvComp = variant === 'H' ? State.layers.find(l => l.isComposicionTextoH)
                        : variant === 'V' ? State.layers.find(l => l.isComposicionTextoV)
@@ -1582,6 +1580,11 @@ const AutoLayout = (() => {
         const compV = State.layers.find(l => l.isComposicionTextoV);
         if (compH) repositionTextComp(compH, 'H');
         if (compV) repositionTextComp(compV, 'V');
+        // También las imágenes de título crudas, para los formatos con variante TITLE_H/V
+        const titleH = State.layers.find(l => l.isTitleLayerH);
+        const titleV = State.layers.find(l => l.isTitleLayerV);
+        if (titleH) repositionTextComp(titleH, 'TITLE_H');
+        if (titleV) repositionTextComp(titleV, 'TITLE_V');
       }
 
       // Ordenar capas por rol: TÍTULO arriba → SUJETO/NINGUNO → FONDO → FANART abajo.
@@ -1652,12 +1655,16 @@ const AutoLayout = (() => {
         applyToFormat(formatName, State.layerRoles, allImageLayers);
       });
 
-      // Reposicionar composiciones H/V en sus receptores
+      // Reposicionar composiciones H/V e imágenes de título crudas en sus receptores
       if (promotedTitle) {
         const compH = State.layers.find(l => l.isComposicionTextoH);
         const compV = State.layers.find(l => l.isComposicionTextoV);
         if (compH) repositionTextComp(compH, 'H');
         if (compV) repositionTextComp(compV, 'V');
+        const titleH = State.layers.find(l => l.isTitleLayerH);
+        const titleV = State.layers.find(l => l.isTitleLayerV);
+        if (titleH) repositionTextComp(titleH, 'TITLE_H');
+        if (titleV) repositionTextComp(titleV, 'TITLE_V');
       }
 
       _reorderByRole();

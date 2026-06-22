@@ -720,7 +720,9 @@ const Export = (() => {
     if (typeof Formats !== 'undefined' && Formats.fanartRoleVisibility &&
         Formats.fanartRoleVisibility(layer.id, formatName) === false) return false;
     if (layer.isTitleLayer) {
-      const inTextFormat = (formatName === 'MUX4 TXT' || formatName === 'MOVIL TXT' || formatName === 'TEXTO HORIZONTAL' || formatName === 'TEXTO VERTICAL' || formatName === 'AMAZON LOGO' || formatName === 'TÍTULO FICHA');
+      const _v = (typeof Formats !== 'undefined' && Formats.getTextVariant) ? Formats.getTextVariant(formatName) : null;
+      const inTextFormat = (formatName === 'MUX4 TXT' || formatName === 'MOVIL TXT' || formatName === 'TEXTO HORIZONTAL' || formatName === 'TEXTO VERTICAL' || formatName === 'AMAZON LOGO' || formatName === 'TÍTULO FICHA')
+                       || _v === 'TITLE_H' || _v === 'TITLE_V';
       if (!inTextFormat) return false;
       if (typeof Formats !== 'undefined' && Formats.isActiveTitleForFormat &&
           !Formats.isActiveTitleForFormat(layer, formatName)) return false;

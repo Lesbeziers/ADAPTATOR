@@ -430,11 +430,15 @@ const Layout = (() => {
 
   // ── DERIVACIÓN DE PRESETS POR ESCALA (formatos nuevos) ────
   // TEXTO HORIZONTAL = MUX4 TXT escalado · TEXTO VERTICAL = MOVIL TXT escalado.
-  // Escala uniforme: x/scaleX por factor de ancho, y/scaleY/tamaño/zonas por factor de alto.
+  // Si un preset NO define MOVIL TXT, se deriva tambien desde MUX4 TXT (mismo ratio)
+  // para que las versiones "MUX4-only" (Horecas, Upsell, Informe, Partners) funcionen
+  // igualmente en MOVIL TXT, SMARTPHONE TEXT y, por encadenamiento, TEXTO VERTICAL.
   const DERIVE = {
     'TEXTO HORIZONTAL': { from: 'MUX4 TXT',  fx: 1920 / 784,  fy: 779 / 318 },
     'TEXTO VERTICAL':   { from: 'MOVIL TXT', fx: 1080 / 1440, fy: 350 / 466 },
   };
+  // Fallback: si el preset no define MOVIL TXT, derivamos desde MUX4 TXT
+  const MOVIL_FALLBACK_FROM_MUX4 = { from: 'MUX4 TXT', fx: 1440 / 784, fy: 466 / 318 };
 
   function _scaleBlock(block, fx, fy) {
     const out = {};
@@ -472,9 +476,15 @@ const Layout = (() => {
   }
 
   function _augmentPreset(base) {
-    const out = { ...base };
+    let out = { ...base };
+    // Paso 1: si no hay MOVIL TXT pero sí MUX4 TXT, derivar MOVIL TXT desde MUX4.
+    // Así las versiones "MUX4-only" funcionan también en MOVIL TXT y SMARTPHONE TEXT.
+    if (!out['MOVIL TXT'] && out['MUX4 TXT']) {
+      out['MOVIL TXT'] = _scaleBlock(out['MUX4 TXT'], MOVIL_FALLBACK_FROM_MUX4.fx, MOVIL_FALLBACK_FROM_MUX4.fy);
+    }
+    // Paso 2: derivar TEXTO HORIZONTAL y TEXTO VERTICAL desde su origen
     for (const fid of Object.keys(DERIVE)) {
-      const b = _deriveBlock(base, fid);
+      const b = _deriveBlock(out, fid);
       if (b) out[fid] = b;
     }
     return out;

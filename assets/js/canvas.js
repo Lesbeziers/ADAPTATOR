@@ -666,7 +666,7 @@ const Canvas = (() => {
       ccBtn = document.createElement('button');
       ccBtn.id = 'canvas-cc-btn';
       _area.appendChild(ccBtn);
-      ccBtn.addEventListener('click', _copyToCartelCom);
+      ccBtn.addEventListener('click', _copyCaratulaCC);
     }
 
     // Contenedor de botones de maquetación automática
@@ -993,6 +993,12 @@ const Canvas = (() => {
     } else if (State.activeFormat === 'CARÁTULA V') {
       ccBtn.textContent    = 'Atributos a CC V';
       ccBtn.style.display  = 'block';
+    } else if (State.activeFormat === 'CARTEL COM. H') {
+      ccBtn.textContent    = 'Atributos a Carátula H';
+      ccBtn.style.display  = 'block';
+    } else if (State.activeFormat === 'CARTEL COM. V') {
+      ccBtn.textContent    = 'Atributos a Carátula V';
+      ccBtn.style.display  = 'block';
     } else {
       ccBtn.style.display  = 'none';
       return;
@@ -1008,10 +1014,17 @@ const Canvas = (() => {
     });
   }
 
-  function _copyToCartelCom() {
+  function _copyCaratulaCC() {
     const srcFormat = State.activeFormat;
-    if (srcFormat !== 'CARÁTULA H' && srcFormat !== 'CARÁTULA V') return;
-    const dstFormat = srcFormat === 'CARÁTULA H' ? 'CARTEL COM. H' : 'CARTEL COM. V';
+    // Mapa bidireccional Carátula ⇄ CC, misma orientación (H↔H, V↔V)
+    const PAIRS = {
+      'CARÁTULA H':    'CARTEL COM. H',
+      'CARÁTULA V':    'CARTEL COM. V',
+      'CARTEL COM. H': 'CARÁTULA H',
+      'CARTEL COM. V': 'CARÁTULA V',
+    };
+    const dstFormat = PAIRS[srcFormat];
+    if (!dstFormat) return;
 
     const srcSize = State.formatSizes[srcFormat];
     const dstSize = State.formatSizes[dstFormat];
@@ -1240,9 +1253,13 @@ const Canvas = (() => {
       let isVisible;
 
       if (layer.isTitleLayer) {
-        // El título "vivo" se ve en maestros de texto y TÍTULO FICHA. Si hay 2 títulos
-        // (H y V), cada formato muestra solo el activo (con fallback).
-        const inHost = ['MUX4 TXT','MOVIL TXT','TEXTO HORIZONTAL','TEXTO VERTICAL','AMAZON LOGO','TÍTULO FICHA'].includes(State.activeFormat);
+        // El título "vivo" se ve en:
+        // - los maestros de texto + TÍTULO FICHA (siempre)
+        // - cualquier formato cuya variante sea TITLE_H/TITLE_V (imagen original cruda)
+        // Si hay 2 títulos (H y V), cada formato muestra solo el activo (con fallback).
+        const _v = (typeof Formats !== 'undefined' && Formats.getTextVariant) ? Formats.getTextVariant(State.activeFormat) : null;
+        const inHost = ['MUX4 TXT','MOVIL TXT','TEXTO HORIZONTAL','TEXTO VERTICAL','AMAZON LOGO','TÍTULO FICHA'].includes(State.activeFormat)
+                    || _v === 'TITLE_H' || _v === 'TITLE_V';
         const isActive = typeof Formats !== 'undefined' && Formats.isActiveTitleForFormat
           ? Formats.isActiveTitleForFormat(layer, State.activeFormat) : true;
         if (inHost && isActive) {
@@ -1867,33 +1884,46 @@ const Canvas = (() => {
       const _topBeforeEdit = parseFloat(el.style.top) || 0;
 
       _editingText        = true;
+      // Edge (especialmente versiones más antiguas) tiene bugs con contentEditable
+      // si se setea SOLO la propiedad sin el atributo; ponemos ambos por seguridad.
+      el.setAttribute('contenteditable', 'true');
       el.contentEditable  = 'true';
       el.style.cursor     = 'text';
       el.style.whiteSpace = 'pre';
       el.style.width      = 'max-content';
       el.style.maxWidth   = 'none';
+      // user-select explícito — Edge a veces hereda 'none' y bloquea la edición
+      el.style.userSelect = 'text';
+      el.style.webkitUserSelect = 'text';
       // Mantener el mismo ancla que en modo normal
       const _editAlign = layer.textParams?.align || 'left';
       const _editTx    = _editAlign === 'left' ? '0%' : _editAlign === 'right' ? '-100%' : '-50%';
       el.style.transform = `translate(${_editTx}, 0%)`;
       _hideHandles();
-      el.focus();
       if (typeof TextLayers !== 'undefined') TextLayers.clearPendingOffsets();
 
-      const range = document.createRange();
-      range.selectNodeContents(el);
-      const sel = window.getSelection();
-      sel.removeAllRanges();
-      sel.addRange(range);
+      // En Edge, llamar a focus() inmediatamente tras cambiar contentEditable a veces no
+      // engancha; esperamos al siguiente frame para que el navegador procese el cambio.
+      requestAnimationFrame(() => {
+        el.focus();
+        const range = document.createRange();
+        range.selectNodeContents(el);
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+      });
 
       if (typeof TextLayers !== 'undefined') TextLayers.openPanel(layerId);
 
       const onBlur = () => {
         _editingText        = false;
+        el.setAttribute('contenteditable', 'false');
         el.contentEditable  = 'false';
         el.style.cursor     = 'move';
         el.style.whiteSpace = 'pre-wrap';
         el.style.width      = 'max-content';
+        el.style.userSelect = '';
+        el.style.webkitUserSelect = '';
         if (layer.textParams && typeof TextLayers !== 'undefined') {
           TextLayers.saveRunsFromDOM(layer, el);
           layer.naturalWidth  = el.offsetWidth  / _scale || 100;

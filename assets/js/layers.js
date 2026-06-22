@@ -763,12 +763,14 @@ const Layers = (() => {
         }
       }
 
-      // Capas normales — en MUX4 FONDO y MOVIL MUX FONDO saltamos isComposicion porque ya la pintamos arriba
+      // Capas normales — saltamos las composiciones SOLO en sus mockups específicos
+      // (donde se pintan arriba como ítems aparte). En el resto de formatos, _buildItem
+      // las gestiona con sus filtros por variante (el lápiz permite cambiar entre H/V/MUX4/MOVIL).
       State.layers.forEach((layer, index) => {
         if (layer.isComposicion && (State.activeFormat === 'MUX4 FONDO' || State.activeFormat === 'MOVIL MUX FONDO' || State.activeFormat === 'AMAZON BG')) return;
         if (layer.isComposicion && State.activeFormat === 'FANART DEST.') return;
-        if (layer.isComposicionMovil) return;
-        if (layer.isComposicionAmazon) return;
+        if (layer.isComposicionMovil && State.activeFormat === 'MOVIL MUX FONDO') return;
+        if (layer.isComposicionAmazon && State.activeFormat === 'AMAZON BG') return;
         if (layer.isMarcaIplus) return;
         if (layer.isMarcaSony) return;
         if (layer.isMolduraFanart) return;
@@ -825,8 +827,8 @@ const Layers = (() => {
       State.layers.forEach((layer, index) => {
         if (layer.isComposicion && (State.activeFormat === 'MUX4 FONDO' || State.activeFormat === 'MOVIL MUX FONDO' || State.activeFormat === 'AMAZON BG')) return;
         if (layer.isComposicion && State.activeFormat === 'FANART DEST.') return;
-        if (layer.isComposicionMovil) return;
-        if (layer.isComposicionAmazon) return;
+        if (layer.isComposicionMovil && State.activeFormat === 'MOVIL MUX FONDO') return;
+        if (layer.isComposicionAmazon && State.activeFormat === 'AMAZON BG') return;
         if (layer.isMarcaIplus) return;
         if (layer.isMarcaSony) return;
         if (layer.isMolduraFanart) return;
@@ -1068,9 +1070,11 @@ const Layers = (() => {
       const _match = (layer.isComposicionTextoH && _v === 'H') || (layer.isComposicionTextoV && _v === 'V');
       if (!_match) return null;
     }
-    // Título "vivo": solo en maestros de texto + TÍTULO FICHA, y solo el activo (H/V) por formato
+    // Título "vivo": en maestros de texto + TÍTULO FICHA, o en formatos con variante TITLE_H/V.
     if (layer.isTitleLayer) {
-      const inHost = ['MUX4 TXT','MOVIL TXT','TEXTO HORIZONTAL','TEXTO VERTICAL','AMAZON LOGO','TÍTULO FICHA'].includes(State.activeFormat);
+      const _v = (typeof Formats !== 'undefined' && Formats.getTextVariant) ? Formats.getTextVariant(State.activeFormat) : null;
+      const inHost = ['MUX4 TXT','MOVIL TXT','TEXTO HORIZONTAL','TEXTO VERTICAL','AMAZON LOGO','TÍTULO FICHA'].includes(State.activeFormat)
+                  || _v === 'TITLE_H' || _v === 'TITLE_V';
       if (!inHost) return null;
       if (typeof Formats !== 'undefined' && Formats.isActiveTitleForFormat &&
           !Formats.isActiveTitleForFormat(layer, State.activeFormat)) return null;
@@ -1084,6 +1088,8 @@ const Layers = (() => {
     // Composición MOVIL: en su mockup (MOVIL MUX FONDO) o donde el formato elija 'MOVIL'
     if (layer.isComposicionMovil && State.activeFormat !== 'MOVIL MUX FONDO' &&
         !(typeof Formats !== 'undefined' && Formats.getTextVariant && Formats.getTextVariant(State.activeFormat) === 'MOVIL')) return null;
+    // Composición AMAZON: solo en su mockup (AMAZON BG). No es variante elegible con el lápiz.
+    if (layer.isComposicionAmazon && State.activeFormat !== 'AMAZON BG') return null;
 
     // Capas con exclusiveFormat: solo en su formato
     if (layer.exclusiveFormat && layer.exclusiveFormat !== State.activeFormat) return null;
@@ -1315,7 +1321,26 @@ const Layers = (() => {
     // ── NOMBRE ──
     const nameSpan = document.createElement('span');
     nameSpan.className = 'layer-name';
-    nameSpan.textContent = layer.name;
+    // Nombre visible según variante (solo para la capa "activa" de título/composición).
+    // No toca layer.name interno — solo el textContent del panel.
+    const _DISPLAY_BY_VARIANT = {
+      'H':       'COMP. TEXTO HOR.',
+      'V':       'COMP. TEXTO VER.',
+      'MUX4':    'MUX4 TEXT',
+      'MOVIL':   'SMARTPHONE TEXT',
+      'TITLE_H': 'TÍTULO ORIGINAL HOR.',
+      'TITLE_V': 'TÍTULO ORIGINAL VER.',
+    };
+    const _vCur = (typeof Formats !== 'undefined' && Formats.getTextVariant) ? Formats.getTextVariant(State.activeFormat) : null;
+    const _isActiveTitleForDisplay = layer.isTitleLayer
+      && typeof Formats !== 'undefined' && Formats.isActiveTitleForFormat
+      && Formats.isActiveTitleForFormat(layer, State.activeFormat);
+    const _isCompForDisplay = layer.isComposicionTextoH || layer.isComposicionTextoV
+                          || layer.isComposicion || layer.isComposicionMovil;
+    const _displayName = (_vCur && _DISPLAY_BY_VARIANT[_vCur] && (_isCompForDisplay || _isActiveTitleForDisplay))
+      ? _DISPLAY_BY_VARIANT[_vCur]
+      : layer.name;
+    nameSpan.textContent = _displayName;
     if (layer.linkGroupId) {
       nameSpan.style.color = 'var(--col-yellow)';
       nameSpan.title = 'Capa enlazada';
@@ -1391,7 +1416,14 @@ const Layers = (() => {
     }
 
     // Lápiz para la composición de texto: elegir QUÉ texto (H/V/MUX4/MOVIL) en este formato
-    const _isTextComp = layer.isComposicionTextoH || layer.isComposicionTextoV || layer.isComposicion || layer.isComposicionMovil;
+    // El lápiz también aparece en isTitleLayer cuando es la capa "activa" del formato
+    // (variante TITLE_H/TITLE_V o formato maestro), para poder cambiar a otra variante.
+    const _isActiveTitle = layer.isTitleLayer
+      && typeof Formats !== 'undefined' && Formats.isActiveTitleForFormat
+      && Formats.isActiveTitleForFormat(layer, State.activeFormat);
+    const _isTextComp = layer.isComposicionTextoH || layer.isComposicionTextoV
+                     || layer.isComposicion || layer.isComposicionMovil
+                     || _isActiveTitle;
     const _curVariant = (typeof Formats !== 'undefined' && Formats.getTextVariant) ? Formats.getTextVariant(State.activeFormat) : null;
     if (_isTextComp && _curVariant && typeof Formats !== 'undefined' && Formats.getTextVariantOptions) {
       const varBtn = document.createElement('div');

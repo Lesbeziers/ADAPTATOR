@@ -267,10 +267,18 @@ const Formats = (() => {
     return { scaleX: 100, scaleY: 100, rotation: 0, x: 0, y: 0 };
   }
 
-  // ── VARIANTE DE TEXTO POR FORMATO (H / V) ─────────────────
-  // Defaults por orientación (tabla de enrutado del plan). El lapicero (paso 5)
-  // escribe overrides en State.formatTextVariant.
-  const TEXT_VARIANT_V_DEFAULT = ['CARÁTULA V', 'CARTEL COM. V', 'DEST. DOBLE 4', 'DEST. DOBLE 4 SIL', 'SONY'];
+  // ── VARIANTE DE TEXTO POR FORMATO ─────────────────────────
+  // Defaults por orientación. El lapicero escribe overrides en State.formatTextVariant.
+  // Formatos que muestran la IMAGEN DE TÍTULO CRUDA por defecto (en vez de composición):
+  const TEXT_VARIANT_TITLE_H_DEFAULT = [
+    'CARÁTULA H', 'CARTEL COM. H', 'XIAOMI BANNER',
+    'DEST. DOBLE 1', 'DEST. DOBLE 1 SIL', 'DEST. DOBLE 2', 'DEST. DOBLE 2 SIL', 'MOD N SIL',
+  ];
+  const TEXT_VARIANT_TITLE_V_DEFAULT = [
+    'CARÁTULA V', 'CARTEL COM. V', 'SONY', 'DEST. DOBLE 4', 'DEST. DOBLE 4 SIL',
+  ];
+  // Formatos con composición horneada VERTICAL por defecto (los que quedan en vertical)
+  const TEXT_VARIANT_V_DEFAULT = [];
   // Formatos que NO reciben texto (sin variante)
   const TEXT_VARIANT_NONE = ['FANART', 'FANART MÓVIL', 'FANART DEST.', 'FANART MOD N', 'PERFIL',
                              'MUX4 FONDO', 'MOVIL MUX FONDO', 'AMAZON BG', 'TÍTULO FICHA',
@@ -278,16 +286,20 @@ const Formats = (() => {
 
   function _defaultTextVariant(fid) {
     if (TEXT_VARIANT_NONE.includes(fid)) return null;
+    if (TEXT_VARIANT_TITLE_H_DEFAULT.includes(fid)) return 'TITLE_H';
+    if (TEXT_VARIANT_TITLE_V_DEFAULT.includes(fid)) return 'TITLE_V';
     return TEXT_VARIANT_V_DEFAULT.includes(fid) ? 'V' : 'H';
   }
 
-  // Las 4 composiciones de texto elegibles por formato (lápiz del panel de Capas).
-  // value = variante guardada · flag = propiedad de la capa de composición · label = lo que ve el usuario.
+  // Opciones del lápiz: 4 composiciones horneadas + 2 imágenes de título crudas.
+  // value = variante · flag = propiedad de la capa a mostrar · label = texto visible.
   const TEXT_VARIANT_OPTIONS = [
-    { value: 'H',     label: 'TEXTO HORIZONTAL', flag: 'isComposicionTextoH' },
-    { value: 'V',     label: 'TEXTO VERTICAL',   flag: 'isComposicionTextoV' },
-    { value: 'MUX4',  label: 'MUX4 TEXT',        flag: 'isComposicion'       },
-    { value: 'MOVIL', label: 'Smartphone TEXT',  flag: 'isComposicionMovil'  },
+    { value: 'H',       label: 'TEXTO HORIZONTAL',     flag: 'isComposicionTextoH' },
+    { value: 'V',       label: 'TEXTO VERTICAL',       flag: 'isComposicionTextoV' },
+    { value: 'MUX4',    label: 'MUX4 TEXT',            flag: 'isComposicion'       },
+    { value: 'MOVIL',   label: 'Smartphone TEXT',      flag: 'isComposicionMovil'  },
+    { value: 'TITLE_H', label: 'TÍTULO ORIGINAL HOR',  flag: 'isTitleLayerH'       },
+    { value: 'TITLE_V', label: 'TÍTULO ORIGINAL VER',  flag: 'isTitleLayerV'       },
   ];
   const TEXT_VARIANT_VALUES = TEXT_VARIANT_OPTIONS.map(o => o.value);
 
@@ -356,8 +368,8 @@ const Formats = (() => {
     if (fid === 'MOVIL TXT' || fid === 'TEXTO VERTICAL') return 'V';
     // Receptores no-maestros: según la variante de texto que tengan
     const v = getTextVariant(fid);
-    if (v === 'H' || v === 'MUX4') return 'H';
-    if (v === 'V' || v === 'MOVIL') return 'V';
+    if (v === 'H' || v === 'MUX4' || v === 'TITLE_H') return 'H';
+    if (v === 'V' || v === 'MOVIL' || v === 'TITLE_V') return 'V';
     return null;
   }
   function getActiveTitleForFormat(fid) {
