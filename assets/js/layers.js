@@ -69,6 +69,7 @@ const Layers = (() => {
             const imageLayers = State.layers.filter(l =>
               !['text','solid','gradient'].includes(l.type) &&
               !l.isComposicion && !l.isComposicionMovil && !l.isComposicionAmazon &&
+              !l.isComposicionTextoH && !l.isComposicionTextoV &&
               !l.isMarcaIplus && !l.isMarcaSony && l.src
             );
             if (imageLayers.length > 0) AutoLayout.onFirstImport(imageLayers);
@@ -79,6 +80,7 @@ const Layers = (() => {
               l && l.src && !l.isTitleLayer &&
               !['text','solid','gradient'].includes(l.type) &&
               !l.isComposicion && !l.isComposicionMovil && !l.isComposicionAmazon &&
+              !l.isComposicionTextoH && !l.isComposicionTextoV &&
               !l.isMarcaIplus && !l.isMarcaSony
             );
             if (extras.length > 0 && AutoLayout.onAdditionalImport) {

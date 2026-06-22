@@ -787,6 +787,7 @@ const AutoLayout = (() => {
     const imageLayers = layers.filter(l =>
       !['text', 'solid', 'gradient'].includes(l.type) &&
       !l.isComposicion && !l.isComposicionMovil && !l.isComposicionAmazon &&
+      !l.isComposicionTextoH && !l.isComposicionTextoV &&
       !l.isMarcaIplus && !l.isMarcaSony &&
       l.src
     );
@@ -1649,6 +1650,7 @@ const AutoLayout = (() => {
       const allImageLayers = State.layers.filter(l =>
         !['text','solid','gradient'].includes(l.type) &&
         !l.isComposicion && !l.isComposicionMovil && !l.isComposicionAmazon &&
+        !l.isComposicionTextoH && !l.isComposicionTextoV &&
         !l.isMarcaIplus && !l.isMarcaSony && l.src
       );
       Object.keys(FORMAT_CONFIG).forEach(formatName => {
@@ -1710,6 +1712,7 @@ const AutoLayout = (() => {
     const layers = State.layers.filter(l =>
       !['text', 'solid', 'gradient'].includes(l.type) &&
       !l.isComposicionMovil && !l.isComposicionAmazon &&
+      !l.isComposicionTextoH && !l.isComposicionTextoV &&
       !l.isMarcaIplus && !l.isMarcaSony && l.src
     );
     if (typeof History !== 'undefined') History.push();
