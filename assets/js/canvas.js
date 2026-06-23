@@ -1035,6 +1035,16 @@ const Canvas = (() => {
 
     if (typeof History !== 'undefined') History.push();
 
+    // Copiar la variante de texto (lápiz H/V/MUX4/MOVIL/TITLE_H/TITLE_V) al destino
+    if (State.formatTextVariant) {
+      if (State.formatTextVariant[srcFormat] !== undefined) {
+        State.formatTextVariant[dstFormat] = State.formatTextVariant[srcFormat];
+      } else {
+        // Si el origen estaba en su default (sin override), borrar el override del destino
+        delete State.formatTextVariant[dstFormat];
+      }
+    }
+
     if (!State.formatParams[dstFormat]) State.formatParams[dstFormat] = {};
 
     State.layers.forEach(layer => {
