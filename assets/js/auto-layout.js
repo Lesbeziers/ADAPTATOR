@@ -1658,15 +1658,24 @@ const AutoLayout = (() => {
         }
       }
 
-      // Re-aplicar maquetación a todos los formatos (las nuevas capas alteran la composición)
+      // Re-aplicar maquetación.
+      // - Si la importación incluye un NUEVO TÍTULO (`promotedTitle`), la
+      //   composición global cambia y tiene sentido re-maquetar TODAS las
+      //   capas en TODOS los formatos.
+      // - Si NO hay título nuevo (caso típico: el usuario añade una foto
+      //   suelta como capa decorativa, fondo, sujeto…), respetamos la
+      //   maquetación manual del proyecto y solo posicionamos LAS NUEVAS
+      //   CAPAS. Sin esto, importar una imagen sin rol relevante reseteaba
+      //   el ajuste manual que el usuario tenía en cada formato.
       const allImageLayers = State.layers.filter(l =>
         !['text','solid','gradient'].includes(l.type) &&
         !l.isComposicion && !l.isComposicionMovil && !l.isComposicionAmazon &&
         !l.isComposicionTextoH && !l.isComposicionTextoV &&
         !l.isMarcaIplus && !l.isMarcaSony && l.src
       );
+      const layersToApply = promotedTitle ? allImageLayers : newLayers;
       Object.keys(FORMAT_CONFIG).forEach(formatName => {
-        applyToFormat(formatName, State.layerRoles, allImageLayers);
+        applyToFormat(formatName, State.layerRoles, layersToApply);
       });
 
       // Reposicionar composiciones H/V e imágenes de título crudas en sus receptores
