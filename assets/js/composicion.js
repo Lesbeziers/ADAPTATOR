@@ -31,6 +31,11 @@ const Composicion = (() => {
       const visibleLayers = [...State.layers]
         .reverse()
         .filter(l => {
+          // Las capas-máscara nunca se hornean en composiciones (son un efecto,
+          // no contenido). Las clientes sí se hornean normal — si una capa
+          // exclusiva del MASTER_FORMAT está enmascarada, la máscara se aplica
+          // a la cliente como en cualquier otro render.
+          if (l.isMask) return false;
           if (l.isTitleLayer) {
             if (_activeTitle && l !== _activeTitle) return false;
             const fmtVisible = State.formatParams?.[MASTER_FORMAT]?.[l.id]?.visible;
@@ -401,6 +406,11 @@ const ComposicionMovil = (() => {
       const visibleLayers = [...State.layers]
         .reverse()
         .filter(l => {
+          // Las capas-máscara nunca se hornean en composiciones (son un efecto,
+          // no contenido). Las clientes sí se hornean normal — si una capa
+          // exclusiva del MASTER_FORMAT está enmascarada, la máscara se aplica
+          // a la cliente como en cualquier otro render.
+          if (l.isMask) return false;
           if (l.isTitleLayer) {
             if (_activeTitle && l !== _activeTitle) return false;
             const fmtVisible = State.formatParams?.[MASTER_FORMAT]?.[l.id]?.visible;
@@ -718,6 +728,11 @@ const ComposicionAmazon = (() => {
       const visibleLayers = [...State.layers]
         .reverse()
         .filter(l => {
+          // Las capas-máscara nunca se hornean en composiciones (son un efecto,
+          // no contenido). Las clientes sí se hornean normal — si una capa
+          // exclusiva del MASTER_FORMAT está enmascarada, la máscara se aplica
+          // a la cliente como en cualquier otro render.
+          if (l.isMask) return false;
           if (l.isTitleLayer) {
             if (_activeTitle && l !== _activeTitle) return false;
             const fmtVisible = State.formatParams?.[MASTER_FORMAT]?.[l.id]?.visible;
@@ -997,6 +1012,11 @@ const ComposicionTexto = (() => {
       const visibleLayers = [...State.layers]
         .reverse()
         .filter(l => {
+          // Las capas-máscara nunca se hornean en composiciones (son un efecto,
+          // no contenido). Las clientes sí se hornean normal — si una capa
+          // exclusiva del MASTER_FORMAT está enmascarada, la máscara se aplica
+          // a la cliente como en cualquier otro render.
+          if (l.isMask) return false;
           if (l.isTitleLayer) {
             if (_activeTitle && l !== _activeTitle) return false;
             const fmtVisible = State.formatParams?.[MASTER_FORMAT]?.[l.id]?.visible;

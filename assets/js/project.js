@@ -135,10 +135,31 @@ const Project = (() => {
   function _serializeState(includeImages) {
     const compLayer = State.layers.find(l => l.isComposicion);
     const composicionParams = compLayer ? _extractCompParams(compLayer.id) : null;
+    // IDs+params de TODAS las composiciones, para que al cargar conserven sus posiciones
+    // y el regenerado encuentre la capa existente (no genere un ID nuevo y pierda los params).
+    const _findComp = (flag) => State.layers.find(l => l[flag]);
+    const _saveComp = (flag) => {
+      const c = _findComp(flag);
+      if (!c) return null;
+      return { id: c.id, params: _extractCompParams(c.id) };
+    };
+    const composiciones = {
+      isComposicion:        _saveComp('isComposicion'),
+      isComposicionMovil:   _saveComp('isComposicionMovil'),
+      isComposicionAmazon:  _saveComp('isComposicionAmazon'),
+      isComposicionTextoH:  _saveComp('isComposicionTextoH'),
+      isComposicionTextoV:  _saveComp('isComposicionTextoV'),
+    };
 
-    // Preservar orden exacto, excluir composicion, composicionMovil, marcas y MOLDURA (auto-generadas)
+    // Preservar orden exacto, excluir TODAS las capas auto-generadas:
+    // - composiciones horneadas (MUX4, Movil, Amazon, TextoH, TextoV) — se regeneran
+    // - marcas, molduras, máscaras — son sistémicas
+    // (las capas con _layoutGenerated SÍ se guardan: se restaurarán y la maquetación
+    //  no se re-aplica, así que sus posiciones manuales se conservan)
     const layers = State.layers
-      .filter(l => !l.isComposicion && !l.isComposicionMovil && !l.isComposicionAmazon && !l.isMarcaIplus && !l.isMarcaSony && !l.isMolduraFanart && !l.isMascaraBlur)
+      .filter(l => !l.isComposicion && !l.isComposicionMovil && !l.isComposicionAmazon
+                && !l.isComposicionTextoH && !l.isComposicionTextoV
+                && !l.isMarcaIplus && !l.isMarcaSony && !l.isMolduraFanart && !l.isMascaraBlur)
       .map(layer => {
         const l = { ...layer, params: { ...layer.params } };
         if (!l.src) return l;
@@ -179,6 +200,7 @@ const Project = (() => {
       layerRoles:        State.layerRoles         ? { ...State.layerRoles } : {},
       composicionParams,
       composicionId:     compLayer?.id || null,
+      composiciones, // ← NUEVO: IDs+params de todas las composiciones
       pastilla:          typeof Pastilla !== 'undefined' ? Pastilla.serialize() : null,
       pastillaFreemium:  typeof Pastilla !== 'undefined' ? Pastilla.serializeFreemium() : null,
       layout:            typeof Layout   !== 'undefined' ? Layout.serialize()   : null,
@@ -266,21 +288,123 @@ const Project = (() => {
   }
 
   // ── ABRIR PROYECTO ────────────────────────────────────────
+  //
+  // El flujo histórico: el usuario guarda como .adaptator.zip, lo descomprime
+  // (macOS lo hace en automático con doble clic), y abre la CARPETA resultante.
+  // Dentro hay un .json + subcarpeta `imagenes/`. Por eso usamos
+  // `webkitdirectory`: así recibimos TODA la carpeta y podemos cargar el JSON
+  // emparejando cada `srcFilename` con su binario en `imagenes/`.
+  //
+  // Para abrir un ZIP sin descomprimir o un JSON autosuficiente, se ofrece
+  // un segundo botón ("Abrir archivo…") que llama a `openFile()`.
 
   function open() {
     const input = document.createElement('input');
+    input.type = 'file';
+    // Atributos para selección de carpeta — algunos navegadores requieren ambos
+    input.webkitdirectory = true;
+    input.directory = true;
+    input.multiple = true;
+    input.addEventListener('change', async e => {
+      const files = Array.from(e.target.files || []);
+      if (files.length === 0) return;
+      await _loadFolder(files);
+    });
+    input.click();
+  }
+
+  // Apertura alternativa: archivo único (.zip o .json autosuficiente)
+  function openFile() {
+    const input = document.createElement('input');
     input.type   = 'file';
-    input.accept = '.zip,.json,.adaptator.json,.adaptator.zip';
+    input.accept = '.adaptator,.zip,.json,.adaptator.json,.adaptator.zip';
     input.addEventListener('change', async e => {
       const file = e.target.files[0];
       if (!file) return;
-      if (file.name.endsWith('.zip')) {
+      const lower = file.name.toLowerCase();
+      if (lower.endsWith('.zip') || lower.endsWith('.adaptator')) {
         await _loadZip(file);
       } else {
         await _loadJson(file);
       }
     });
     input.click();
+  }
+
+  // ── CARGAR CARPETA DESCOMPRIMIDA ──────────────────────────
+
+  async function _loadFolder(files) {
+    // 1) Si la carpeta sólo contiene un ZIP, delegar a _loadZip
+    const zipFile = files.find(f => /\.(zip|adaptator)$/i.test(f.name));
+    const jsonFiles = files.filter(f => /\.json$/i.test(f.name));
+    if (zipFile && jsonFiles.length === 0) {
+      await _loadZip(zipFile);
+      return;
+    }
+
+    // 2) Localizar el JSON del proyecto. Preferimos el de menor profundidad
+    //    (típicamente está en la raíz de la carpeta seleccionada).
+    if (jsonFiles.length === 0) {
+      alert('No se ha encontrado ningún archivo .json en la carpeta.');
+      return;
+    }
+    jsonFiles.sort((a, b) => {
+      const da = (a.webkitRelativePath || a.name).split('/').length;
+      const db = (b.webkitRelativePath || b.name).split('/').length;
+      return da - db;
+    });
+    const jsonFile = jsonFiles[0];
+
+    let data;
+    try {
+      data = JSON.parse(await jsonFile.text());
+    } catch (err) {
+      console.error('[Project] JSON malformado:', err);
+      alert('El archivo .json contiene datos inválidos.');
+      return;
+    }
+
+    // 3) Indexar imágenes por nombre. Buscamos en `imagenes/` (caso normal) y
+    //    también en cualquier subruta por si el usuario reorganizó la carpeta.
+    const imageByName = new Map();
+    for (const f of files) {
+      const rel = (f.webkitRelativePath || f.name).toLowerCase();
+      if (rel.endsWith('.json')) continue;
+      // Indexar por nombre simple — el JSON referencia `srcFilename` sin ruta.
+      const base = f.name;
+      if (!imageByName.has(base)) imageByName.set(base, f);
+    }
+
+    // 4) Convertir cada imagen referenciada a dataURL
+    const faltantes = [];
+    for (const layer of (data.layers || [])) {
+      if (layer.srcType === 'data' && layer.srcFilename && !layer.src) {
+        const f = imageByName.get(layer.srcFilename);
+        if (!f) { faltantes.push(layer.srcFilename); continue; }
+        try {
+          const buf = await f.arrayBuffer();
+          const mime = layer.originalMimeType || f.type || _extToMime(f.name);
+          // Convertir a base64 sin pasar por FileReader (más rápido y predecible)
+          let bin = '';
+          const bytes = new Uint8Array(buf);
+          for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+          layer.src = `data:${mime};base64,${btoa(bin)}`;
+        } catch (err) {
+          console.warn('[Project] No se pudo leer', f.name, err);
+          faltantes.push(layer.srcFilename);
+        }
+      }
+    }
+
+    if (faltantes.length > 0) {
+      console.warn('[Project] Imágenes no encontradas en la carpeta:', faltantes);
+      alert(
+        `No se han encontrado ${faltantes.length} imagen(es) referenciada(s) por el proyecto.\n\n` +
+        `Las capas afectadas se cargarán sin imagen. Verifica que la subcarpeta "imagenes/" está dentro de la carpeta seleccionada.`
+      );
+    }
+
+    _applyState(data);
   }
 
   // ── CARGAR ZIP ────────────────────────────────────────────
@@ -351,6 +475,23 @@ const Project = (() => {
       alert('El archivo no es un JSON de proyecto válido.');
       return;
     }
+
+    // Si el JSON viene del INTERIOR de un .adaptator.zip descomprimido y se
+    // abrió como archivo suelto (no como carpeta), las imágenes están aparte
+    // y no se pueden recuperar. Aviso y dejo continuar con capas vacías.
+    const sinImagenes = (data.layers || []).filter(l =>
+      l.srcType === 'data' && l.srcFilename && !l.src
+    );
+    if (sinImagenes.length > 0) {
+      const seguir = confirm(
+        `Faltan ${sinImagenes.length} imagen(es) en este JSON.\n\n` +
+        `Si el JSON estaba dentro de una carpeta descomprimida con subcarpeta "imagenes/", ` +
+        `usa el botón "Abrir proyecto" y selecciona la CARPETA, no el .json suelto.\n\n` +
+        `¿Continuar de todos modos? Las capas afectadas quedarán sin imagen.`
+      );
+      if (!seguir) return;
+    }
+
     _applyState(data);
   }
 
@@ -416,8 +557,29 @@ const Project = (() => {
     // Restaurar maquetación automática
     if (typeof Layout !== 'undefined') Layout.restore(data.layout);
 
-    // Cargar capas en orden exacto guardado, sin composicion ni capas auto-generadas
-    State.layers = (data.layers ?? []).filter(l => !l.isComposicion && !l.isComposicionMovil && !l.isComposicionAmazon && !l.isMarcaIplus && !l.isMarcaSony && !l.isMolduraFanart && !l.isMascaraBlur);
+    // Saneamiento defensivo: en JSONs viejos hay capas que heredaron flags de
+    // composición por el bug de duplicado (p. ej. una "sombra" con isComposicionTextoH).
+    // Si el flag está pero el nombre NO es el oficial → limpiar el flag para
+    // que la capa sobreviva como imagen normal.
+    const _OFFICIAL_COMP_NAMES = {
+      isComposicion:       'COMPOSICIÓN TÍTULO',
+      isComposicionMovil:  'COMPOSICIÓN MOVIL TEXTO',
+      isComposicionAmazon: 'COMPOSICIÓN AMAZON LOGO',
+      isComposicionTextoH: 'COMPOSICIÓN TEXTO HORIZONTAL',
+      isComposicionTextoV: 'COMPOSICIÓN TEXTO VERTICAL',
+    };
+    (data.layers || []).forEach(l => {
+      Object.entries(_OFFICIAL_COMP_NAMES).forEach(([flag, officialName]) => {
+        if (l[flag] && l.name !== officialName) delete l[flag];
+      });
+    });
+
+    // Cargar capas en orden exacto guardado, sin composicion ni capas auto-generadas.
+    // Las composiciones oficiales se regenerarán limpias al final de _applyState.
+    State.layers = (data.layers ?? []).filter(l =>
+      !l.isComposicion && !l.isComposicionMovil && !l.isComposicionAmazon
+      && !l.isComposicionTextoH && !l.isComposicionTextoV
+      && !l.isMarcaIplus && !l.isMarcaSony && !l.isMolduraFanart && !l.isMascaraBlur);
     // Limpiar src corruptos guardados como string "undefined"
     State.layers.forEach(l => { if (l.src === 'undefined') l.src = null; });
 
@@ -466,21 +628,6 @@ const Project = (() => {
         img.src = layer.src;
       }));
 
-    Promise.all([...logoPromises, ...otherImgPromises]).then(() => {
-      // Re-inicializar capas auto-generadas que no se guardan en el JSON
-      if (typeof Canvas !== 'undefined') {
-        Canvas.reinitAutoLayers();
-        Canvas.render();
-      }
-      // Regenerar composiciones — ya no necesitamos setTimeout porque las
-      // imágenes están todas pre-cargadas (naturalWidth/Height ya disponibles).
-      const fmt = State.activeFormat;
-      if (typeof Composicion !== 'undefined' && (fmt === 'MUX4 TXT' || fmt === 'MUX4 FONDO')) Composicion.generate();
-      if (typeof ComposicionMovil !== 'undefined' && (fmt === 'MOVIL TXT' || fmt === 'MOVIL MUX FONDO')) ComposicionMovil.generate();
-      if (typeof ComposicionAmazon !== 'undefined' && (fmt === 'AMAZON LOGO' || fmt === 'AMAZON BG')) ComposicionAmazon.generate();
-      if (typeof Canvas !== 'undefined') Canvas.render();
-    });
-
     // Restaurar visual del selector de modalidad
     if (State.activeModality) {
       const optionsEl = document.getElementById('modality-options');
@@ -505,27 +652,65 @@ const Project = (() => {
     if (typeof Canvas  !== 'undefined') Canvas.render();
     if (typeof UI      !== 'undefined') UI.updateSliders();
 
-    // Pre-insertar composición con el ID y params guardados
-    // así generate() la encuentra ya existente y no resetea sus params
-    if (data.composicionParams && data.composicionId) {
+    // Pre-insertar TODAS las composiciones con sus IDs guardados, para que al
+    // regenerarse el sistema encuentre la capa existente y no genere un ID nuevo
+    // que dejaría huérfanos los formatParams.
+    const _COMPS_META = [
+      { flag: 'isComposicion',       name: 'COMPOSICIÓN TÍTULO' },
+      { flag: 'isComposicionMovil',  name: 'COMPOSICIÓN MOVIL TEXTO' },
+      { flag: 'isComposicionAmazon', name: 'COMPOSICIÓN AMAZON LOGO' },
+      { flag: 'isComposicionTextoH', name: 'COMPOSICIÓN TEXTO HORIZONTAL' },
+      { flag: 'isComposicionTextoV', name: 'COMPOSICIÓN TEXTO VERTICAL' },
+    ];
+    const _preInsertComp = (flag, name, id, params) => {
+      if (!id) return;
       const comp = {
-        id:            data.composicionId,
-        name:          'COMPOSICIÓN TÍTULO',
-        isComposicion: true,
-        visible:       true,
-        naturalWidth:  0,
+        id,
+        name,
+        [flag]: true,
+        visible: true,
+        naturalWidth: 0,
         naturalHeight: 0,
         params: { opacity: 100, blur: 0, noise: 0, brightness: 0, contrast: 0, saturation: 0 },
       };
       State.layers.unshift(comp);
-      // Restaurar sus formatParams con el ID guardado
-      Object.entries(data.composicionParams).forEach(([fid, p]) => {
-        if (!State.formatParams[fid]) State.formatParams[fid] = {};
-        State.formatParams[fid][comp.id] = { ...p };
+      if (params) {
+        Object.entries(params).forEach(([fid, p]) => {
+          if (!State.formatParams[fid]) State.formatParams[fid] = {};
+          State.formatParams[fid][comp.id] = { ...p };
+        });
+      }
+    };
+
+    // Formato nuevo (composiciones): TODAS pre-insertadas con su ID
+    if (data.composiciones) {
+      _COMPS_META.forEach(meta => {
+        const c = data.composiciones[meta.flag];
+        if (c?.id) _preInsertComp(meta.flag, meta.name, c.id, c.params);
       });
+    } else if (data.composicionParams && data.composicionId) {
+      // Formato antiguo (compatibilidad con proyectos previos): solo MUX4
+      _preInsertComp('isComposicion', 'COMPOSICIÓN TÍTULO', data.composicionId, data.composicionParams);
     }
 
-    if (typeof Composicion !== 'undefined') Composicion.generate();
+    // Regenerar TODAS las composiciones (no solo la del formato activo).
+    // Esto pinta el contenido de las capas pre-insertadas.
+    Promise.all([...logoPromises, ...otherImgPromises]).then(() => {
+      // Re-inicializar capas auto-generadas que no se guardan en el JSON (marcas, etc.)
+      if (typeof Canvas !== 'undefined') Canvas.reinitAutoLayers();
+      const tasks = [];
+      if (typeof Composicion       !== 'undefined') tasks.push(Composicion.generate());
+      if (typeof ComposicionMovil  !== 'undefined') tasks.push(ComposicionMovil.generate());
+      if (typeof ComposicionAmazon !== 'undefined') tasks.push(ComposicionAmazon.generate());
+      if (typeof ComposicionTexto  !== 'undefined') {
+        tasks.push(ComposicionTexto.generate('TEXTO HORIZONTAL', 'COMPOSICIÓN TEXTO HORIZONTAL', 'isComposicionTextoH'));
+        tasks.push(ComposicionTexto.generate('TEXTO VERTICAL',   'COMPOSICIÓN TEXTO VERTICAL',   'isComposicionTextoV'));
+      }
+      Promise.all(tasks).then(() => {
+        if (typeof Canvas !== 'undefined') Canvas.render();
+        if (typeof Layers !== 'undefined') Layers.render();
+      });
+    });
   }
 
   // ── HELPERS ───────────────────────────────────────────────
@@ -541,5 +726,5 @@ const Project = (() => {
     URL.revokeObjectURL(url);
   }
 
-  return { init, save: _showSaveModal, open };
+  return { init, save: _showSaveModal, open, openFile };
 })();

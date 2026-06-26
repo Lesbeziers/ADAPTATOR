@@ -1440,6 +1440,137 @@ const Canvas = (() => {
           oldWrapper.remove();
         }
       }
+
+      // ── MÁSCARA CUSTOM (Fase 1: rect del sólido/degradado, sin blur) ──
+      // Solo se aplica si la capa cliente NO está ya enmascarada por el
+      // sistema SIL/PERFIL del formato, y solo si el usuario no ha desactivado
+      // la máscara custom en este formato (customMaskDisabled).
+      //
+      // Usamos `mask-image` con un SVG inline (no `clip-path`) porque cuando
+      // la capa cliente tiene `filter: blur(...)` el halo del blur se rendereriza
+      // fuera del bounding box. `clip-path` recorta ese halo al borde de la
+      // caja; `mask-image` no — respeta el contenido visual real, incluido el
+      // blur. Esto es esencial para el caso "imagen + sombra duplicada".
+      const _noSystemMask = !isMaskedSIL && !isMaskedCircle && !isMaskedRect;
+      const _customMaskApplied = (() => {
+        if (!_noSystemMask || !layer.maskLayerId || !State.activeFormat) return false;
+        const _custDisabled = !!State.formatParams?.[State.activeFormat]?.[layer.id]?.customMaskDisabled;
+        if (_custDisabled) return false;
+        const _mask = State.layers.find(l => l.id === layer.maskLayerId);
+        if (!_mask || !_mask.isMask) return false;
+
+        const _mp = _getParams(_mask.id);
+        const _fmtSizeMask = State.formatSizes[State.activeFormat];
+        const _mnw = _mask.naturalWidth  || _fmtSizeMask?.w || 1920;
+        const _mnh = _mask.naturalHeight || _fmtSizeMask?.h || 1080;
+        const _msx = _mp.scaleX ?? 100;
+        const _msy = _mp.scaleY ?? 100;
+        const _mcx = _contentCenterX + (_mp.x ?? 0) * _scale * _contentScaleX;
+        const _mcy = _contentCenterY + (_mp.y ?? 0) * _scale * _contentScaleY;
+        const _mw  = _mnw * _msx / 100 * _scale * _contentScaleX;
+        const _mh  = _mnh * _msy / 100 * _scale * _contentScaleY;
+        const _mx1 = _mcx - _mw/2, _my1 = _mcy - _mh/2;
+        const _mx2 = _mcx + _mw/2, _my2 = _mcy + _mh/2;
+        const _ex  = parseFloat(el.style.left)   || 0;
+        const _ey  = parseFloat(el.style.top)    || 0;
+        const _ew  = parseFloat(el.style.width)  || 0;
+        const _eh  = parseFloat(el.style.height) || 0;
+        if (_ew <= 0 || _eh <= 0) return false;
+        const _ex1 = _ex - _ew/2, _ey1 = _ey - _eh/2;
+        const _ex2 = _ex1 + _ew,  _ey2 = _ey1 + _eh;
+
+        // Si la máscara abarca completamente el bounding box del elemento
+        // Y NO tiene blur, NO aplicamos mask: la capa se renderea entera y su
+        // halo de blur fluye libre. Si la máscara tiene blur, siempre aplicamos
+        // mask para que el borde difuso pueda asomar al bounding box.
+        const _maskBlurRaw = (_mask.params?.blur ?? 0);
+        if (_maskBlurRaw === 0 && _mx1 <= _ex1 && _my1 <= _ey1 && _mx2 >= _ex2 && _my2 >= _ey2) {
+          return false;
+        }
+
+        // Caso parcial: la máscara recorta en al menos un lado.
+        // Padding generoso (8 * blur del cliente) para que el halo del blur del
+        // cliente sobreviva donde la máscara está abierta. Si la máscara TAMBIÉN
+        // tiene blur (efecto de borde difuminado), añadimos margen extra para
+        // que el halo del blur del rect no se recorte al viewBox del SVG.
+        const _gBlur = (layer.params?.blur ?? 0) * _scale;
+        const _maskBlur = (_mask.params?.blur ?? 0) * _scale;
+        const _pad = Math.max(0, Math.ceil(Math.max(_gBlur * 8, _maskBlur * 4)));
+        const _Wm = _ew + 2*_pad;
+        const _Hm = _eh + 2*_pad;
+        // Posición del rect de la máscara en coords del SVG (origen = esquina
+        // sup-izq del SVG, que está en _ex1 - _pad, _ey1 - _pad).
+        const _rectX = (_mx1 - (_ex1 - _pad));
+        const _rectY = (_my1 - (_ey1 - _pad));
+        const _rectW = _mw;
+        const _rectH = _mh;
+        // SVG mask. Si la capa-máscara tiene blur (params.blur > 0), aplicamos
+        // feGaussianBlur al rect para que sus bordes degraden suavemente —
+        // resultado: recorte de máscara con halo en lugar de borde a sangre.
+        let _svg;
+        if (_maskBlur > 0) {
+          _svg = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 ${_Wm.toFixed(2)} ${_Hm.toFixed(2)}' preserveAspectRatio='none'><defs><filter id='mb' x='-50%' y='-50%' width='200%' height='200%'><feGaussianBlur stdDeviation='${_maskBlur.toFixed(2)}'/></filter></defs><rect x='${_rectX.toFixed(3)}' y='${_rectY.toFixed(3)}' width='${Math.max(0,_rectW).toFixed(3)}' height='${Math.max(0,_rectH).toFixed(3)}' fill='white' filter='url(#mb)'/></svg>`;
+        } else {
+          _svg = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 ${_Wm.toFixed(2)} ${_Hm.toFixed(2)}' preserveAspectRatio='none'><rect x='${_rectX.toFixed(3)}' y='${_rectY.toFixed(3)}' width='${Math.max(0,_rectW).toFixed(3)}' height='${Math.max(0,_rectH).toFixed(3)}' fill='white'/></svg>`;
+        }
+        const _dataURL = `url("data:image/svg+xml;utf8,${encodeURIComponent(_svg)}")`;
+        el.style.maskImage           = _dataURL;
+        el.style.webkitMaskImage     = _dataURL;
+        el.style.maskSize            = `${_Wm.toFixed(2)}px ${_Hm.toFixed(2)}px`;
+        el.style.webkitMaskSize      = `${_Wm.toFixed(2)}px ${_Hm.toFixed(2)}px`;
+        el.style.maskRepeat          = 'no-repeat';
+        el.style.webkitMaskRepeat    = 'no-repeat';
+        el.style.maskPosition        = `${-_pad}px ${-_pad}px`;
+        el.style.webkitMaskPosition  = `${-_pad}px ${-_pad}px`;
+        // Sin esto, el navegador recorta la máscara al bounding box del
+        // elemento (mask-clip por defecto = border-box), invalidando el
+        // padding que añadimos para el halo del blur. `no-clip` permite que
+        // la máscara aplique también al halo que se proyecta fuera del box.
+        el.style.maskClip            = 'no-clip';
+        el.style.webkitMaskClip      = 'no-clip';
+        // Permitir que el halo del blur se renderee fuera del bounding box.
+        // Sin esto el `overflow: hidden` del propio el lo recortaría antes
+        // siquiera de aplicarse la máscara.
+        el.style.overflow            = 'visible';
+        return true;
+      })();
+      if (!_customMaskApplied && !layer.isMascaraBlur) {
+        // Limpiar mask-image residual (no tocar isMascaraBlur que usa mask-image propio)
+        if (el.style.maskImage || el.style.webkitMaskImage) {
+          el.style.maskImage = '';
+          el.style.webkitMaskImage = '';
+          el.style.maskClip = '';
+          el.style.webkitMaskClip = '';
+        }
+        // Devolver overflow al default del canvas-layer si lo habíamos cambiado
+        // por el sistema de máscara custom. Las capas-text/solid/gradient no
+        // tenían overflow:hidden originalmente; las imágenes sí.
+        const _isImage = !['text','solid','gradient'].includes(layer.type);
+        if (el.style.overflow === 'visible' && _isImage) {
+          el.style.overflow = 'hidden';
+        }
+      }
+
+      // ── APARIENCIA DE LA PROPIA CAPA-MÁSCARA ─────────────────
+      // Si la capa es máscara y tiene clientes y el usuario la ha hecho visible
+      // (típicamente para reposicionarla), se pinta como fantasma (semi-transparente
+      // + outline) en el editor. En el render final (export) no se pinta nunca:
+      // eso lo gestiona la Fase 3.
+      if (layer.isMask) {
+        const _hasClients = State.layers.some(l => l.maskLayerId === layer.id);
+        if (_hasClients && isVisible) {
+          const _baseOp = parseFloat(el.style.opacity);
+          el.style.opacity = ((Number.isFinite(_baseOp) ? _baseOp : 1) * 0.35).toFixed(3);
+          el.style.outline = '1px dashed var(--col-yellow)';
+          el.style.outlineOffset = '0';
+        } else {
+          el.style.outline = '';
+          el.style.outlineOffset = '';
+        }
+      } else {
+        // Limpiar restos si la capa dejó de ser máscara
+        if (el.style.outline) { el.style.outline = ''; el.style.outlineOffset = ''; }
+      }
     });
 
     if (typeof SystemLayers !== 'undefined') {
@@ -1597,7 +1728,54 @@ const Canvas = (() => {
     if (g.brightness !== 0) filters.push(`brightness(${100 + g.brightness}%)`);
     if (g.contrast   !== 0) filters.push(`contrast(${100 + g.contrast}%)`);
     if (g.saturation !== 0) filters.push(`saturate(${100 + g.saturation}%)`);
-    el.style.filter = filters.join(' ');
+    const _filterStr = filters.join(' ');
+
+    // ── HALO BLUR + MÁSCARA — wrapper interno ────────────────
+    // Cuando una capa enmascarada tiene blur, el halo del blur necesita
+    // espacio físico dentro del `el` (no fuera) para que sobreviva al
+    // `overflow:hidden` del lienzo. Para lograrlo creamos un wrapper interno
+    // `.canvas-mask-pad`, lo extendemos al tamaño del bounding box visual,
+    // y agrandamos el `el` con un padding suficiente para acomodar el halo.
+    // El filter se aplica al wrapper (su halo cabe dentro del el extendido).
+    // El mask sigue aplicándose al `el` y abarca el área visible deseada.
+    const _isImageLayer = !['text','solid','gradient'].includes(layer.type);
+    const _needsPad = _isImageLayer && layer.maskLayerId && g.blur > 0;
+    let _padEl = el.querySelector(':scope > .canvas-mask-pad');
+
+    if (_needsPad) {
+      if (!_padEl) {
+        _padEl = document.createElement('div');
+        _padEl.className = 'canvas-mask-pad';
+        _padEl.style.cssText = 'position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);overflow:visible;pointer-events:none;';
+        // Mover img y tint overlay actuales dentro del pad
+        const _img = el.querySelector(':scope > img');
+        const _tint = el.querySelector(':scope > .layer-tint-overlay');
+        if (_img)  _padEl.appendChild(_img);
+        if (_tint) _padEl.appendChild(_tint);
+        el.appendChild(_padEl);
+      }
+      // El pad mantiene el tamaño visual de la capa (BB original).
+      // El `el` se agranda con _haloPad en cada lado, manteniendo su centro.
+      const _bbW = Math.round(nw * scaleX / 100 * _scale * _contentScaleX);
+      const _bbH = Math.round(nh * scaleY / 100 * _scale * _contentScaleY);
+      const _haloPad = Math.ceil(g.blur * _scale * 4);
+      _padEl.style.width  = _bbW + 'px';
+      _padEl.style.height = _bbH + 'px';
+      el.style.width  = (_bbW + 2*_haloPad) + 'px';
+      el.style.height = (_bbH + 2*_haloPad) + 'px';
+      _padEl.style.filter = _filterStr;
+      el.style.filter = '';
+    } else {
+      // Desenvolver: si había pad, sacar img+tint y eliminarlo.
+      if (_padEl) {
+        const _img = _padEl.querySelector(':scope > img');
+        const _tint = _padEl.querySelector(':scope > .layer-tint-overlay');
+        if (_img)  el.appendChild(_img);
+        if (_tint) el.appendChild(_tint);
+        _padEl.remove();
+      }
+      el.style.filter = _filterStr;
+    }
 
     // ── Tint overlay (solo capas de imagen) ───────────────────
     if (!['text','solid','gradient'].includes(layer.type)) {
@@ -1656,8 +1834,12 @@ const Canvas = (() => {
     const p2x = gp.x2 - 50;
     const p2y = (gp.y2 - 50) * aspect;
 
-    const proj1 = p1x * sinA + p1y * cosA;
-    const proj2 = p2x * sinA + p2y * cosA;
+    // CSS gradient angles miden Y invertido respecto a la convención
+    // matemática (0deg = hacia arriba en pantalla). Por eso usamos -cosA al
+    // proyectar Y: si no, los stops salen invertidos en degradados con
+    // componente vertical (ej. 180deg producía s1>s2 → CSS lo aplana a sólido).
+    const proj1 = p1x * sinA - p1y * cosA;
+    const proj2 = p2x * sinA - p2y * cosA;
 
     const s1 = Math.round(50 + proj1 / (L / 2) * 50);
     const s2 = Math.round(50 + proj2 / (L / 2) * 50);

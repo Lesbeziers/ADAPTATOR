@@ -358,6 +358,8 @@ const Layers = (() => {
         Object.values(State.formatMaskEnabled || {}).forEach(byLayer => { delete byLayer[id]; });
         if (State._multiOrigins) delete State._multiOrigins[id];
         if (State.layerRoles)    delete State.layerRoles[id];
+        // Si la capa borrada era una máscara, soltar las clientes que la usaban.
+        State.layers.forEach(l => { if (l.maskLayerId === id) delete l.maskLayerId; });
       });
 
       State.selectedLayerId = State.layers[0]?.id ?? null;
@@ -381,6 +383,30 @@ const Layers = (() => {
     };
     // El enlace debe ser manual, no se hereda al duplicar
     delete copy.linkGroupId;
+    // Limpiar TODOS los flags de identidad / sistema. Una capa duplicada es una
+    // capa normal — no es composición horneada, ni título oficial, ni capa generada
+    // por el preset de maquetación. Sin esto, "duplicar" la composición de texto
+    // crea una capa fantasma con isComposicionTextoH que el guardado trata como real.
+    delete copy.isComposicion;
+    delete copy.isComposicionMovil;
+    delete copy.isComposicionAmazon;
+    delete copy.isComposicionTextoH;
+    delete copy.isComposicionTextoV;
+    delete copy.isTitleLayer;
+    delete copy.isTitleLayerH;
+    delete copy.isTitleLayerV;
+    delete copy.isMarcaIplus;
+    delete copy.isMarcaSony;
+    delete copy.isMolduraFanart;
+    delete copy.isMascaraBlur;
+    // La copia NUNCA es una máscara nueva — vuelve a ser un sólido/degradado normal.
+    // (Pero SÍ hereda `maskLayerId` para soportar el caso típico "imagen + duplicado
+    //  con tint para sombra", donde ambas comparten la misma máscara.)
+    delete copy.isMask;
+    delete copy._layoutGenerated;
+    // srcFondo/srcMovilFondo solo aplican a la composición original
+    delete copy.srcFondo;
+    delete copy.srcMovilFondo;
     // Deep copy objetos internos para que no compartan referencia
     if (src.params)         copy.params         = { ...src.params };
     if (src.solidParams)    copy.solidParams    = { ...src.solidParams };
@@ -486,10 +512,45 @@ const Layers = (() => {
     const pinLabel = isPinned ? 'Visible en todos los formatos' : 'Fijar a este formato';
 
     const isImageLayer = !['text','solid','gradient'].includes(layer?.type) && !!layer?.src;
+    const canBeMask    = _isValidMaskLayer(layer);
+    const isAlreadyMask = !!layer?.isMask;
+    const hasMask       = !!layer?.maskLayerId;
     const menuItems = [
       { label: 'Duplicar capa', action: () => _duplicateLayer(layerId), disabled: false },
       { label: pinLabel, action: () => { if (layer) { _toggleExclusive(layer); _render(); } }, disabled: isSystemExclusive || !State.activeFormat },
       ...(isImageLayer ? [{ label: 'Reemplazar imagen', action: () => _replaceImage(layer), disabled: false }] : []),
+      // ── MÁSCARAS ──
+      ...(canBeMask && !isAlreadyMask ? [
+        { label: 'Convertir en máscara', action: () => { _setAsMask(layerId); _render(); if (typeof Canvas !== 'undefined') Canvas.render(); }, disabled: false }
+      ] : []),
+      ...(isAlreadyMask ? [
+        { label: 'Usar como máscara en…', action: () => _openMaskTargetModal(layerId), disabled: false },
+        { label: 'Quitar el rol de máscara', action: () => { _unsetAsMask(layerId); _render(); if (typeof Canvas !== 'undefined') Canvas.render(); }, disabled: false },
+      ] : []),
+      ...(hasMask ? [
+        { label: 'Quitar la máscara de esta capa', action: () => { if (typeof History !== 'undefined') History.push(); _clearMaskTarget(layerId); _render(); if (typeof Canvas !== 'undefined') Canvas.render(); }, disabled: false }
+      ] : []),
+      // Override por formato: desactivar la máscara solo en este formato.
+      // No afecta a la relación máscara↔cliente, solo a la aplicación visual
+      // en el formato activo. Útil para casos como un SIL donde la máscara
+      // estorba aunque sea coherente en el resto.
+      ...(hasMask && State.activeFormat ? [
+        (() => {
+          const _disabled = !!State.formatParams?.[State.activeFormat]?.[layerId]?.customMaskDisabled;
+          return {
+            label: _disabled ? `Reactivar máscara en ${State.activeFormat}` : `Desactivar máscara en ${State.activeFormat}`,
+            action: () => {
+              if (typeof History !== 'undefined') History.push();
+              if (!State.formatParams[State.activeFormat]) State.formatParams[State.activeFormat] = {};
+              if (!State.formatParams[State.activeFormat][layerId]) State.formatParams[State.activeFormat][layerId] = {};
+              State.formatParams[State.activeFormat][layerId].customMaskDisabled = !_disabled;
+              _render();
+              if (typeof Canvas !== 'undefined') Canvas.render();
+            },
+            disabled: false
+          };
+        })()
+      ] : []),
     ];
 
     menuItems.forEach(item => {
@@ -525,7 +586,257 @@ const Layers = (() => {
     if (_contextMenu) { _contextMenu.remove(); _contextMenu = null; }
   }
 
+  // ── MODAL: USAR COMO MÁSCARA EN… ──────────────────────────
+  // Muestra una lista multi-selección con TODAS las capas elegibles
+  // (no la propia máscara, ni otras máscaras, ni capas sistémicas).
+  // Los checkboxes vienen pre-marcados con las clientes actuales para
+  // que el modal también sirva para QUITAR la máscara de una capa.
+
+  function _openMaskTargetModal(maskLayerId) {
+    const mask = State.layers.find(l => l.id === maskLayerId);
+    if (!mask) return;
+
+    const isSystem = l =>
+      l.isMarcaIplus || l.isMarcaSony || l.isMolduraFanart || l.isMascaraBlur ||
+      l.isComposicion || l.isComposicionMovil || l.isComposicionAmazon ||
+      l.isComposicionTextoH || l.isComposicionTextoV ||
+      l.isTitleLayer;
+
+    // Filtros:
+    //  - No la propia máscara, ni otras máscaras.
+    //  - No capas de sistema (composiciones, marcas, etc.).
+    //  - No capas auto-generadas por maquetación (los DEG, IMAGEN BLUR, etc.
+    //    de FANART MOD N: son técnicas, no editables manualmente).
+    //  - No capas fijadas a OTRO formato distinto del activo (las versiones
+    //    SIL/FONDO que solo viven en su formato exclusivo no son relevantes
+    //    aquí; si el usuario quiere enmascararlas, va a ese formato).
+    const candidates = State.layers.filter(l =>
+      l.id !== maskLayerId &&
+      !l.isMask &&
+      !isSystem(l) &&
+      !l._layoutGenerated &&
+      (!l.exclusiveFormat || l.exclusiveFormat === State.activeFormat)
+    );
+
+    // Backdrop
+    const backdrop = document.createElement('div');
+    backdrop.style.cssText = `
+      position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9998;
+      display:flex;align-items:center;justify-content:center;
+    `;
+
+    const dialog = document.createElement('div');
+    dialog.style.cssText = `
+      background:#1f1f1f;border:1px solid #444;border-radius:6px;
+      min-width:340px;max-width:480px;max-height:70vh;
+      display:flex;flex-direction:column;overflow:hidden;
+      box-shadow:0 10px 40px rgba(0,0,0,0.6);
+      font-family:var(--font);
+    `;
+
+    const header = document.createElement('div');
+    header.textContent = `Usar "${mask.name}" como máscara en…`;
+    header.style.cssText = `
+      padding:14px 18px;border-bottom:1px solid #333;
+      font-size:11px;font-weight:700;letter-spacing:0.06em;
+      text-transform:uppercase;color:var(--col-yellow);
+    `;
+    dialog.appendChild(header);
+
+    const body = document.createElement('div');
+    body.style.cssText = 'flex:1 1 auto;overflow:auto;padding:6px 0;';
+
+    if (candidates.length === 0) {
+      const empty = document.createElement('div');
+      empty.textContent = 'No hay capas elegibles en el proyecto.';
+      empty.style.cssText = 'padding:18px;color:#999;font-size:12px;';
+      body.appendChild(empty);
+    } else {
+      candidates.forEach(l => {
+        const row = document.createElement('label');
+        row.style.cssText = `
+          display:flex;align-items:center;gap:10px;
+          padding:8px 18px;cursor:pointer;font-size:12px;color:#ddd;
+        `;
+        row.addEventListener('mouseenter', () => row.style.background = '#2a2a2a');
+        row.addEventListener('mouseleave', () => row.style.background = 'transparent');
+
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.value = l.id;
+        cb.checked = (l.maskLayerId === maskLayerId);
+
+        const label = document.createElement('span');
+        label.textContent = l.name || '(sin nombre)';
+        label.style.cssText = 'flex:1;';
+
+        const typeBadge = document.createElement('span');
+        const typeLabel = l.type === 'text' ? 'TEXTO'
+                       : l.type === 'solid' ? 'SÓLIDO'
+                       : l.type === 'gradient' ? 'DEGRADADO'
+                       : l.isLogo ? 'LOGO'
+                       : 'IMAGEN';
+        typeBadge.textContent = typeLabel;
+        typeBadge.style.cssText = `
+          font-size:9px;letter-spacing:0.06em;color:#888;
+          padding:2px 6px;border:1px solid #444;border-radius:3px;
+        `;
+
+        row.appendChild(cb);
+        row.appendChild(label);
+        row.appendChild(typeBadge);
+        body.appendChild(row);
+      });
+    }
+    dialog.appendChild(body);
+
+    const footer = document.createElement('div');
+    footer.style.cssText = `
+      padding:12px 18px;border-top:1px solid #333;
+      display:flex;justify-content:flex-end;gap:8px;
+    `;
+    const btnStyle = `
+      padding:8px 16px;font-family:var(--font);font-size:11px;
+      font-weight:700;letter-spacing:0.06em;text-transform:uppercase;
+      border:none;border-radius:3px;cursor:pointer;
+    `;
+    const cancelBtn = document.createElement('button');
+    cancelBtn.textContent = 'Cancelar';
+    cancelBtn.style.cssText = btnStyle + 'background:#333;color:#ccc;';
+    const okBtn = document.createElement('button');
+    okBtn.textContent = 'Aplicar';
+    okBtn.style.cssText = btnStyle + 'background:var(--col-yellow);color:#1a1a1a;';
+
+    cancelBtn.addEventListener('click', () => backdrop.remove());
+    backdrop.addEventListener('click', e => { if (e.target === backdrop) backdrop.remove(); });
+    okBtn.addEventListener('click', () => {
+      if (typeof History !== 'undefined') History.push();
+      const checks = body.querySelectorAll('input[type=checkbox]');
+      const selected = new Set();
+      checks.forEach(c => { if (c.checked) selected.add(c.value); });
+
+      // Aplicar diffs
+      candidates.forEach(l => {
+        const wasClient = (l.maskLayerId === maskLayerId);
+        const isClient  = selected.has(l.id);
+        if (isClient && !wasClient) {
+          _setMaskTarget(maskLayerId, l.id);
+        } else if (!isClient && wasClient) {
+          delete l.maskLayerId;
+        }
+      });
+      backdrop.remove();
+      _render();
+      if (typeof Canvas !== 'undefined') Canvas.render();
+    });
+
+    footer.appendChild(cancelBtn);
+    footer.appendChild(okBtn);
+    dialog.appendChild(footer);
+
+    backdrop.appendChild(dialog);
+    document.body.appendChild(backdrop);
+  }
+
   // ── RENDER ────────────────────────────────────────────────
+
+  // ── MÁSCARAS (estilo Photoshop) ───────────────────────────
+  //
+  // Modelo:
+  //  - layer.isMask = true        → la capa actúa como máscara.
+  //  - layer.maskLayerId = <id>   → la capa está enmascarada por esa máscara.
+  //
+  // Una sola máscara puede tener N clientes (caso típico: imagen + duplicado
+  // con tint para crear sombra; ambas comparten la misma máscara).
+  //
+  // Cuando una capa pasa a tener clientes, se autoapaga el ojo (visible=false).
+  // El render final NUNCA pinta una máscara, aunque el usuario reactive el ojo;
+  // en el editor sí se ve para reposicionarla.
+
+  function _isValidMaskLayer(layer) {
+    // v1: solo sólidos y degradados son admisibles como máscara.
+    return !!layer && (layer.type === 'solid' || layer.type === 'gradient');
+  }
+
+  function _getMaskClients(maskLayerId) {
+    return State.layers.filter(l => l.maskLayerId === maskLayerId);
+  }
+
+  function _setAsMask(layerId) {
+    const layer = State.layers.find(l => l.id === layerId);
+    if (!layer || !_isValidMaskLayer(layer) || layer.isMask) return;
+    if (typeof History !== 'undefined') History.push();
+    layer.isMask = true;
+    // Renombrar a "MÁSCARA" para que se distinga de un sólido normal. Si ya
+    // existe otra máscara con ese nombre, numeramos (MÁSCARA 2, 3, …).
+    const _existing = State.layers
+      .filter(l => l.id !== layerId && /^MÁSCARA(\s\d+)?$/.test(l.name || ''))
+      .map(l => l.name);
+    if (!_existing.includes('MÁSCARA')) {
+      layer.name = 'MÁSCARA';
+    } else {
+      let n = 2;
+      while (_existing.includes('MÁSCARA ' + n)) n++;
+      layer.name = 'MÁSCARA ' + n;
+    }
+    // Sincronizar los params del formato actual a todos los demás. Sin esto,
+    // los formatos donde la capa no se ha tocado mantienen sus params al
+    // default y la máscara se ve descolocada/de tamaño raro al cambiar de
+    // formato.
+    if (State.activeFormat && typeof Formats !== 'undefined' && Formats.syncMaskAcrossFormats) {
+      Formats.syncMaskAcrossFormats(layerId, State.activeFormat);
+    }
+  }
+
+  function _unsetAsMask(layerId) {
+    const layer = State.layers.find(l => l.id === layerId);
+    if (!layer || !layer.isMask) return;
+    if (typeof History !== 'undefined') History.push();
+    delete layer.isMask;
+    // Limpiar referencias de clientes — la capa vuelve a ser un sólido normal.
+    State.layers.forEach(l => {
+      if (l.maskLayerId === layerId) delete l.maskLayerId;
+    });
+  }
+
+  function _setMaskTarget(maskLayerId, targetLayerId) {
+    if (maskLayerId === targetLayerId) return;
+    const mask   = State.layers.find(l => l.id === maskLayerId);
+    const target = State.layers.find(l => l.id === targetLayerId);
+    if (!mask || !target || !mask.isMask) return;
+    if (target.maskLayerId === maskLayerId) return;
+    target.maskLayerId = maskLayerId;
+    // NOTA: NO encadenamos automáticamente con linkGroupId. El linkGroup
+    // propaga deltas absolutos, lo cual choca con la propagación cliente-
+    // relativa de máscaras (que usa ratios) creando valores caóticos al
+    // mover/escalar. La propagación entre formatos ya mantiene la relación
+    // visual máscara↔cliente. Si el usuario quiere mover ambas juntas en
+    // el mismo formato, puede hacer shift+click para multi-seleccionar.
+    // Auto-apagar el ojo de la máscara cuando se le añade el PRIMER cliente.
+    // Como la máscara es un efecto global, propagamos visible=false a TODOS los
+    // formatos para que no quede visible en otros formatos por defecto.
+    if (_getMaskClients(maskLayerId).length === 1) {
+      Object.keys(State.formatSizes || {}).forEach(fid => {
+        if (!State.formatParams[fid]) State.formatParams[fid] = {};
+        if (!State.formatParams[fid][mask.id]) State.formatParams[fid][mask.id] = {};
+        State.formatParams[fid][mask.id].visible = false;
+      });
+      mask.visible = false;
+    }
+    // Re-sincronizar los params de la máscara desde el formato activo a todos
+    // los demás. Esto cubre el caso de máscaras creadas antes de habilitar la
+    // propagación (los formatos donde no se tocó la máscara podían quedar
+    // con defaults).
+    if (State.activeFormat && typeof Formats !== 'undefined' && Formats.syncMaskAcrossFormats) {
+      Formats.syncMaskAcrossFormats(maskLayerId, State.activeFormat);
+    }
+  }
+
+  function _clearMaskTarget(targetLayerId) {
+    const target = State.layers.find(l => l.id === targetLayerId);
+    if (!target || !target.maskLayerId) return;
+    delete target.maskLayerId;
+  }
 
   // ── LOCK POR FORMATO ─────────────────────────────────────
 
@@ -1103,11 +1414,19 @@ const Layers = (() => {
 
     const item = document.createElement('div');
     const isKey = (typeof Canvas !== 'undefined') && Canvas.getKeyLayerId() === layer.id;
+    const _maskClientsCount = layer.isMask ? _getMaskClients(layer.id).length : 0;
     item.className = 'layer-item'
       + (State.selectedLayerIds.includes(layer.id) ? ' active' : '')
-      + (isKey ? ' key-layer' : '');
+      + (isKey ? ' key-layer' : '')
+      + (layer.isMask ? ' is-mask-host' : '')
+      + (layer.maskLayerId ? ' is-masked' : '');
     item.dataset.id    = layer.id;
     item.dataset.index = index;
+    // Estilo visual mínimo para distinguir las capas-máscara en el panel
+    if (layer.isMask) {
+      item.style.borderLeft = '3px solid var(--col-yellow)';
+      item.style.paddingLeft = '5px';
+    }
 
     // ── OJO ──
     const eye = document.createElement('div');
@@ -1127,6 +1446,17 @@ const Layers = (() => {
         if (!State.formatParams[State.activeFormat]) State.formatParams[State.activeFormat] = {};
         if (!State.formatParams[State.activeFormat][layer.id]) State.formatParams[State.activeFormat][layer.id] = {};
         State.formatParams[State.activeFormat][layer.id].visible = newVis;
+        // Si es máscara, propagar visibilidad a todos los formatos (la máscara
+        // es un efecto global; reactivar el ojo aquí lo activa también en
+        // los demás formatos donde el usuario quiera reposicionarla).
+        if (layer.isMask) {
+          Object.keys(State.formatSizes || {}).forEach(fid => {
+            if (fid === State.activeFormat) return;
+            if (!State.formatParams[fid]) State.formatParams[fid] = {};
+            if (!State.formatParams[fid][layer.id]) State.formatParams[fid][layer.id] = {};
+            State.formatParams[fid][layer.id].visible = newVis;
+          });
+        }
       } else {
         layer.visible = newVis;
       }
@@ -1373,6 +1703,33 @@ const Layers = (() => {
     item.appendChild(thumb);
     item.appendChild(nameSpan);
     item.appendChild(nameInput);
+
+    // ── BADGE: máscara (host o cliente) ──
+    if (layer.isMask) {
+      const mb = document.createElement('span');
+      mb.title = _maskClientsCount > 0
+        ? `Máscara activa en ${_maskClientsCount} capa(s)`
+        : 'Máscara — todavía sin capas asociadas';
+      // Icono ◐ (half-circle) en amarillo
+      mb.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="6" cy="6" r="5" stroke="currentColor" stroke-width="1.2"/><path d="M6 1 A5 5 0 0 1 6 11 Z" fill="currentColor"/></svg>';
+      mb.style.cssText = `
+        display:inline-flex;align-items:center;justify-content:center;
+        width:14px;height:14px;margin-left:4px;flex-shrink:0;
+        color:var(--col-yellow);
+      `;
+      item.appendChild(mb);
+    } else if (layer.maskLayerId) {
+      const mask = State.layers.find(l => l.id === layer.maskLayerId);
+      const mb = document.createElement('span');
+      mb.title = mask ? `Enmascarada por: ${mask.name}` : 'Enmascarada';
+      mb.innerHTML = '<svg width="11" height="11" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="6" cy="6" r="5" stroke="currentColor" stroke-width="1.2" opacity="0.7"/><path d="M6 1 A5 5 0 0 1 6 11 Z" fill="currentColor" opacity="0.7"/></svg>';
+      mb.style.cssText = `
+        display:inline-flex;align-items:center;justify-content:center;
+        width:13px;height:13px;margin-left:4px;flex-shrink:0;
+        color:#bbb;
+      `;
+      item.appendChild(mb);
+    }
 
     // ── BADGE: blend mode activo ──
     if (layer.blendMode && layer.blendMode !== 'normal') {
@@ -1925,6 +2282,19 @@ const Layers = (() => {
     return item;
   }
 
+  // Comprueba si una capa es elegible para ser cliente de una máscara (mismo
+  // criterio que el modal "Usar como máscara en…").
+  function _isMaskableLayer(l) {
+    if (!l) return false;
+    if (l.isMask) return false;
+    if (l.isMarcaIplus || l.isMarcaSony || l.isMolduraFanart || l.isMascaraBlur) return false;
+    if (l.isComposicion || l.isComposicionMovil || l.isComposicionAmazon) return false;
+    if (l.isComposicionTextoH || l.isComposicionTextoV) return false;
+    if (l.isTitleLayer) return false;
+    if (l._layoutGenerated) return false;
+    return true;
+  }
+
   function _bindItemDrag(item, layer) {
     let startX, startY, dragging = false, dragSrcIndex;
 
@@ -1954,9 +2324,12 @@ const Layers = (() => {
 
         if (dragging) {
           document.querySelectorAll('.layer-item:not(.dragging)')
-            .forEach(el => el.classList.remove('drag-over'));
-          const target = _getDragTarget(ev.clientY);
-          if (target) target.classList.add('drag-over');
+            .forEach(el => { el.classList.remove('drag-over'); el.classList.remove('drop-as-mask'); });
+          const hit = _getDragTargetWithIntent(ev.clientY, layer);
+          if (hit) {
+            if (hit.intent === 'mask') hit.item.classList.add('drop-as-mask');
+            else                       hit.item.classList.add('drag-over');
+          }
         }
       };
 
@@ -1968,17 +2341,26 @@ const Layers = (() => {
 
         if (dragging) {
           item.classList.remove('dragging');
-          document.querySelectorAll('.layer-item').forEach(el => el.classList.remove('drag-over'));
+          document.querySelectorAll('.layer-item').forEach(el => { el.classList.remove('drag-over'); el.classList.remove('drop-as-mask'); });
 
-          const target = _getDragTarget(ev.clientY);
-          if (target) {
-            const destIndex = +target.dataset.index;
-            if (destIndex !== dragSrcIndex) {
+          const hit = _getDragTargetWithIntent(ev.clientY, layer);
+          if (hit) {
+            if (hit.intent === 'mask') {
+              // Drop encima de fila-máscara → enmascarar.
               if (typeof History !== 'undefined') History.push();
-              const [moved] = State.layers.splice(dragSrcIndex, 1);
-              State.layers.splice(destIndex, 0, moved);
+              _setMaskTarget(hit.layerId, layer.id);
               _render();
               if (typeof Canvas !== 'undefined') Canvas.render();
+            } else {
+              // Drop entre filas → reordenar (comportamiento clásico).
+              const destIndex = +hit.item.dataset.index;
+              if (destIndex !== dragSrcIndex) {
+                if (typeof History !== 'undefined') History.push();
+                const [moved] = State.layers.splice(dragSrcIndex, 1);
+                State.layers.splice(destIndex, 0, moved);
+                _render();
+                if (typeof Canvas !== 'undefined') Canvas.render();
+              }
             }
           }
         } else {
@@ -2049,6 +2431,25 @@ const Layers = (() => {
       const r = el.getBoundingClientRect();
       return clientY >= r.top && clientY <= r.bottom;
     }) ?? null;
+  }
+
+  // Devuelve la fila bajo el cursor con la intención del drop:
+  //  - 'mask'    → la fila es una capa-máscara Y el cursor está en su tercio
+  //                central Y la capa arrastrada es elegible para ser enmascarada.
+  //  - 'reorder' → reordenamiento clásico (comportamiento previo).
+  function _getDragTargetWithIntent(clientY, draggedLayer) {
+    const el = _getDragTarget(clientY);
+    if (!el) return null;
+    const layerId = el.dataset.id;
+    const targetLayer = layerId ? State.layers.find(l => l.id === layerId) : null;
+    const r = el.getBoundingClientRect();
+    if (targetLayer?.isMask && _isMaskableLayer(draggedLayer)) {
+      const third = r.height / 3;
+      if (clientY >= r.top + third && clientY <= r.bottom - third) {
+        return { item: el, intent: 'mask', layerId: targetLayer.id };
+      }
+    }
+    return { item: el, intent: 'reorder', layerId };
   }
 
   return { init, render: _render, getLocked: _getLocked, makeProxy: _makeProxy, applyTitleFitZones: _applyTitleFitZones };

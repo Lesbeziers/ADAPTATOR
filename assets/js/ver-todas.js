@@ -171,7 +171,7 @@ var VerTodas = (() => {
       if (layer.isMolduraFanart) continue;
       const isVisible = _isLayerVisible(layer, formatName);
       if (!isVisible) continue;
-      await _drawLayer(ctx, layer, formatName, W, H);
+      await _drawLayerMaybeMasked(ctx, layer, formatName, W, H);
     }
 
     // Pastilla de publicidad (encima de todo)
@@ -236,6 +236,10 @@ var VerTodas = (() => {
   }
 
   function _isLayerVisible(layer, formatName) {
+    // Las capas-máscara NO se renderean nunca en el output final, aunque el
+    // usuario tenga su ojo activo en el editor (solo sirven para definir el
+    // recorte de sus clientes).
+    if (layer.isMask) return false;
     // Rol FANART: el fanart solo en formatos FANART; subject/fondo ocultos en FANART si hay fanart
     if (typeof Formats !== 'undefined' && Formats.fanartRoleVisibility &&
         Formats.fanartRoleVisibility(layer.id, formatName) === false) return false;
@@ -258,9 +262,12 @@ var VerTodas = (() => {
       return fmtVisible !== undefined ? fmtVisible : true;
     }
     if (layer.isComposicion) {
-      // Composición MUX4: en su mockup o donde el formato elija 'MUX4'
+      // Composición MUX4: SOLO en formatos cuya variante de texto sea 'MUX4'.
+      // En MUX4 FONDO no se incluye — es referencia visual en el editor pero
+      // no debe aparecer aquí (mismo criterio que la composición MOVIL en
+      // MOVIL MUX FONDO).
       const _mv = (typeof Formats !== 'undefined' && Formats.getTextVariant) ? Formats.getTextVariant(formatName) : null;
-      if (formatName !== 'MUX4 FONDO' && _mv !== 'MUX4') return false;
+      if (_mv !== 'MUX4') return false;
       const fmtVisible = State.formatParams?.[formatName]?.[layer.id]?.visible;
       return fmtVisible !== undefined ? fmtVisible : true;
     }
@@ -378,6 +385,79 @@ var VerTodas = (() => {
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.drawImage(tmp2, 0, 0);
     ctx.restore();
+  }
+
+  // ── MÁSCARA CUSTOM (sistema de máscaras Photoshop-style) ──
+  //
+  // Si la capa cliente tiene `maskLayerId`, su contenido se renderea en un
+  // canvas offscreen y se aplica el alfa de la máscara usando
+  // `globalCompositeOperation = 'destination-in'`. La máscara se renderea
+  // como rect blanco con `ctx.filter = blur()` opcional para reproducir
+  // el efecto de borde difuminado del editor.
+  //
+  // Si la capa tiene una máscara del SISTEMA activa (SIL/PERFIL), o el
+  // usuario ha desactivado la máscara custom en este formato, se ignora.
+
+  async function _drawLayerMaybeMasked(ctx, layer, formatName, W, H) {
+    if (!layer.maskLayerId) {
+      return await _drawLayer(ctx, layer, formatName, W, H);
+    }
+    const fmtSize = State.formatSizes[formatName];
+    const maskType = State.formatMaskEnabled?.[formatName]?.[layer.id] ?? null;
+    const hasSystemMask = (fmtSize?.maskRect && !fmtSize.maskCircle && !!maskType) ||
+                         (fmtSize?.maskCircle && (maskType === 'circle' || maskType === 'rect'));
+    const customDisabled = !!State.formatParams?.[formatName]?.[layer.id]?.customMaskDisabled;
+    if (hasSystemMask || customDisabled) {
+      return await _drawLayer(ctx, layer, formatName, W, H);
+    }
+    const maskLayer = State.layers.find(l => l.id === layer.maskLayerId);
+    if (!maskLayer || !maskLayer.isMask) {
+      return await _drawLayer(ctx, layer, formatName, W, H);
+    }
+    // Offscreen del tamaño del formato: dibujamos la capa cliente y luego
+    // aplicamos la máscara con destination-in. Después se compone al ctx final.
+    const off = document.createElement('canvas');
+    off.width = W; off.height = H;
+    const offCtx = off.getContext('2d');
+    await _drawLayer(offCtx, layer, formatName, W, H);
+    const maskCv = _renderCustomMaskCanvas(maskLayer, formatName, W, H);
+    offCtx.globalCompositeOperation = 'destination-in';
+    offCtx.drawImage(maskCv, 0, 0);
+    ctx.drawImage(off, 0, 0);
+    // Liberar memoria
+    off.width = 0; off.height = 0;
+    maskCv.width = 0; maskCv.height = 0;
+  }
+
+  function _renderCustomMaskCanvas(maskLayer, formatName, W, H) {
+    const c = document.createElement('canvas');
+    c.width = W; c.height = H;
+    const mctx = c.getContext('2d');
+    const p = State.formatParams?.[formatName]?.[maskLayer.id] || {};
+    const sx = (p.scaleX ?? 100) / 100;
+    const sy = (p.scaleY ?? 100) / 100;
+    const rot = ((p.rotation ?? 0) * Math.PI) / 180;
+    const nw = maskLayer.naturalWidth  || W;
+    const nh = maskLayer.naturalHeight || H;
+    const mw = nw * sx;
+    const mh = nh * sy;
+    const cx = W/2 + (p.x ?? 0);
+    const cy = H/2 + (p.y ?? 0);
+    const blur = maskLayer.params?.blur ?? 0;
+    if (blur > 0) mctx.filter = `blur(${blur}px)`;
+    mctx.save();
+    mctx.translate(cx, cy);
+    mctx.rotate(rot);
+    mctx.fillStyle = 'white';
+    const radius = (maskLayer.type === 'solid' && maskLayer.solidParams?.radius) || 0;
+    if (radius > 0) {
+      _roundRect(mctx, -mw/2, -mh/2, mw, mh, radius * Math.max(sx, sy));
+      mctx.fill();
+    } else {
+      mctx.fillRect(-mw/2, -mh/2, mw, mh);
+    }
+    mctx.restore();
+    return c;
   }
 
   async function _drawLayer(ctx, layer, formatName, W, H) {

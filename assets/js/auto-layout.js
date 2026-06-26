@@ -1333,6 +1333,18 @@ const AutoLayout = (() => {
     if (!State.formatParams[formatName]) State.formatParams[formatName] = {};
     if (!State.formatParams[formatName][layerId]) State.formatParams[formatName][layerId] = {};
     Object.assign(State.formatParams[formatName][layerId], params);
+    // Si la capa modificada es CLIENTE PRINCIPAL de alguna máscara,
+    // recalcular esa máscara en ESE formato para que mantenga su relación
+    // visual con la cliente recién reposicionada. Sin esto la máscara queda
+    // en sitio obsoleto al aplicar maquetación automática.
+    if (typeof Formats !== 'undefined' && Formats.recomputeMaskForFormat) {
+      State.layers.forEach(m => {
+        if (!m.isMask) return;
+        const primary = State.layers.find(l => l.maskLayerId === m.id);
+        if (primary?.id !== layerId) return;
+        Formats.recomputeMaskForFormat(m.id, formatName);
+      });
+    }
   }
 
   // ── MOD N ─────────────────────────────────────────────────
