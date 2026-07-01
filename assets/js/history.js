@@ -41,6 +41,7 @@ const History = (() => {
       formatMaskEnabled:       _clone(State.formatMaskEnabled || {}),
       systemVisibility:        _clone(State.systemVisibility || {}),
       layerRoles:              { ...(State.layerRoles || {}) },
+      focalFrames:             _clone(State.focalFrames || {}),
       overlays:                State.overlays ? { ...State.overlays } : null,
       pastillaConfig:          State.pastillaConfig         ? _clone(State.pastillaConfig)         : null,
       pastillaFreemiumConfig:  State.pastillaFreemiumConfig ? _clone(State.pastillaFreemiumConfig) : null,
@@ -63,6 +64,7 @@ const History = (() => {
       State.formatMaskEnabled= _clone(snap.formatMaskEnabled || {});
       State.systemVisibility = _clone(snap.systemVisibility || {});
       State.layerRoles       = { ...(snap.layerRoles || {}) };
+      State.focalFrames      = _clone(snap.focalFrames || {});
       if (snap.overlays) State.overlays = { ...snap.overlays };
       if (snap.pastillaConfig)         State.pastillaConfig         = _clone(snap.pastillaConfig);
       if (snap.pastillaFreemiumConfig) State.pastillaFreemiumConfig = _clone(snap.pastillaFreemiumConfig);
@@ -97,6 +99,13 @@ const History = (() => {
     if (_undoStack.length > MAX_STEPS) _undoStack.shift();
     _redoStack = [];
   }
+
+  // ── SUSPEND / RESUME ──────────────────────────────────────
+  // Silencia los push() durante una operación compuesta (p. ej. la sesión de
+  // encuadre focal), para que el conjunto cuente como un único paso de undo.
+  // El push de frontera debe hacerse ANTES de suspender.
+  function suspend() { _paused = true; }
+  function resume()  { _paused = false; }
 
   // ── UNDO / REDO ───────────────────────────────────────────
 
@@ -135,5 +144,5 @@ const History = (() => {
     });
   }
 
-  return { init, push, undo, redo };
+  return { init, push, undo, redo, suspend, resume };
 })();

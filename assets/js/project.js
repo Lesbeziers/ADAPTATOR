@@ -132,6 +132,18 @@ const Project = (() => {
 
   // ── SERIALIZAR ESTADO ─────────────────────────────────────
 
+  // Quita claves de formato SINTÉTICAS (prefijo `__`, p. ej. el formato
+  // fantasma `__FOCAL__` del modo encuadre) que nunca deben persistirse.
+  // Protege contra fugas si la página se cierra a media sesión de encuadre.
+  function _scrubSyntheticFormats(fp) {
+    const out = {};
+    Object.keys(fp || {}).forEach(fid => {
+      if (fid.startsWith('__')) return;
+      out[fid] = fp[fid];
+    });
+    return out;
+  }
+
   function _serializeState(includeImages) {
     const compLayer = State.layers.find(l => l.isComposicion);
     const composicionParams = compLayer ? _extractCompParams(compLayer.id) : null;
@@ -193,11 +205,12 @@ const Project = (() => {
       activeModality:    State.activeModality,
       activeFormat:      State.activeFormat,
       formatOk:          State.formatOk          || {},
-      formatParams:      State.formatParams       || {},
+      formatParams:      _scrubSyntheticFormats(State.formatParams),
       formatMaskEnabled: State.formatMaskEnabled  || {},
       systemVisibility:  State.systemVisibility   || {},
       overlays:          State.overlays           ? { ...State.overlays } : null,
       layerRoles:        State.layerRoles         ? { ...State.layerRoles } : {},
+      focalFrames:       State.focalFrames        ? { ...State.focalFrames } : {},
       composicionParams,
       composicionId:     compLayer?.id || null,
       composiciones, // ← NUEVO: IDs+params de todas las composiciones
@@ -535,6 +548,7 @@ const Project = (() => {
     State.selectedLayerIds = [];
     State._multiOrigins    = {};
     State.layerRoles       = data.layerRoles       ?? {};
+    State.focalFrames      = data.focalFrames      ?? {};   // proyectos antiguos → {} → fallback genérico
     State.systemVisibility = data.systemVisibility ?? {};
     State.overlays         = data.overlays         ?? { mockup: true, txt: true, foco: false };
     State.formatTextVariant = data.formatTextVariant ?? {};

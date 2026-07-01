@@ -37,6 +37,19 @@ const Canvas = (() => {
 
   let _handles      = null;
 
+  // ── MODO ENCUADRE FOCAL ───────────────────────────────────
+  // Cuando está activo, el lienzo muestra el formato fantasma `__FOCAL__` y
+  // SOLO la capa-sujeto que se está encuadrando. Suprime el fondo verde
+  // chivato, oculta el resto de capas (sistema incluidas) y silencia el push
+  // de history en cada gesto (la sesión cuenta como un único paso de undo).
+  let _framingMode    = false;
+  let _framingLayerId = null;
+  function setFraming(on, layerId) {
+    _framingMode    = !!on;
+    _framingLayerId = on ? (layerId || null) : null;
+  }
+  function isFraming() { return _framingMode; }
+
   function init() {
     _area   = document.getElementById('canvas-area');
     _lienzo = document.getElementById('lienzo');
@@ -575,8 +588,10 @@ const Canvas = (() => {
   function _updateLienzo() {
     if (!State.activeFormat) {
       _lienzo.style.display = 'none';
+      _lienzo.style.outline = '';
       const mb = document.getElementById('canvas-mockup-btn');
       if (mb) mb.style.display = 'none';
+      _updateRulersAndGuides(); // ocultar reglas/guías (sin esto quedan las del último formato)
       return;
     }
 
@@ -585,8 +600,10 @@ const Canvas = (() => {
     const size = State.formatSizes[State.activeFormat];
     if (!size) {
       _lienzo.style.display = 'none';
+      _lienzo.style.outline = '';
       const mb = document.getElementById('canvas-mockup-btn');
       if (mb) mb.style.display = 'none';
+      _updateRulersAndGuides(); // ocultar reglas/guías (sin esto quedan las del último formato)
       return;
     }
 
@@ -619,7 +636,7 @@ const Canvas = (() => {
         _contentClip.id = 'content-clip';
         _lienzo.appendChild(_contentClip);
       }
-      const _greenBg = (typeof Export !== 'undefined' && !Export.isPngFormat(State.activeFormat)) ? '#00ff12' : 'transparent';
+      const _greenBg = (!_framingMode && typeof Export !== 'undefined' && !Export.isPngFormat(State.activeFormat)) ? '#00ff12' : 'transparent';
       _contentClip.style.cssText = `
         position: absolute;
         left: ${Math.round(dc.contentX * _scale)}px;
@@ -656,7 +673,9 @@ const Canvas = (() => {
     // Fondo verde "chivato" — solo cuando no hay displayContext (con dc lo lleva _contentClip)
     // y solo para formatos que se exportan como JPG (los PNG llevan transparencia).
     const _isPng = typeof Export !== 'undefined' && Export.isPngFormat(State.activeFormat);
-    _lienzo.style.background = (!dc && !_isPng) ? '#00ff12' : 'transparent';
+    _lienzo.style.background = (!_framingMode && !dc && !_isPng) ? '#00ff12' : 'transparent';
+    // En modo encuadre, marcar el contorno del marco (el lienzo ES el marco).
+    _lienzo.style.outline = _framingMode ? '2px solid #f0a500' : '';
 
     // ── Botón OK flotante ─────────────────────────────────────
     // OK se añade dentro de auto-controls (se crea allí abajo)
@@ -1262,7 +1281,11 @@ const Canvas = (() => {
 
       let isVisible;
 
-      if (layer.isTitleLayer) {
+      if (_framingMode) {
+        // En modo encuadre solo se ve la capa-sujeto que se está encuadrando.
+        // El resto (fondo, otras imágenes y capas de sistema) se ocultan.
+        isVisible = (layer.id === _framingLayerId);
+      } else if (layer.isTitleLayer) {
         // El título "vivo" se ve en:
         // - los maestros de texto + TÍTULO FICHA (siempre)
         // - cualquier formato cuya variante sea TITLE_H/TITLE_V (imagen original cruda)
@@ -1483,7 +1506,10 @@ const Canvas = (() => {
         // Y NO tiene blur, NO aplicamos mask: la capa se renderea entera y su
         // halo de blur fluye libre. Si la máscara tiene blur, siempre aplicamos
         // mask para que el borde difuso pueda asomar al bounding box.
-        const _maskBlurRaw = (_mask.params?.blur ?? 0);
+        // Blur de la máscara POR FORMATO (maskBlur), con fallback al blur global
+        // de la capa para máscaras antiguas sin override por-formato.
+        const _maskBlurRaw = (State.formatParams?.[State.activeFormat]?.[_mask.id]?.maskBlur)
+                             ?? (_mask.params?.blur ?? 0);
         if (_maskBlurRaw === 0 && _mx1 <= _ex1 && _my1 <= _ey1 && _mx2 >= _ex2 && _my2 >= _ey2) {
           return false;
         }
@@ -1494,7 +1520,7 @@ const Canvas = (() => {
         // tiene blur (efecto de borde difuminado), añadimos margen extra para
         // que el halo del blur del rect no se recorte al viewBox del SVG.
         const _gBlur = (layer.params?.blur ?? 0) * _scale;
-        const _maskBlur = (_mask.params?.blur ?? 0) * _scale;
+        const _maskBlur = _maskBlurRaw * _scale;
         const _pad = Math.max(0, Math.ceil(Math.max(_gBlur * 8, _maskBlur * 4)));
         const _Wm = _ew + 2*_pad;
         const _Hm = _eh + 2*_pad;
@@ -2595,5 +2621,5 @@ const Canvas = (() => {
     _initMarcaSony();
   }
 
-  return { init, render, getScale, reinitAutoLayers, align, setKeyLayer, getKeyLayerId, calcGradientStops: _calcGradientStops };
+  return { init, render, getScale, reinitAutoLayers, align, setKeyLayer, getKeyLayerId, calcGradientStops: _calcGradientStops, setFraming, isFraming };
 })();

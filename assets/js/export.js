@@ -58,10 +58,45 @@ const Export = (() => {
     'WEB PUBLI',
     'FANART MÓVIL',
     'AMAZON BG',
+    'AD PAUSE',
+    'FANART',
   ];
 
   function isMockupFormat(formatName) {
     return MOCKUP_FORMATS.includes(formatName);
+  }
+
+  // Formatos que en la EXPORTACIÓN generan DOS mockups, uno por cada capa de su
+  // grupo exclusivo de sistema — forzando la variante, sea cual sea la visible en
+  // el editor. Cada variante lleva un sufijo propio en el nombre del archivo.
+  // (El botón GENERAR MOCKUP sigue exportando SOLO la variante visible en pantalla.)
+  const DUAL_MOCKUP_FORMATS = {
+    'MUX4 FONDO': [
+      { key: 'mockup', suffix: 'MOCKUP' },
+      { key: 'foco',   suffix: 'MOCKUP_FOCO' },
+    ],
+    'FANART': [
+      { key: 'nivel1', suffix: 'MOCKUP_NIVEL1' },
+      { key: 'nivel2', suffix: 'MOCKUP_NIVEL2' },
+    ],
+  };
+
+  // Renderiza el mockup de un formato FORZANDO una variante de capa de sistema
+  // (grupo exclusivo), sin dejar tocado el estado del editor (lo restaura al salir).
+  // forcedKey = null → usa la visibilidad actual (mockup simple, sin forzar).
+  async function _renderMockupVariantCanvas(formatName, forcedKey) {
+    if (!forcedKey || typeof SystemLayers === 'undefined') {
+      return _renderMockupCanvas(formatName);
+    }
+    const saved = State.systemVisibility[formatName]
+      ? { ...State.systemVisibility[formatName] } : undefined;
+    try {
+      SystemLayers.setVisible(formatName, forcedKey, true); // exclusivo: oculta el hermano
+      return await _renderMockupCanvas(formatName);
+    } finally {
+      if (saved) State.systemVisibility[formatName] = saved;
+      else       delete State.systemVisibility[formatName];
+    }
   }
 
   // ── INIT ──────────────────────────────────────────────────
@@ -262,6 +297,29 @@ const Export = (() => {
         const arrayBuf = await blob.arrayBuffer();
         zip.file(filename, arrayBuf);
         exportedCount++;
+
+        // Mockups en el ZIP. Los formatos de DOBLE variante (MUX4 FONDO, FANART)
+        // generan dos mockups forzando cada capa de su grupo exclusivo; el resto,
+        // uno solo con la variante visible. Sufijo _MOCKUP[...] en el nombre.
+        // Tolerante a fallos: un mockup que no salga se avisa y no aborta el resto.
+        const _mockVariants = DUAL_MOCKUP_FORMATS[formatName]
+          || (isMockupFormat(formatName) ? [{ key: null, suffix: 'MOCKUP' }] : []);
+        for (const mv of _mockVariants) {
+          try {
+            progress.update(i + 1, `${formatName} · ${mv.suffix}`);
+            const mockCv = await _renderMockupVariantCanvas(formatName, mv.key);
+            const mockBlob = mockCv ? await _jpgWithMaxSize(mockCv, 5) : null;
+            if (mockBlob) {
+              const mockName = `${_buildBaseName(nombre, formatName)}_${cfg.suffix}_${mv.suffix}.jpg`;
+              zip.file(mockName, await mockBlob.arrayBuffer());
+            } else {
+              warnings.push(`⚠️ ${formatName} (${mv.suffix}): no se pudo generar el mockup.`);
+            }
+          } catch (err) {
+            console.error(`[Export] Error mockup ${formatName} (${mv.suffix}):`, err);
+            warnings.push(`⚠️ ${formatName} (${mv.suffix}): error al generar el mockup. (${err?.message || err})`);
+          }
+        }
       }
 
       progress.close();
@@ -502,7 +560,7 @@ const Export = (() => {
   //  - MUX4 FONDO       → COMPOSICIÓN TÍTULO  (posición depende del overlay 'foco')
   //  - MOVIL MUX FONDO  → COMPOSICIÓN MOVIL TEXTO
   async function _drawCompositionOverlay(designCv, formatName) {
-    if (formatName !== 'MUX4 FONDO' && formatName !== 'MOVIL MUX FONDO') return;
+    if (formatName !== 'MUX4 FONDO' && formatName !== 'MOVIL MUX FONDO' && formatName !== 'AMAZON BG') return;
     const ctx = designCv.getContext('2d');
 
     if (formatName === 'MUX4 FONDO') {
@@ -529,6 +587,22 @@ const Export = (() => {
       const nh   = comp.naturalHeight || 466;
       const src  = comp.srcMovilFondo || comp.src;
       await _drawImage(ctx, src, posX, posY, nw, nh);
+      return;
+    }
+
+    if (formatName === 'AMAZON BG') {
+      // El AMAZON LOGO (composición isComposicionAmazon) NO se exporta en AMAZON BG
+      // (queda excluido en _isLayerVisible), pero en el MOCKUP debe verse.
+      // En el editor NO es arrastrable: el canvas la FIJA en (104, 65) a tamaño
+      // natural (ver _applyParams en canvas.js). Replicamos esa posición EXACTA.
+      // El canvas de diseño ya está en coordenadas de contenido (1920×720).
+      const comp = State.layers.find(l => l.isComposicionAmazon);
+      if (!comp || !comp.src) return;
+      const nw = comp.naturalWidth  || 640;
+      const nh = comp.naturalHeight || 480;
+      const AMAZON_LOGO_X = 104;  // debe coincidir con _applyParams (canvas.js)
+      const AMAZON_LOGO_Y = 65;
+      await _drawImage(ctx, comp.src, AMAZON_LOGO_X, AMAZON_LOGO_Y, nw, nh);
     }
   }
 
@@ -916,7 +990,8 @@ const Export = (() => {
     const mh = nh * sy;
     const cx = W/2 + (p.x ?? 0);
     const cy = H/2 + (p.y ?? 0);
-    const blur = maskLayer.params?.blur ?? 0;
+    // Blur POR FORMATO (maskBlur), con fallback al blur global de la capa.
+    const blur = (p.maskBlur) ?? (maskLayer.params?.blur ?? 0);
     if (blur > 0) mctx.filter = `blur(${blur}px)`;
     mctx.save();
     mctx.translate(cx, cy);

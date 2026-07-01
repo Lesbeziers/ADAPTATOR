@@ -942,8 +942,21 @@ const AutoLayout = (() => {
 
     if (!State.formatParams[formatName]) State.formatParams[formatName] = {};
 
-    // Inicializar estado de escala, espejo y variante
-    if (!_scaleMode[formatName]) _scaleMode[formatName] = cfg.scaleModeDefault;
+    // Inicializar estado de escala, espejo y variante.
+    // Si el formato usará ENCUADRE FOCAL del sujeto, el modo natural es FIT
+    // (contain): muestra la región encuadrada COMPLETA. Cover (crop) haría zoom
+    // más allá del encuadre y recortaría justo lo que el usuario enmarcó. Los
+    // formatos SIN encuadre conservan su default original (crop). El toggle
+    // sigue disponible por si se quiere acercar.
+    if (!_scaleMode[formatName]) {
+      let _focalDefault = false;
+      if (typeof FocalFrames !== 'undefined' && cfg.fit) {
+        const _b = FocalFrames.bandForFormat(formatName);
+        const _subj = _b ? (layers || []).find(l => roles[l.id] === 'subject') : null;
+        if (_subj && FocalFrames.getFrame(_subj.id, _b)) _focalDefault = true;
+      }
+      _scaleMode[formatName] = _focalDefault ? 'fit' : cfg.scaleModeDefault;
+    }
     if (_mirrored[formatName] === undefined) _mirrored[formatName] = false;
     if (!_variant[formatName]) _variant[formatName] = 'A';
 
@@ -982,7 +995,16 @@ const AutoLayout = (() => {
 
       } else if (role === 'subject') {
         if (!scaleCfg) return; // formato sin crop/fit (ej. AMAZON LOGO — solo título)
-        _applySubject(formatName, layer, W, H, cfg, scaleCfg, mirrored, focusZone);
+        // Encuadre focal: si el usuario definió un rect para la banda de este
+        // formato, derivar la colocación por cover-fit de ese rect. Si no, caer
+        // a la colocación genérica de siempre (feature puramente aditiva).
+        const _band = (typeof FocalFrames !== 'undefined') ? FocalFrames.bandForFormat(formatName) : null;
+        const _fr   = _band ? FocalFrames.getFrame(layer.id, _band) : null;
+        if (_fr) {
+          _applySubjectFocal(formatName, layer, W, H, focusZone, mirrored, _fr, scaleMode);
+        } else {
+          _applySubject(formatName, layer, W, H, cfg, scaleCfg, mirrored, focusZone);
+        }
 
       } else if (role === 'title_h' || role === 'title_v' || role === 'title') {
         // Si textZone es null, el formato no tiene zona de título (ej. FANART DEST.)
@@ -1110,6 +1132,53 @@ const AutoLayout = (() => {
     _setParams(formatName, layer.id, {
       x: Math.round(x),
       y: Math.round(y),
+      scaleX: Math.round(scaleX * 10) / 10,
+      scaleY: Math.round(scaleY * 10) / 10,
+      rotation: 0,
+    });
+  }
+
+  // Colocación del sujeto a partir de un RECTÁNGULO FOCAL definido por el
+  // usuario (espacio normalizado de la imagen). Hace cover-fit del rect sobre
+  // la focusZone del formato (no el frame completo): en formatos con texto la
+  // focusZone es una sub-zona deliberada; en full-bleed ≈ {0,0,1,1}. Una regla.
+  //   crop = cover (max)  ·  fit = contain (min)
+  // No usa contentBounds ni heurísticas anchorEdge/fill: el encuadre del
+  // usuario manda. Convención de salida idéntica a _applySubject (x,y = offset
+  // del centro de la imagen respecto al centro del formato).
+  function _applySubjectFocal(formatName, layer, W, H, fz, mirrored, fr, scaleMode) {
+    const nw = layer.naturalWidth  || 200;
+    const nh = layer.naturalHeight || 200;
+
+    const fzWpx = W * fz.w;
+    const fzHpx = H * fz.h;
+    const frWpx = nw * fr.w;
+    const frHpx = nh * fr.h;
+    if (!(frWpx > 0) || !(frHpx > 0)) return;
+
+    const s = (scaleMode === 'fit')
+      ? Math.min(fzWpx / frWpx, fzHpx / frHpx)   // contain: se ve el rect entero
+      : Math.max(fzWpx / frWpx, fzHpx / frHpx);  // cover: el rect llena la zona
+
+    const scaleX = s * 100;
+    const scaleY = s * 100;
+    const drawW = nw * s;
+    const drawH = nh * s;
+
+    // Centro del rect focal dentro de la imagen dibujada (mirror voltea X).
+    const frCxNorm = mirrored ? (1 - (fr.x + fr.w / 2)) : (fr.x + fr.w / 2);
+    const frCyNorm = fr.y + fr.h / 2;
+    // Centro de la focusZone en px del formato (mirror voltea X, igual que _applySubject).
+    const zoneCx = W * (mirrored ? (1 - (fz.x + fz.w / 2)) : (fz.x + fz.w / 2));
+    const zoneCy = H * (fz.y + fz.h / 2);
+
+    // Colocar la imagen para que el centro del rect focal caiga en el centro de la zona.
+    const cx = zoneCx - frCxNorm * drawW + drawW / 2;
+    const cy = zoneCy - frCyNorm * drawH + drawH / 2;
+
+    _setParams(formatName, layer.id, {
+      x: Math.round(cx - W / 2),
+      y: Math.round(cy - H / 2),
       scaleX: Math.round(scaleX * 10) / 10,
       scaleY: Math.round(scaleY * 10) / 10,
       rotation: 0,
@@ -1333,18 +1402,9 @@ const AutoLayout = (() => {
     if (!State.formatParams[formatName]) State.formatParams[formatName] = {};
     if (!State.formatParams[formatName][layerId]) State.formatParams[formatName][layerId] = {};
     Object.assign(State.formatParams[formatName][layerId], params);
-    // Si la capa modificada es CLIENTE PRINCIPAL de alguna máscara,
-    // recalcular esa máscara en ESE formato para que mantenga su relación
-    // visual con la cliente recién reposicionada. Sin esto la máscara queda
-    // en sitio obsoleto al aplicar maquetación automática.
-    if (typeof Formats !== 'undefined' && Formats.recomputeMaskForFormat) {
-      State.layers.forEach(m => {
-        if (!m.isMask) return;
-        const primary = State.layers.find(l => l.maskLayerId === m.id);
-        if (primary?.id !== layerId) return;
-        Formats.recomputeMaskForFormat(m.id, formatName);
-      });
-    }
+    // Modelo "semilla única, luego independiente": las máscaras NO auto-siguen a
+    // su cliente. Una vez sembradas (Formats.syncMaskAcrossFormats), cada formato
+    // mantiene su máscara tal cual; el usuario la reajusta a mano donde quiera.
   }
 
   // ── MOD N ─────────────────────────────────────────────────
@@ -1582,30 +1642,44 @@ const AutoLayout = (() => {
         }
       }
 
-      // Aplicar maquetación a todos los formatos configurados
-      Object.keys(FORMAT_CONFIG).forEach(formatName => {
-        applyToFormat(formatName, roles, layers);
-      });
+      // Maquetación a todos los formatos + post-pasos. Se extrae a una
+      // continuación para poder intercalar ANTES el encuadre focal del sujeto.
+      const runLayoutLoop = () => {
+        // Aplicar maquetación a todos los formatos configurados
+        Object.keys(FORMAT_CONFIG).forEach(formatName => {
+          applyToFormat(formatName, roles, layers);
+        });
 
-      // Reposicionar las composiciones H/V en sus formatos receptores
-      if (promotedTitle) {
-        const compH = State.layers.find(l => l.isComposicionTextoH);
-        const compV = State.layers.find(l => l.isComposicionTextoV);
-        if (compH) repositionTextComp(compH, 'H');
-        if (compV) repositionTextComp(compV, 'V');
-        // También las imágenes de título crudas, para los formatos con variante TITLE_H/V
-        const titleH = State.layers.find(l => l.isTitleLayerH);
-        const titleV = State.layers.find(l => l.isTitleLayerV);
-        if (titleH) repositionTextComp(titleH, 'TITLE_H');
-        if (titleV) repositionTextComp(titleV, 'TITLE_V');
+        // Reposicionar las composiciones H/V en sus formatos receptores
+        if (promotedTitle) {
+          const compH = State.layers.find(l => l.isComposicionTextoH);
+          const compV = State.layers.find(l => l.isComposicionTextoV);
+          if (compH) repositionTextComp(compH, 'H');
+          if (compV) repositionTextComp(compV, 'V');
+          // También las imágenes de título crudas, para los formatos con variante TITLE_H/V
+          const titleH = State.layers.find(l => l.isTitleLayerH);
+          const titleV = State.layers.find(l => l.isTitleLayerV);
+          if (titleH) repositionTextComp(titleH, 'TITLE_H');
+          if (titleV) repositionTextComp(titleV, 'TITLE_V');
+        }
+
+        // Ordenar capas por rol: TÍTULO arriba → SUJETO/NINGUNO → FONDO → FANART abajo.
+        // Las capas de sistema mantienen su posición al principio del array.
+        _reorderByRole();
+
+        if (typeof Canvas !== 'undefined') Canvas.render();
+        if (typeof Layers !== 'undefined') Layers.render();
+      };
+
+      // Encuadre focal: si hay EXACTAMENTE un sujeto, abrir el encuadre por
+      // bandas ANTES de maquetar; al pulsar "Hecho" se ejecuta runLayoutLoop
+      // (que ya usará los rectángulos focales). Si no, maquetar directo.
+      const _subjects = layers.filter(l => roles[l.id] === 'subject');
+      if (_subjects.length === 1 && typeof FocalFrames !== 'undefined') {
+        FocalFrames.open(_subjects[0].id, runLayoutLoop);
+      } else {
+        runLayoutLoop();
       }
-
-      // Ordenar capas por rol: TÍTULO arriba → SUJETO/NINGUNO → FONDO → FANART abajo.
-      // Las capas de sistema mantienen su posición al principio del array.
-      _reorderByRole();
-
-      if (typeof Canvas !== 'undefined') Canvas.render();
-      if (typeof Layers !== 'undefined') Layers.render();
     });
   }
 
@@ -1674,26 +1748,39 @@ const AutoLayout = (() => {
         !l.isMarcaIplus && !l.isMarcaSony && l.src
       );
       const layersToApply = promotedTitle ? allImageLayers : newLayers;
-      Object.keys(FORMAT_CONFIG).forEach(formatName => {
-        applyToFormat(formatName, State.layerRoles, layersToApply);
-      });
+      const runLayoutLoop = () => {
+        Object.keys(FORMAT_CONFIG).forEach(formatName => {
+          applyToFormat(formatName, State.layerRoles, layersToApply);
+        });
 
-      // Reposicionar composiciones H/V e imágenes de título crudas en sus receptores
-      if (promotedTitle) {
-        const compH = State.layers.find(l => l.isComposicionTextoH);
-        const compV = State.layers.find(l => l.isComposicionTextoV);
-        if (compH) repositionTextComp(compH, 'H');
-        if (compV) repositionTextComp(compV, 'V');
-        const titleH = State.layers.find(l => l.isTitleLayerH);
-        const titleV = State.layers.find(l => l.isTitleLayerV);
-        if (titleH) repositionTextComp(titleH, 'TITLE_H');
-        if (titleV) repositionTextComp(titleV, 'TITLE_V');
+        // Reposicionar composiciones H/V e imágenes de título crudas en sus receptores
+        if (promotedTitle) {
+          const compH = State.layers.find(l => l.isComposicionTextoH);
+          const compV = State.layers.find(l => l.isComposicionTextoV);
+          if (compH) repositionTextComp(compH, 'H');
+          if (compV) repositionTextComp(compV, 'V');
+          const titleH = State.layers.find(l => l.isTitleLayerH);
+          const titleV = State.layers.find(l => l.isTitleLayerV);
+          if (titleH) repositionTextComp(titleH, 'TITLE_H');
+          if (titleV) repositionTextComp(titleV, 'TITLE_V');
+        }
+
+        _reorderByRole();
+
+        if (typeof Canvas !== 'undefined') Canvas.render();
+        if (typeof Layers !== 'undefined') Layers.render();
+      };
+
+      // Encuadre focal solo si llega un SUJETO NUEVO sin frames (no reabrir al
+      // añadir fondos/títulos a un proyecto cuyo sujeto ya está encuadrado).
+      const _newSubjToFrame = (typeof FocalFrames !== 'undefined')
+        ? newLayers.find(l => roles[l.id] === 'subject' && !FocalFrames.hasAnyFrame(l.id))
+        : null;
+      if (_newSubjToFrame) {
+        FocalFrames.open(_newSubjToFrame.id, runLayoutLoop);
+      } else {
+        runLayoutLoop();
       }
-
-      _reorderByRole();
-
-      if (typeof Canvas !== 'undefined') Canvas.render();
-      if (typeof Layers !== 'undefined') Layers.render();
     });
   }
 

@@ -19,6 +19,14 @@ const State = {
   _multiOrigins: {},
   layerRoles: {}, // { layerId: 'background'|'subject'|'title'|null }
 
+  // ── ENCUADRE FOCAL POR BANDA ─────────────────────────────
+  // Rectángulo focal normalizado (0–1, espacio de la imagen origen) que el
+  // usuario define UNA vez por banda de proporción. Cada formato deriva su
+  // colocación inicial por cover-fit del rect de su banda. Solo se guardan
+  // las bandas realmente encuadradas; ausencia → colocación genérica.
+  // { [layerId]: { VERTICAL:{x,y,w,h}, '16:9':{...}, PANO:{...}, ULTRA:{...} } }
+  focalFrames: {},
+
   // ── GUÍAS DE COMPOSICIÓN ─────────────────────────────────
   // Por formato. Cada guía: { id, orient: 'h'|'v', pos: number (px en coord del formato) }
   guides:        {},   // { formatId: [ {id, orient, pos}, ... ] }

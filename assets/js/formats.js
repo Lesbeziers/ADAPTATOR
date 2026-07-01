@@ -186,6 +186,15 @@ const Formats = (() => {
     if (!State.formatParams[formatId]) State.formatParams[formatId] = {};
     if (!State.formatParams[formatId][layerId]) State.formatParams[formatId][layerId] = _defaultParams();
 
+    // Modo ENCUADRE FOCAL: los gestos se aplican sobre el formato fantasma
+    // `__FOCAL__` y NO deben propagarse (ni a título, ni a link-groups, ni a
+    // máscaras) — el sujeto se está encuadrando de forma aislada. Escribir y salir.
+    if (typeof Canvas !== 'undefined' && Canvas.isFraming && Canvas.isFraming()) {
+      State.formatParams[formatId][layerId][key] = value;
+      State.dirty = true;
+      return;
+    }
+
     // Calcular delta antes de aplicar (para propagación a capas enlazadas)
     const prevValue = State.formatParams[formatId][layerId][key] ?? _defaultParams()[key] ?? 0;
     const delta = value - prevValue;
@@ -204,27 +213,12 @@ const Formats = (() => {
       _propagateLinkGroup(formatId, layerId, layer.linkGroupId, key, delta);
     }
 
-    // Propagación para máscaras: una capa-máscara representa un efecto gráfico
-    // global, por eso sus params se replican en todos los formatos. Si en algún
-    // formato se quiere una máscara distinta, el usuario marca la capa como
-    // exclusiva de ese formato (`exclusiveFormat`) y la edita ahí.
-    if (layer?.isMask) {
-      _propagateMaskParam(formatId, layerId, key, value);
-    }
-
-    // Si la capa modificada es la CLIENTE PRINCIPAL de alguna máscara
-    // (primera capa con maskLayerId === maskId), re-sincronizar esa máscara.
-    // Sin esto, mover/escalar la cliente desactualiza la relación máscara↔cliente
-    // que usa la propagación cliente-relativa en otros formatos.
-    if (!layer?.isMask && ['x','y','scaleX','scaleY'].includes(key)) {
-      State.layers.forEach(maskCandidate => {
-        if (!maskCandidate.isMask) return;
-        const primaryClient = State.layers.find(l => l.maskLayerId === maskCandidate.id);
-        if (primaryClient?.id !== layerId) return;
-        if (!State.formatParams[formatId]?.[maskCandidate.id]) return;
-        _propagateMaskParam(formatId, maskCandidate.id, '', 0);
-      });
-    }
+    // MÁSCARAS — modelo "semilla única, luego independiente":
+    // La máscara se siembra a TODOS los formatos UNA sola vez, al asignarla
+    // (Formats.syncMaskAcrossFormats). A partir de ahí NO se vuelve a propagar
+    // ni auto-sigue a su cliente: cada formato edita su máscara (posición,
+    // escala, rotación y blur) de forma independiente. Por eso aquí ya no se
+    // propaga nada al editar una máscara ni al mover su capa cliente.
   }
 
   // Pública: sincroniza los params de una máscara desde `sourceFormat` a todos

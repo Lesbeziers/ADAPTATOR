@@ -210,8 +210,14 @@ const Layers = (() => {
             _importTitleLayer(layer);
             if (onDone) onDone(layer);
           } else {
-            // Si se importa estando en MUX4 TXT o MOVIL TXT, la capa es exclusiva de ese formato
-            if (formatAtImport === 'MUX4 TXT' || formatAtImport === 'MOVIL TXT' || formatAtImport === 'AMAZON LOGO') {
+            // Importar estando en un formato "maestro de texto" (que SOLO muestra
+            // capas exclusivas — ver la regla de ocultación en _isLayerVisible /
+            // canvas.js): la capa se marca exclusiva de ese formato. Si no, quedaría
+            // oculta justo ahí y visible en todos los demás. Esta lista DEBE coincidir
+            // con la de esa regla (MUX4/MOVIL TXT, AMAZON LOGO, TEXTO H/V, TÍTULO FICHA).
+            const _TEXT_MASTER_FORMATS = ['MUX4 TXT', 'MOVIL TXT', 'AMAZON LOGO',
+                                          'TEXTO HORIZONTAL', 'TEXTO VERTICAL', 'TÍTULO FICHA'];
+            if (_TEXT_MASTER_FORMATS.includes(formatAtImport)) {
               layer.exclusiveFormat = formatAtImport;
             }
             // Calcular índice de inserción: después de capas auto-generadas y de isTitleLayer
@@ -461,8 +467,15 @@ const Layers = (() => {
           const p   = State.formatParams?.[fmt]?.[layer.id] || {};
           const oldVisualW = (layer.naturalWidth  || 1) * (p.scaleX ?? 100) / 100;
           const oldVisualH = (layer.naturalHeight || 1) * (p.scaleY ?? 100) / 100;
-          const newScaleX  = (oldVisualW / img.naturalWidth)  * 100;
-          const newScaleY  = (oldVisualH / img.naturalHeight) * 100;
+          // Escala UNIFORME (misma X e Y) → la nueva imagen NO se deforma: conserva
+          // su proporción y ocupa aproximadamente la misma ÁREA visual que la
+          // sustituida. (Antes se calculaban scaleX/scaleY por separado forzando el
+          // ancho y alto de la vieja, lo que estiraba imágenes de otra proporción.)
+          const oldArea = Math.max(1, oldVisualW * oldVisualH);
+          const newArea = Math.max(1, img.naturalWidth * img.naturalHeight);
+          const uniformScale = Math.sqrt(oldArea / newArea) * 100;
+          const newScaleX  = uniformScale;
+          const newScaleY  = uniformScale;
           const mimeType = file.type || 'image/png';
           const proxy = _makeProxy(img, mimeType);
           layer.src           = proxy || ev.target.result;

@@ -443,7 +443,8 @@ var VerTodas = (() => {
     const mh = nh * sy;
     const cx = W/2 + (p.x ?? 0);
     const cy = H/2 + (p.y ?? 0);
-    const blur = maskLayer.params?.blur ?? 0;
+    // Blur POR FORMATO (maskBlur), con fallback al blur global de la capa.
+    const blur = (p.maskBlur) ?? (maskLayer.params?.blur ?? 0);
     if (blur > 0) mctx.filter = `blur(${blur}px)`;
     mctx.save();
     mctx.translate(cx, cy);

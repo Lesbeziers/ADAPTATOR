@@ -28,7 +28,7 @@ const UI = (() => {
       { key: 'scale',      val: multiSelect ? 100 : (p.scaleX ?? 100), unit: '%' },
       { key: 'rotation',   val: multiSelect ? 0   : (p.rotation ?? 0), unit: '°' },
       { key: 'opacity',    val: multiSelect ? 100 : g.opacity,          unit: '%' },
-      { key: 'blur',       val: multiSelect ? 0   : g.blur,             unit: ''  },
+      { key: 'blur',       val: multiSelect ? 0   : (layer?.isMask ? (p.maskBlur ?? g.blur) : g.blur), unit: ''  },
       { key: 'noise',      val: multiSelect ? 0   : g.noise,            unit: ''  },
       { key: 'brightness', val: multiSelect ? 0   : g.brightness,       unit: '%' },
       { key: 'contrast',   val: multiSelect ? 0   : g.contrast,         unit: '%' },
@@ -241,6 +241,12 @@ const UI = (() => {
 
           if (isGlobal) {
             if (!layer) return;
+            // Blur de MÁSCARA → POR FORMATO (independiente, modelo semilla+divergencia).
+            // El resto de params globales (opacity, noise…) siguen globales en máscaras.
+            if (key === 'blur' && layer.isMask && State.activeFormat) {
+              Formats.setLayerParam(State.activeFormat, lid, 'maskBlur', newVal);
+              return;
+            }
             if (!layer.params) layer.params = { ...DEFAULTS };
             if (multi) {
               const neutral  = key === 'opacity' ? 100 : 0;
@@ -312,6 +318,11 @@ const UI = (() => {
           const layer = State.layers.find(l => l.id === lid);
           if (isGlobal) {
             if (!layer) return;
+            // Blur de MÁSCARA → por-formato (igual que el slider).
+            if (key === 'blur' && layer.isMask && State.activeFormat) {
+              Formats.setLayerParam(State.activeFormat, lid, 'maskBlur', val);
+              return;
+            }
             if (!layer.params) layer.params = { ...DEFAULTS };
             layer.params[key] = val;
           } else {
