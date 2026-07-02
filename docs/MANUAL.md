@@ -69,6 +69,18 @@ Una sola maquetación, todos los formatos resueltos. Si lo tocas en uno, se prop
 
 Las versiones recientes han añadido:
 
+**Julio 2026**
+
+- **Encuadre focal del sujeto** — al asignar roles, encuadras el sujeto una sola vez por banda de proporción (vertical, 16:9, panorámico, ultra) reutilizando el viewport; cada formato deriva su encaje automáticamente y sigue siendo reposicionable. PERFIL mantiene su autocentrado de cara aparte.
+- **Reemplazar imagen hereda el encaje** — al sustituir una imagen (botón derecho → Reemplazar), la nueva conserva escala, posición, rotación y demás en todos los formatos. Ideal para plantillas: reemplazas assets del mismo tamaño (p. ej. jugadores) y quedan clavados sin retocar.
+- **Atributos exclusivos por capa** — los parámetros visuales (opacidad, blur, ruido, brillo, contraste, saturación, tinte y modo de capa) se propagan por defecto; un interruptor en el panel TRANSFORMAR permite que una capa concreta los tenga independientes por formato.
+- **Composiciones de texto con ajuste manual persistente** — cuando ajustas a mano una composición dentro de un formato, ese ajuste manda y se conserva (al editar el texto maestro, al importar y al reabrir); el botón AUTO de ese formato es lo único que vuelve a re-encajar.
+- **Máscaras independientes por formato** — modelo "siembra una vez, luego cada formato va por libre", con blur por formato (a sangre vs degradado).
+- **Mockups ampliados** — mockups dobles en MUX4 FONDO y FANART, AD PAUSE y FANART en la lista, y el logo de Amazon compuesto en el mockup de AMAZON BG.
+- **Nuevo logo oficial** — DAZN Mundial elegible desde Añadir Logos.
+
+**Versiones anteriores**
+
 - **Sistema de máscaras Photoshop-style** ([capítulo 7](07-mascaras.md)) — recortes con halo, drag&drop, propagación entre formatos.
 - **Sincronización inteligente entre formatos** — al modificar una capa o aplicar maquetación automática, las máscaras se reposicionan manteniendo su relación visual con la imagen.
 - **Save/load robusto** — JSON autosuficiente con imágenes embebidas, ZIP autosuficiente, modo carpeta descomprimida.
