@@ -13,13 +13,38 @@ const UI = (() => {
     _bindOverlayToggles();
     _bindSliders();
     _bindOkButton();
+    _bindExclusiveToggle();
+  }
+
+  // Toggle "ATRIBUTOS EXCLUSIVOS": marca/desmarca la capa seleccionada como
+  // exclusiva en el formato activo (congela sus visuales aquí; deja de propagar).
+  function _bindExclusiveToggle() {
+    const btn = document.getElementById('btn-exclusive-toggle');
+    if (!btn) return;
+    btn.addEventListener('click', () => {
+      if (btn.disabled || !State.activeFormat || !State.selectedLayerIds.length) return;
+      const turnOn = !btn.classList.contains('on');
+      if (typeof History !== 'undefined') History.push();
+      State.selectedLayerIds.forEach(lid => {
+        if (typeof Formats !== 'undefined' && Formats.setVisualExclusive) {
+          Formats.setVisualExclusive(State.activeFormat, lid, turnOn);
+        }
+      });
+      updateSliders();
+      if (typeof Canvas !== 'undefined') Canvas.render();
+      if (typeof Layers !== 'undefined') Layers.render();
+    });
   }
 
   function updateSliders() {
     const multiSelect = State.selectedLayerIds.length > 1;
     const layer = State.layers.find(l => l.id === State.selectedLayerId);
     const _defaults = { opacity: 100, blur: 0, noise: 0, brightness: 0, contrast: 0, saturation: 0, tintAmount: 0, tintColor: '#000000' };
-    const g = layer?.params ? { ..._defaults, ...layer.params } : _defaults;
+    // Ajustes visuales POR FORMATO (con fallback al global). El slider muestra el
+    // valor efectivo en el formato activo.
+    const g = (layer && typeof Formats !== 'undefined' && Formats.resolveVisual)
+      ? Formats.resolveVisual(State.activeFormat, layer)
+      : (layer?.params ? { ..._defaults, ...layer.params } : _defaults);
     const p = (!multiSelect && State.activeFormat && State.selectedLayerId)
       ? Formats.getLayerParams(State.activeFormat, State.selectedLayerId)
       : { scaleX: 100, rotation: 0 };
@@ -53,6 +78,18 @@ const UI = (() => {
       const c = g.tintColor || '#000000';
       swatch.style.background = c;
       picker.value = c;
+    }
+
+    // Estado del toggle "Atributos exclusivos" (refleja la capa seleccionada
+    // en el formato activo).
+    const exBtn = document.getElementById('btn-exclusive-toggle');
+    if (exBtn) {
+      const canToggle = !!(State.activeFormat && State.selectedLayerId && layer);
+      const isEx = (canToggle && typeof Formats !== 'undefined' && Formats.isVisualExclusive)
+        ? Formats.isVisualExclusive(State.activeFormat, State.selectedLayerId) : false;
+      exBtn.classList.toggle('on', !!isEx);
+      exBtn.setAttribute('aria-checked', isEx ? 'true' : 'false');
+      exBtn.disabled = !canToggle;
     }
 
     // Deshabilitar todo el panel si la capa está bloqueada
@@ -198,8 +235,31 @@ const UI = (() => {
     const DEFAULTS   = { opacity: 100, blur: 0, noise: 0, brightness: 0, contrast: 0, saturation: 0, tintAmount: 0, tintColor: '#000000' };
 
     function _getLayerGlobal(layer, k) {
+      // Valor visual efectivo por-formato (override si existe, si no el global).
+      if (typeof Formats !== 'undefined' && Formats.resolveVisual && State.activeFormat) {
+        return Formats.resolveVisual(State.activeFormat, layer)[k];
+      }
       if (!layer.params) layer.params = { ...DEFAULTS };
       return layer.params[k] ?? DEFAULTS[k];
+    }
+
+    // Escribe un atributo visual respetando el modelo propagación/exclusivo:
+    //  - Capa exclusiva en el formato activo → override por-formato (no propaga).
+    //  - Capa normal → valor GLOBAL de la capa → se propaga a todos los formatos.
+    // (El blur de MÁSCARA es un caso aparte: siempre por-formato, va a maskBlur.)
+    function _writeVisual(lid, key, value) {
+      const layer = State.layers.find(l => l.id === lid);
+      if (!layer) return;
+      if (key === 'blur' && layer.isMask && State.activeFormat) {
+        Formats.setLayerParam(State.activeFormat, lid, 'maskBlur', value);
+        return;
+      }
+      if (State.activeFormat && Formats.isVisualExclusive && Formats.isVisualExclusive(State.activeFormat, lid)) {
+        Formats.setLayerParam(State.activeFormat, lid, key, value);
+      } else {
+        if (!layer.params) layer.params = { ...DEFAULTS };
+        layer.params[key] = value;
+      }
     }
 
     keys.forEach(key => {
@@ -226,11 +286,7 @@ const UI = (() => {
 
         // ── Tint ──────────────────────────────────────────────
         if (key === 'tint') {
-          State.selectedLayerIds.forEach(lid => {
-            const layer = State.layers.find(l => l.id === lid);
-            if (!layer?.params) return;
-            layer.params.tintAmount = newVal;
-          });
+          State.selectedLayerIds.forEach(lid => _writeVisual(lid, 'tintAmount', newVal));
           Canvas.render();
           return;
         }
@@ -241,23 +297,16 @@ const UI = (() => {
 
           if (isGlobal) {
             if (!layer) return;
-            // Blur de MÁSCARA → POR FORMATO (independiente, modelo semilla+divergencia).
-            // El resto de params globales (opacity, noise…) siguen globales en máscaras.
-            if (key === 'blur' && layer.isMask && State.activeFormat) {
-              Formats.setLayerParam(State.activeFormat, lid, 'maskBlur', newVal);
-              return;
-            }
-            if (!layer.params) layer.params = { ...DEFAULTS };
+            let applied = newVal;
             if (multi) {
               const neutral  = key === 'opacity' ? 100 : 0;
               const original = State._multiOrigins?.[lid]?.[key] ?? _getLayerGlobal(layer, key);
-              let applied = key === 'opacity'
+              applied = key === 'opacity'
                 ? Math.round(original * newVal / Math.max(neutral, 1))
                 : original + (newVal - neutral);
-              layer.params[key] = Math.max(min, Math.min(max, applied));
-            } else {
-              layer.params[key] = newVal;
+              applied = Math.max(min, Math.min(max, applied));
             }
+            _writeVisual(lid, key, applied);   // global (propaga) o por-formato (exclusivo)
           } else {
             if (!State.activeFormat) return;
             if (key === 'scale') {
@@ -306,11 +355,7 @@ const UI = (() => {
 
         // ── Tint ──────────────────────────────────────────────
         if (key === 'tint') {
-          State.selectedLayerIds.forEach(lid => {
-            const layer = State.layers.find(l => l.id === lid);
-            if (!layer?.params) return;
-            layer.params.tintAmount = val;
-          });
+          State.selectedLayerIds.forEach(lid => _writeVisual(lid, 'tintAmount', val));
           Canvas.render();
           return;
         }
@@ -318,13 +363,7 @@ const UI = (() => {
           const layer = State.layers.find(l => l.id === lid);
           if (isGlobal) {
             if (!layer) return;
-            // Blur de MÁSCARA → por-formato (igual que el slider).
-            if (key === 'blur' && layer.isMask && State.activeFormat) {
-              Formats.setLayerParam(State.activeFormat, lid, 'maskBlur', val);
-              return;
-            }
-            if (!layer.params) layer.params = { ...DEFAULTS };
-            layer.params[key] = val;
+            _writeVisual(lid, key, val);
           } else {
             if (!State.activeFormat) return;
             if (key === 'scale') {
@@ -355,11 +394,7 @@ const UI = (() => {
       tintPicker.addEventListener('input', e => {
         const color = e.target.value;
         tintSwatch.style.background = color;
-        State.selectedLayerIds.forEach(lid => {
-          const layer = State.layers.find(l => l.id === lid);
-          if (!layer?.params) return;
-          layer.params.tintColor = color;
-        });
+        State.selectedLayerIds.forEach(lid => _writeVisual(lid, 'tintColor', color));
         Canvas.render();
       });
     }

@@ -1022,9 +1022,11 @@ const Export = (() => {
     const sx  = (p.scaleX  ?? 100) / 100;
     const sy  = (p.scaleY  ?? 100) / 100;
     const rot = ((p.rotation ?? 0) * Math.PI) / 180;
-    const op  = (layer.params?.opacity ?? 100) / 100;
+    // Ajustes visuales POR FORMATO (con fallback al global de la capa).
+    const _v  = (typeof Formats !== 'undefined' && Formats.resolveVisual) ? Formats.resolveVisual(formatName, layer) : (layer.params || {});
+    const op  = (_v.opacity ?? 100) / 100;
     // Blend mode: 'normal' en CSS = 'source-over' en canvas
-    const blend = (!layer.blendMode || layer.blendMode === 'normal') ? 'source-over' : layer.blendMode;
+    const blend = (!_v.blendMode || _v.blendMode === 'normal') ? 'source-over' : _v.blendMode;
 
     // ── MÁSCARA SIL ───────────────────────────────────────
     const fmtSize    = State.formatSizes[formatName];
@@ -1073,7 +1075,7 @@ const Export = (() => {
     ctx.globalCompositeOperation = blend;
 
     const filters = [];
-    const g = layer.params || {};
+    const g = _v;
     if (g.blur       > 0)   filters.push(`blur(${g.blur}px)`);
     // El ruido se aplica POR CAPA con el mismo filtro SVG que usa el editor
     // (canvas.js:_injectNoiseFilter). Reemplaza al antiguo render global de
@@ -1185,7 +1187,7 @@ const Export = (() => {
     } else if (layer.src) {
       const iw = (layer.naturalWidth  || 200) * sx;
       const ih = (layer.naturalHeight || 200) * sy;
-      if (layer.params?.tintAmount > 0) {
+      if (_v.tintAmount > 0) {
         const tmp = document.createElement('canvas');
         tmp.width  = W; tmp.height = H;
         const tctx = tmp.getContext('2d');
@@ -1194,8 +1196,8 @@ const Export = (() => {
         tctx.rotate(((p.rotation ?? 0) * Math.PI) / 180);
         await _drawImage(tctx, _layerSrc, -iw/2, -ih/2, iw, ih);
         tctx.globalCompositeOperation = 'source-atop';
-        tctx.globalAlpha = layer.params.tintAmount / 100;
-        tctx.fillStyle   = layer.params.tintColor || '#000000';
+        tctx.globalAlpha = _v.tintAmount / 100;
+        tctx.fillStyle   = _v.tintColor || '#000000';
         tctx.fillRect(-iw/2, -ih/2, iw, ih);
         tctx.restore();
         ctx.restore();

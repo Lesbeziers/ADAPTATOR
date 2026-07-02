@@ -895,9 +895,12 @@ const Layers = (() => {
       .filter(Boolean);
 
     const hasSelection = selectedLayers.length > 0;
-    const modes = new Set(selectedLayers.map(l => l.blendMode || 'normal'));
+    // Modo efectivo (resuelve exclusivo-por-formato vs global).
+    const _blendOf = (l) => ((typeof Formats !== 'undefined' && Formats.resolveVisual)
+      ? Formats.resolveVisual(State.activeFormat, l).blendMode : l.blendMode) || 'normal';
+    const modes = new Set(selectedLayers.map(_blendOf));
     const isMixed = modes.size > 1;
-    const currentMode = isMixed ? '__mixed__' : (selectedLayers[0]?.blendMode || 'normal');
+    const currentMode = isMixed ? '__mixed__' : (selectedLayers[0] ? _blendOf(selectedLayers[0]) : 'normal');
 
     if (isMixed) {
       const optMixed = document.createElement('option');
@@ -926,7 +929,14 @@ const Layers = (() => {
       selectedLayers.forEach(l => {
         // Capas sistémicas obligatorias: blend mode bloqueado
         if (l.isMarcaIplus || l.isMarcaSony || l.isMolduraFanart || l.isMascaraBlur) return;
-        l.blendMode = newMode === 'normal' ? null : newMode;
+        const bm = newMode === 'normal' ? null : newMode;
+        // Exclusiva en este formato → override por-formato; si no, global (propaga).
+        if (State.activeFormat && typeof Formats !== 'undefined' && Formats.isVisualExclusive
+            && Formats.isVisualExclusive(State.activeFormat, l.id)) {
+          Formats.setLayerParam(State.activeFormat, l.id, 'blendMode', bm);
+        } else {
+          l.blendMode = bm;
+        }
       });
       _render();
       if (typeof Canvas !== 'undefined') Canvas.render();
@@ -2424,7 +2434,9 @@ const Layers = (() => {
       const formatP = State.activeFormat ? Formats.getLayerParams(State.activeFormat, lid) : {};
       const layer   = State.layers.find(l => l.id === lid);
       const globalP = layer?.params || {};
-      State._multiOrigins[lid] = { ...formatP, ...globalP };
+      // formatP AL FINAL: los overrides visuales por-formato (si existen) ganan al
+      // global; para claves sin override, el global hace de fallback.
+      State._multiOrigins[lid] = { ...globalP, ...formatP };
     });
 
     // Si es texto y el panel está abierto, actualizarlo con los parámetros correctos

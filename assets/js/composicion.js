@@ -58,12 +58,14 @@ const Composicion = (() => {
         const cx  = W / 2 + (p.x ?? 0);
         const cy  = H / 2 + (p.y ?? 0);
 
-        const op         = (layer.params?.opacity     ?? 100) / 100;
-        const blur       = layer.params?.blur         ?? 0;
-        const noise      = layer.params?.noise        ?? 0;
-        const brightness = layer.params?.brightness   ?? 0;
-        const contrast   = layer.params?.contrast     ?? 0;
-        const saturation = layer.params?.saturation   ?? 0;
+        // Visuales efectivos (resuelve exclusivo-por-formato vs global).
+        const _cv        = (typeof Formats !== 'undefined' && Formats.resolveVisual) ? Formats.resolveVisual(MASTER_FORMAT, layer) : (layer.params || {});
+        const op         = (_cv.opacity    ?? 100) / 100;
+        const blur       = _cv.blur        ?? 0;
+        const noise      = _cv.noise       ?? 0;
+        const brightness = _cv.brightness  ?? 0;
+        const contrast   = _cv.contrast    ?? 0;
+        const saturation = _cv.saturation  ?? 0;
 
         const filters = [];
         if (blur       > 0)   filters.push(`blur(${blur}px)`);
@@ -181,7 +183,7 @@ const Composicion = (() => {
               const iw = (layer.naturalWidth  || img.width)  * sx;
               const ih = (layer.naturalHeight || img.height) * sy;
 
-              if (layer.params?.tintAmount > 0) {
+              if ((_cv.tintAmount ?? 0) > 0) {
                 // Canvas temporal para preservar alpha del SVG
                 const tmp = document.createElement('canvas');
                 tmp.width  = Math.round(iw);
@@ -191,8 +193,8 @@ const Composicion = (() => {
                 tctx.drawImage(img, 0, 0, iw, ih);
                 // Dibujar color de tint solo sobre píxeles opacos
                 tctx.globalCompositeOperation = 'source-in';
-                tctx.globalAlpha = layer.params.tintAmount / 100;
-                tctx.fillStyle   = layer.params.tintColor || '#000000';
+                tctx.globalAlpha = (_cv.tintAmount ?? 0) / 100;
+                tctx.fillStyle   = _cv.tintColor || '#000000';
                 tctx.fillRect(0, 0, iw, ih);
                 // Restaurar imagen original debajo del tint
                 tctx.globalCompositeOperation = 'destination-over';
@@ -433,12 +435,14 @@ const ComposicionMovil = (() => {
         const cx  = W / 2 + (p.x ?? 0);
         const cy  = H / 2 + (p.y ?? 0);
 
-        const op         = (layer.params?.opacity     ?? 100) / 100;
-        const blur       = layer.params?.blur         ?? 0;
-        const noise      = layer.params?.noise        ?? 0;
-        const brightness = layer.params?.brightness   ?? 0;
-        const contrast   = layer.params?.contrast     ?? 0;
-        const saturation = layer.params?.saturation   ?? 0;
+        // Visuales efectivos (resuelve exclusivo-por-formato vs global).
+        const _cv        = (typeof Formats !== 'undefined' && Formats.resolveVisual) ? Formats.resolveVisual(MASTER_FORMAT, layer) : (layer.params || {});
+        const op         = (_cv.opacity    ?? 100) / 100;
+        const blur       = _cv.blur        ?? 0;
+        const noise      = _cv.noise       ?? 0;
+        const brightness = _cv.brightness  ?? 0;
+        const contrast   = _cv.contrast    ?? 0;
+        const saturation = _cv.saturation  ?? 0;
 
         const filters = [];
         if (blur       > 0)   filters.push(`blur(${blur}px)`);
@@ -554,15 +558,15 @@ const ComposicionMovil = (() => {
               const iw = (layer.naturalWidth  || img.width)  * sx;
               const ih = (layer.naturalHeight || img.height) * sy;
 
-              if (layer.params?.tintAmount > 0) {
+              if ((_cv.tintAmount ?? 0) > 0) {
                 const tmp = document.createElement('canvas');
                 tmp.width  = Math.round(iw);
                 tmp.height = Math.round(ih);
                 const tctx = tmp.getContext('2d');
                 tctx.drawImage(img, 0, 0, iw, ih);
                 tctx.globalCompositeOperation = 'source-in';
-                tctx.globalAlpha = layer.params.tintAmount / 100;
-                tctx.fillStyle   = layer.params.tintColor || '#000000';
+                tctx.globalAlpha = (_cv.tintAmount ?? 0) / 100;
+                tctx.fillStyle   = _cv.tintColor || '#000000';
                 tctx.fillRect(0, 0, iw, ih);
                 tctx.globalCompositeOperation = 'destination-over';
                 tctx.globalAlpha = 1;
@@ -755,12 +759,14 @@ const ComposicionAmazon = (() => {
         const cx  = W / 2 + (p.x ?? 0);
         const cy  = H / 2 + (p.y ?? 0);
 
-        const op         = (layer.params?.opacity     ?? 100) / 100;
-        const blur       = layer.params?.blur         ?? 0;
-        const noise      = layer.params?.noise        ?? 0;
-        const brightness = layer.params?.brightness   ?? 0;
-        const contrast   = layer.params?.contrast     ?? 0;
-        const saturation = layer.params?.saturation   ?? 0;
+        // Visuales efectivos (resuelve exclusivo-por-formato vs global).
+        const _cv        = (typeof Formats !== 'undefined' && Formats.resolveVisual) ? Formats.resolveVisual(MASTER_FORMAT, layer) : (layer.params || {});
+        const op         = (_cv.opacity    ?? 100) / 100;
+        const blur       = _cv.blur        ?? 0;
+        const noise      = _cv.noise       ?? 0;
+        const brightness = _cv.brightness  ?? 0;
+        const contrast   = _cv.contrast    ?? 0;
+        const saturation = _cv.saturation  ?? 0;
 
         const filters = [];
         if (blur       > 0)   filters.push(`blur(${blur}px)`);
@@ -866,15 +872,15 @@ const ComposicionAmazon = (() => {
             img.onload = () => {
               const iw = (layer.naturalWidth  || img.width)  * sx;
               const ih = (layer.naturalHeight || img.height) * sy;
-              if (layer.params?.tintAmount > 0) {
+              if ((_cv.tintAmount ?? 0) > 0) {
                 const tmp = document.createElement('canvas');
                 tmp.width  = Math.round(iw);
                 tmp.height = Math.round(ih);
                 const tctx = tmp.getContext('2d');
                 tctx.drawImage(img, 0, 0, iw, ih);
                 tctx.globalCompositeOperation = 'source-in';
-                tctx.globalAlpha = layer.params.tintAmount / 100;
-                tctx.fillStyle   = layer.params.tintColor || '#000000';
+                tctx.globalAlpha = (_cv.tintAmount ?? 0) / 100;
+                tctx.fillStyle   = _cv.tintColor || '#000000';
                 tctx.fillRect(0, 0, iw, ih);
                 tctx.globalCompositeOperation = 'destination-over';
                 tctx.globalAlpha = 1;
@@ -1039,12 +1045,14 @@ const ComposicionTexto = (() => {
         const cx  = W / 2 + (p.x ?? 0);
         const cy  = H / 2 + (p.y ?? 0);
 
-        const op         = (layer.params?.opacity     ?? 100) / 100;
-        const blur       = layer.params?.blur         ?? 0;
-        const noise      = layer.params?.noise        ?? 0;
-        const brightness = layer.params?.brightness   ?? 0;
-        const contrast   = layer.params?.contrast     ?? 0;
-        const saturation = layer.params?.saturation   ?? 0;
+        // Visuales efectivos (resuelve exclusivo-por-formato vs global).
+        const _cv        = (typeof Formats !== 'undefined' && Formats.resolveVisual) ? Formats.resolveVisual(MASTER_FORMAT, layer) : (layer.params || {});
+        const op         = (_cv.opacity    ?? 100) / 100;
+        const blur       = _cv.blur        ?? 0;
+        const noise      = _cv.noise       ?? 0;
+        const brightness = _cv.brightness  ?? 0;
+        const contrast   = _cv.contrast    ?? 0;
+        const saturation = _cv.saturation  ?? 0;
 
         const filters = [];
         if (blur       > 0)   filters.push(`blur(${blur}px)`);
@@ -1162,7 +1170,7 @@ const ComposicionTexto = (() => {
               const iw = (layer.naturalWidth  || img.width)  * sx;
               const ih = (layer.naturalHeight || img.height) * sy;
 
-              if (layer.params?.tintAmount > 0) {
+              if ((_cv.tintAmount ?? 0) > 0) {
                 // Canvas temporal para preservar alpha del SVG
                 const tmp = document.createElement('canvas');
                 tmp.width  = Math.round(iw);
@@ -1172,8 +1180,8 @@ const ComposicionTexto = (() => {
                 tctx.drawImage(img, 0, 0, iw, ih);
                 // Dibujar color de tint solo sobre píxeles opacos
                 tctx.globalCompositeOperation = 'source-in';
-                tctx.globalAlpha = layer.params.tintAmount / 100;
-                tctx.fillStyle   = layer.params.tintColor || '#000000';
+                tctx.globalAlpha = (_cv.tintAmount ?? 0) / 100;
+                tctx.fillStyle   = _cv.tintColor || '#000000';
                 tctx.fillRect(0, 0, iw, ih);
                 // Restaurar imagen original debajo del tint
                 tctx.globalCompositeOperation = 'destination-over';

@@ -168,6 +168,8 @@ const Formats = (() => {
 
     if (typeof Canvas !== 'undefined') Canvas.render();
     if (typeof Layers !== 'undefined') Layers.render();
+    // Refrescar el panel Transformar (sliders por-formato + toggle Exclusivo).
+    if (typeof UI !== 'undefined' && UI.updateSliders) UI.updateSliders();
   }
 
   function toggleOk(formatName) {
@@ -418,6 +420,55 @@ const Formats = (() => {
 
   function _defaultParams() {
     return { scaleX: 100, scaleY: 100, rotation: 0, x: 0, y: 0 };
+  }
+
+  // ── ATRIBUTOS VISUALES: PROPAGACIÓN vs FORMATO EXCLUSIVO ──
+  // Modelo: por defecto los atributos visuales (opacidad, desenfoque, ruido,
+  // brillo, contraste, saturación, tinte y MODO DE CAPA) son GLOBALES → se
+  // propagan a todos los formatos. Si una capa se marca "exclusiva" en un
+  // formato (formatParams[fmt][layerId].visualExclusive = true), en ESE formato
+  // usa sus propios overrides (congelados al activar) y deja de propagar.
+  const VISUAL_DEFAULTS = { opacity: 100, blur: 0, noise: 0, brightness: 0, contrast: 0, saturation: 0, tintAmount: 0, tintColor: '#000000' };
+  const VISUAL_KEYS = Object.keys(VISUAL_DEFAULTS);
+
+  function isVisualExclusive(formatId, layerId) {
+    return !!State.formatParams?.[formatId]?.[layerId]?.visualExclusive;
+  }
+
+  // Valor visual efectivo. Si la capa NO es exclusiva en ese formato → global
+  // (propagación). Si es exclusiva → sus overrides por-formato (fallback global).
+  function resolveVisual(formatId, layer) {
+    const out = { ...VISUAL_DEFAULTS, ...(layer && layer.params ? layer.params : {}) };
+    out.blendMode = (layer && layer.blendMode) || null;
+    const pf = (formatId && layer) ? State.formatParams?.[formatId]?.[layer.id] : null;
+    if (pf && pf.visualExclusive) {
+      VISUAL_KEYS.forEach(k => { if (pf[k] !== undefined) out[k] = pf[k]; });
+      if (pf.blendMode !== undefined) out.blendMode = pf.blendMode;
+    }
+    return out;
+  }
+
+  // Activa/desactiva la exclusividad visual de una capa en un formato.
+  // Al ACTIVAR: congela (snapshot) los valores actuales (globales) como overrides
+  // → la capa queda protegida e independiente en ese formato.
+  // Al DESACTIVAR: suelta los overrides → vuelve a propagar (global).
+  function setVisualExclusive(formatId, layerId, on) {
+    if (!formatId || !layerId) return;
+    const layer = State.layers.find(l => l.id === layerId);
+    if (!State.formatParams[formatId]) State.formatParams[formatId] = {};
+    if (!State.formatParams[formatId][layerId]) State.formatParams[formatId][layerId] = _defaultParams();
+    const pf = State.formatParams[formatId][layerId];
+    if (on) {
+      const cur = resolveVisual(formatId, layer); // = global (aún sin override)
+      VISUAL_KEYS.forEach(k => { pf[k] = cur[k]; });
+      pf.blendMode = cur.blendMode ?? null;
+      pf.visualExclusive = true;
+    } else {
+      VISUAL_KEYS.forEach(k => { delete pf[k]; });
+      delete pf.blendMode;
+      delete pf.visualExclusive;
+    }
+    State.dirty = true;
   }
 
   // ── VARIANTE DE TEXTO POR FORMATO ─────────────────────────
@@ -717,7 +768,7 @@ const Formats = (() => {
     if (p && typeof p.then === 'function') p.then(_done); else _done();
   }
 
-  return { init, setActiveFormat, toggleOk, getLayerParams, setLayerParam, linkLayers, unlinkLayer, refreshGrid: _renderFormatGrid, getTextVariant, setTextVariant, getTextVariantOptions, displayLabel, getTextPair, propagateTextAttributes, isFanartFormat, fanartRoleVisibility, syncMaskAcrossFormats, recomputeMaskForFormat,
+  return { init, setActiveFormat, toggleOk, getLayerParams, setLayerParam, resolveVisual, isVisualExclusive, setVisualExclusive, linkLayers, unlinkLayer, refreshGrid: _renderFormatGrid, getTextVariant, setTextVariant, getTextVariantOptions, displayLabel, getTextPair, propagateTextAttributes, isFanartFormat, fanartRoleVisibility, syncMaskAcrossFormats, recomputeMaskForFormat,
     getActiveTitleForFormat, isActiveTitleForFormat,
     getGuides, hasGuides, areGuidesVisible, areGuidesLocked, isSnapEnabled,
     addGuide, moveGuide, deleteGuide, toggleGuidesVisible, toggleGuidesLocked, toggleSnap };

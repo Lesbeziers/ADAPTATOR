@@ -1738,7 +1738,7 @@ const Canvas = (() => {
     }
 
     el.style.opacity = g.opacity / 100;
-    el.style.mixBlendMode = layer.blendMode || 'normal';
+    el.style.mixBlendMode = g.blendMode || 'normal';
     el.style.left    = x + 'px';
     // Para texto: ancla en borde superior → restar la mitad de la altura para que y=0 sea centrado
     if (layer.type === 'text') {
@@ -1884,6 +1884,10 @@ const Canvas = (() => {
   }
 
   function _getGlobalParams(layer) {
+    // Los ajustes visuales son POR FORMATO (con fallback al global de la capa).
+    if (typeof Formats !== 'undefined' && Formats.resolveVisual) {
+      return Formats.resolveVisual(State.activeFormat, layer);
+    }
     const defaults = { opacity: 100, blur: 0, noise: 0, brightness: 0, contrast: 0, saturation: 0, tintAmount: 0, tintColor: '#000000' };
     return { ...defaults, ...(layer.params || {}) };
   }

@@ -470,9 +470,11 @@ var VerTodas = (() => {
     const sx  = (p.scaleX  ?? 100) / 100;
     const sy  = (p.scaleY  ?? 100) / 100;
     const rot = ((p.rotation ?? 0) * Math.PI) / 180;
-    const op  = (layer.params?.opacity ?? 100) / 100;
+    // Ajustes visuales POR FORMATO (con fallback al global de la capa).
+    const _v  = (typeof Formats !== 'undefined' && Formats.resolveVisual) ? Formats.resolveVisual(formatName, layer) : (layer.params || {});
+    const op  = (_v.opacity ?? 100) / 100;
     // Blend mode: 'normal' en CSS = 'source-over' en canvas
-    const blend = (!layer.blendMode || layer.blendMode === 'normal') ? 'source-over' : layer.blendMode;
+    const blend = (!_v.blendMode || _v.blendMode === 'normal') ? 'source-over' : _v.blendMode;
 
     // ── MÁSCARA SIL ───────────────────────────────────────
     const fmtSize    = State.formatSizes[formatName];
@@ -527,7 +529,7 @@ var VerTodas = (() => {
 
     // Filtros CSS → canvas
     const filters = [];
-    const g = layer.params || {};
+    const g = _v;
     if (g.blur       > 0)   filters.push(`blur(${g.blur}px)`);
     // Ruido por capa con el mismo filtro SVG del editor (canvas.js:_injectNoiseFilter).
     // Antes se aplicaba como capa global de grano sobre toda la composición.
@@ -639,7 +641,7 @@ var VerTodas = (() => {
       const iw = (layer.naturalWidth  || 200) * sx;
       const ih = (layer.naturalHeight || 200) * sy;
 
-      if (layer.params?.tintAmount > 0) {
+      if (_v.tintAmount > 0) {
         // Canvas temporal en coordenadas reales del formato (W×H)
         // para que el blur no se recorte al bounding box de la imagen
         const tmp = document.createElement('canvas');
@@ -651,8 +653,8 @@ var VerTodas = (() => {
         tctx.rotate(((p.rotation ?? 0) * Math.PI) / 180);
         await _drawImage(tctx, layer.src, -iw/2, -ih/2, iw, ih);
         tctx.globalCompositeOperation = 'source-atop';
-        tctx.globalAlpha = layer.params.tintAmount / 100;
-        tctx.fillStyle   = layer.params.tintColor || '#000000';
+        tctx.globalAlpha = _v.tintAmount / 100;
+        tctx.fillStyle   = _v.tintColor || '#000000';
         tctx.fillRect(-iw/2, -ih/2, iw, ih);
         tctx.restore();
         // Volcar al ctx principal (que ya tiene el scale aplicado) en coordenadas del formato
