@@ -1832,7 +1832,16 @@ const Canvas = (() => {
   function _getParams(layerId) {
     const fid = State.activeFormat;
     if (!fid || !layerId) return _defaultParams();
-    return State.formatParams?.[fid]?.[layerId] ?? _defaultParams();
+    const p = State.formatParams?.[fid]?.[layerId];
+    if (!p) return _defaultParams();
+    // Reparar en sitio cualquier valor no-finito (NaN/Infinity) que se haya colado:
+    // una capa con x/y NaN queda inmovible. Así se auto-cura al renderizar.
+    if (!Number.isFinite(p.x))        p.x = 0;
+    if (!Number.isFinite(p.y))        p.y = 0;
+    if (!Number.isFinite(p.scaleX))   p.scaleX = 100;
+    if (!Number.isFinite(p.scaleY))   p.scaleY = 100;
+    if (!Number.isFinite(p.rotation)) p.rotation = 0;
+    return p;
   }
 
   function _defaultParams() {

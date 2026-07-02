@@ -4,6 +4,18 @@
 
 const Formats = (() => {
 
+  // Composiciones de título que el auto-layout coloca vía _applyTitle en muchos
+  // formatos. Si el usuario las ajusta a mano en un receptor, ese formato queda
+  // "bloqueado" (titleManual) frente al re-encaje automático.
+  const _AUTO_TITLE_FLAGS = [
+    'isComposicion', 'isComposicionMovil',
+    'isComposicionTextoH', 'isComposicionTextoV',
+    'isTitleLayerH', 'isTitleLayerV',
+  ];
+  // Formatos MAESTROS donde se edita el texto (no son receptores): ahí no se
+  // marca el candado manual.
+  const _TITLE_MASTER_FORMATS = ['TEXTO HORIZONTAL', 'TEXTO VERTICAL', 'MUX4 TXT', 'MOVIL TXT'];
+
   function init() {
     _buildDropdown();
     _bindDropdown();
@@ -185,6 +197,9 @@ const Formats = (() => {
   }
 
   function setLayerParam(formatId, layerId, key, value) {
+    // Anti-NaN: nunca escribir valores no-finitos en params numéricos. Una capa con
+    // x/y en NaN queda INMÓVIL (NaN + cualquier delta = NaN → ni arrastre ni flechas).
+    if (['x','y','scaleX','scaleY','rotation'].includes(key) && !Number.isFinite(value)) return;
     if (!State.formatParams[formatId]) State.formatParams[formatId] = {};
     if (!State.formatParams[formatId][layerId]) State.formatParams[formatId][layerId] = _defaultParams();
 
@@ -208,6 +223,18 @@ const Formats = (() => {
     const layer = State.layers.find(l => l.id === layerId);
     if (layer?.isTitleLayer) {
       _propagateTitleParam(formatId, layerId, key, value);
+    }
+
+    // "Candado manual" del título/composición: si el diseñador ajusta a mano
+    // (mover/escalar/rotar) una composición de título en un formato RECEPTOR,
+    // ese formato pasa a ser suyo: ni la edición del texto maestro
+    // (repositionTextComp) ni una importación posterior (applyToFormat) vuelven
+    // a re-encajarlo automáticamente. Solo el botón AUTO (resetFormat) suelta el
+    // candado y re-coloca. El flag vive en formatParams → se guarda y restaura solo.
+    if (['x','y','scaleX','scaleY','rotation'].includes(key)
+        && layer && _AUTO_TITLE_FLAGS.some(f => layer[f])
+        && !_TITLE_MASTER_FORMATS.includes(formatId)) {
+      State.formatParams[formatId][layerId].titleManual = true;
     }
 
     // Propagación para capas enlazadas (solo x, y, scaleX, scaleY, rotation)

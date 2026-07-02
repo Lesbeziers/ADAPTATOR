@@ -1020,13 +1020,19 @@ const AutoLayout = (() => {
             State.layers.find(l => l.isTitleLayerH),       // imagen título cruda H
             State.layers.find(l => l.isTitleLayerV),       // imagen título cruda V
           ].filter(Boolean);
-          candidates.forEach(c => _applyTitle(formatName, c, W, H, cfg, mirrored, textZone));
+          // Respetar el candado manual: no re-encajar las composiciones que el
+          // diseñador ajustó a mano en este formato (resetFormat ya lo ha
+          // soltado antes si venimos del botón AUTO).
+          candidates.forEach(c => {
+            if (State.formatParams?.[formatName]?.[c.id]?.titleManual) return;
+            _applyTitle(formatName, c, W, H, cfg, mirrored, textZone);
+          });
           // Aditivo extra (mantenemos comportamiento anterior por compat):
           const variant = (typeof Formats !== 'undefined' && Formats.getTextVariant) ? Formats.getTextVariant(formatName) : null;
           const hvComp = variant === 'H' ? State.layers.find(l => l.isComposicionTextoH)
                        : variant === 'V' ? State.layers.find(l => l.isComposicionTextoV)
                        : null;
-          if (hvComp) {
+          if (hvComp && !State.formatParams?.[formatName]?.[hvComp.id]?.titleManual) {
             _applyTitle(formatName, hvComp, W, H, cfg, mirrored, textZone);
           }
         }
@@ -1816,6 +1822,11 @@ const AutoLayout = (() => {
   function resetFormat(formatName) {
     const roles = State.layerRoles;
     if (!roles) return;
+    // El botón AUTO (y espejo/crop-fit/variante, que pasan por aquí) es la ÚNICA
+    // vía para volver al encaje automático: soltamos el candado manual de las
+    // composiciones de título de este formato antes de re-maquetar.
+    const _fp = State.formatParams[formatName];
+    if (_fp) Object.keys(_fp).forEach(lid => { if (_fp[lid]) delete _fp[lid].titleManual; });
     // Incluir isComposicion para poder posicionarla con el rol title
     const layers = State.layers.filter(l =>
       !['text', 'solid', 'gradient'].includes(l.type) &&
@@ -1950,6 +1961,10 @@ const AutoLayout = (() => {
     if (!comp) return;
     Object.keys(State.formatSizes || {}).forEach(formatName => {
       if (typeof Formats === 'undefined' || Formats.getTextVariant(formatName) !== variant) return;
+      // Respetar el ajuste manual del diseñador: si este formato tiene la
+      // composición bloqueada (titleManual), la edición del texto maestro NO la
+      // re-encaja. Solo el botón AUTO (resetFormat) suelta el candado.
+      if (State.formatParams?.[formatName]?.[comp.id]?.titleManual) return;
       const cfg = FORMAT_CONFIG[formatName];
       if (!cfg) return;
       const fmtSize = State.formatSizes[formatName];

@@ -463,19 +463,11 @@ const Layers = (() => {
       reader.onload = ev => {
         const img = new Image();
         img.onload = () => {
-          const fmt = State.activeFormat;
-          const p   = State.formatParams?.[fmt]?.[layer.id] || {};
-          const oldVisualW = (layer.naturalWidth  || 1) * (p.scaleX ?? 100) / 100;
-          const oldVisualH = (layer.naturalHeight || 1) * (p.scaleY ?? 100) / 100;
-          // Escala UNIFORME (misma X e Y) → la nueva imagen NO se deforma: conserva
-          // su proporción y ocupa aproximadamente la misma ÁREA visual que la
-          // sustituida. (Antes se calculaban scaleX/scaleY por separado forzando el
-          // ancho y alto de la vieja, lo que estiraba imágenes de otra proporción.)
-          const oldArea = Math.max(1, oldVisualW * oldVisualH);
-          const newArea = Math.max(1, img.naturalWidth * img.naturalHeight);
-          const uniformScale = Math.sqrt(oldArea / newArea) * 100;
-          const newScaleX  = uniformScale;
-          const newScaleY  = uniformScale;
+          // Reemplazo = SOLO píxeles. La nueva imagen HEREDA tal cual el encaje que
+          // el diseñador ya definió en el proyecto (escala, posición, rotación,
+          // opacidad y demás), en TODOS los formatos. No se recalcula ni se toca
+          // ningún parámetro: los assets que sustituyen (p.ej. jugadores del mismo
+          // tamaño) quedan clavados sin tener que reescalar a mano.
           const mimeType = file.type || 'image/png';
           const proxy = _makeProxy(img, mimeType);
           layer.src           = proxy || ev.target.result;
@@ -486,10 +478,6 @@ const Layers = (() => {
           layer.originalMimeType = mimeType;
           _detectContentBounds(ev.target.result, mimeType, img.naturalWidth, img.naturalHeight, bounds => {
             layer.contentBounds = bounds || null;
-            if (fmt && typeof Formats !== 'undefined') {
-              Formats.setLayerParam(fmt, layer.id, 'scaleX', Math.round(newScaleX * 10) / 10);
-              Formats.setLayerParam(fmt, layer.id, 'scaleY', Math.round(newScaleY * 10) / 10);
-            }
             if (typeof Canvas !== 'undefined') Canvas.render();
             _render();
           });

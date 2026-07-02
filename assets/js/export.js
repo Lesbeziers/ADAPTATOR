@@ -85,14 +85,16 @@ const Export = (() => {
   // (grupo exclusivo), sin dejar tocado el estado del editor (lo restaura al salir).
   // forcedKey = null → usa la visibilidad actual (mockup simple, sin forzar).
   async function _renderMockupVariantCanvas(formatName, forcedKey) {
+    // Export por lotes → forceVisible=true: el marco del mockup se muestra aunque
+    // esté oculto en el editor (a diferencia del botón GENERAR MOCKUP).
     if (!forcedKey || typeof SystemLayers === 'undefined') {
-      return _renderMockupCanvas(formatName);
+      return _renderMockupCanvas(formatName, true);
     }
     const saved = State.systemVisibility[formatName]
       ? { ...State.systemVisibility[formatName] } : undefined;
     try {
       SystemLayers.setVisible(formatName, forcedKey, true); // exclusivo: oculta el hermano
-      return await _renderMockupCanvas(formatName);
+      return await _renderMockupCanvas(formatName, true);
     } finally {
       if (saved) State.systemVisibility[formatName] = saved;
       else       delete State.systemVisibility[formatName];
@@ -487,7 +489,7 @@ const Export = (() => {
   }
 
   // ── MOCKUP: diseño + capas de sistema visibles (sin zona de seguridad) ──
-  async function _renderMockupCanvas(formatName) {
+  async function _renderMockupCanvas(formatName, forceVisible = false) {
     const size = State.formatSizes[formatName];
     if (!size) return null;
 
@@ -495,10 +497,7 @@ const Export = (() => {
     const designCv = await _renderFormatCanvas(formatName);
     if (!designCv) return null;
 
-    // Componer COMPOSICIÓN TÍTULO / COMPOSICIÓN MOVIL TEXTO en sus formatos de fondo
-    // (en el export normal no van; aquí se añaden para reflejar lo que ve el usuario en pantalla).
-    await _drawCompositionOverlay(designCv, formatName);
-
+    // La COMPOSICIÓN DE TÍTULO se dibuja al FINAL (sobre el marco), no aquí.
     const dc = size.displayContext;
     const W = dc ? dc.w : size.w;
     const H = dc ? dc.h : size.h;
@@ -522,7 +521,16 @@ const Export = (() => {
       (typeof SystemLayers !== 'undefined')
         ? SystemLayers.getVisible(formatName, l.key)
         : (l.defaultVisible !== false);
-    const include = (l) => isVisible(l) && l.label !== 'ZONA DE SEGURIDAD';
+    // forceVisible = true (export por lotes): los elementos del mockup (marco,
+    // fondo, pastilla) SIEMPRE se muestran aunque estén ocultos en el editor —
+    // el sentido de un mockup es verlos. Las guías (ZONA DE SEGURIDAD) nunca.
+    // Los grupos EXCLUSIVOS (foco/mockup, nivel1/2) respetan la variante activa
+    // o forzada. forceVisible = false (botón GENERAR MOCKUP): respeta pantalla.
+    const include = (l) => {
+      if (l.label === 'ZONA DE SEGURIDAD') return false;
+      if (forceVisible && !l.exclusive) return true;
+      return isVisible(l);
+    };
 
     // Capas zBase debajo del diseño
     for (const layer of sysLayers.filter(l => l.zBase && include(l))) {
@@ -543,6 +551,12 @@ const Export = (() => {
       await _drawSystemMockupLayer(ctx, layer, W, H, dc);
     }
 
+    // COMPOSICIÓN DE TÍTULO (texto) POR ENCIMA DEL MARCO — se dibuja la ÚLTIMA,
+    // sobre el mockup, para que las letras queden nítidas y no atenuadas por el
+    // marco semitransparente. (Coincide 1:1 con las coords de contenido en los
+    // formatos con composición: MUX4 FONDO, MOVIL MUX FONDO, AMAZON BG.)
+    await _drawCompositionOverlay(ctx, formatName);
+
     // Downsample a resolución nativa
     const finalCv = document.createElement('canvas');
     finalCv.width  = W;
@@ -555,13 +569,14 @@ const Export = (() => {
     return finalCv;
   }
 
-  // Pinta sobre el canvas del diseño (a tamaño nativo del formato) la composición
-  // que normalmente se ve en pantalla pero no se incluye en el export estándar.
+  // Pinta la composición de texto (título) que se ve en pantalla pero no va en el
+  // export estándar. En el mockup se dibuja SOBRE el marco (última capa) para que
+  // el texto quede por encima y nítido. `ctx` es el contexto donde pintar.
   //  - MUX4 FONDO       → COMPOSICIÓN TÍTULO  (posición depende del overlay 'foco')
   //  - MOVIL MUX FONDO  → COMPOSICIÓN MOVIL TEXTO
-  async function _drawCompositionOverlay(designCv, formatName) {
+  //  - AMAZON BG        → AMAZON LOGO
+  async function _drawCompositionOverlay(ctx, formatName) {
     if (formatName !== 'MUX4 FONDO' && formatName !== 'MOVIL MUX FONDO' && formatName !== 'AMAZON BG') return;
-    const ctx = designCv.getContext('2d');
 
     if (formatName === 'MUX4 FONDO') {
       const comp = State.layers.find(l => l.isComposicion);

@@ -140,6 +140,7 @@ const Logos = (() => {
     {name:'BBC Player Claim Negativo',file:'BBC_PLAYER_CLAIM_NEG.svg',category:'PARTNERS'},
     {name:'BBC Player Color Positivo',file:'BBC_PLAYER_Col_Pos.svg',category:'PARTNERS'},
     {name:'BBC Player Negativo',file:'BBC_PLAYER_Neg.svg',category:'PARTNERS'},
+    {name:'DAZN Mundial',file:'DAZN_Mundial.png',category:'PARTNERS'},
     {name:'DAZN Negativo',file:'DAZN_Neg.svg',category:'PARTNERS'},
     {name:'DAZN Positivo',file:'DAZN_Pos.svg',category:'PARTNERS'},
     {name:'Disney+ Claim Color Positivo',file:'DISNEY_PLUS_CLAIM_Col_Pos.svg',category:'PARTNERS'},
