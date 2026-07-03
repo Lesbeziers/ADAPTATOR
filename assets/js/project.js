@@ -168,6 +168,8 @@ const Project = (() => {
     // - marcas, molduras, máscaras — son sistémicas
     // (las capas con _layoutGenerated SÍ se guardan: se restaurarán y la maquetación
     //  no se re-aplica, así que sus posiciones manuales se conservan)
+    const _usedFilenames = new Set();
+    const _contentToFile = new Map(); // content (dataURL) → srcFilename, para deduplicar
     const layers = State.layers
       .filter(l => !l.isComposicion && !l.isComposicionMovil && !l.isComposicionAmazon
                 && !l.isComposicionTextoH && !l.isComposicionTextoV
@@ -191,8 +193,20 @@ const Project = (() => {
 
         // Imágenes importadas (dataURL)
         l.srcType = 'data';
-        // Usar nombre original del archivo
-        l.srcFilename = l.originalFilename || (_sanitizeFilename(l.name) + '.' + _mimeToExt(l.originalMimeType));
+        // Dedupe por CONTENIDO: si varias capas comparten la misma imagen (p.ej.
+        // duplicados), todas apuntan al MISMO archivo → se guarda una sola vez.
+        const _content = l.srcOriginal || l.src;
+        if (_contentToFile.has(_content)) {
+          l.srcFilename = _contentToFile.get(_content);
+        } else {
+          // Nombre ORIGINAL del archivo importado (no el de la capa). Dedupe de
+          // NOMBRE para que dos imágenes DISTINTAS con el mismo nombre no colisionen.
+          l.srcFilename = _uniqueFilename(
+            l.originalFilename || (_sanitizeFilename(l.name) + '.' + _mimeToExt(l.originalMimeType)),
+            _usedFilenames
+          );
+          _contentToFile.set(_content, l.srcFilename);
+        }
 
         if (!includeImages) delete l.src;
 
@@ -236,6 +250,21 @@ const Project = (() => {
     return result;
   }
 
+  // Garantiza un nombre de archivo único dentro del ZIP: el primero conserva su
+  // nombre original tal cual; si otro coincide, se le añade sufijo (_2, _3, …).
+  // Evita que dos capas con el mismo nombre de origen colisionen en imagenes/ y
+  // acaben compartiendo binario al reabrir.
+  function _uniqueFilename(name, used) {
+    if (!used.has(name)) { used.add(name); return name; }
+    const dot  = name.lastIndexOf('.');
+    const base = dot > 0 ? name.slice(0, dot) : name;
+    const ext  = dot > 0 ? name.slice(dot)    : '';
+    let i = 2, candidate;
+    do { candidate = `${base}_${i}${ext}`; i++; } while (used.has(candidate));
+    used.add(candidate);
+    return candidate;
+  }
+
   function _mimeToExt(mime) {
     const map = { 'image/jpeg': 'jpg', 'image/jpg': 'jpg', 'image/png': 'png', 'image/gif': 'gif', 'image/webp': 'webp', 'image/svg+xml': 'svg' };
     return map[mime] || 'png';
@@ -255,8 +284,16 @@ const Project = (() => {
       const imgFolder = zip.folder('imagenes');
       const baseName  = _sanitizeFilename(filename) || _sanitizeFilename(State.projectName) || 'proyecto';
 
+      const _writtenFiles = new Set(); // evita escribir dos veces el mismo binario compartido
       for (const layer of data.layers) {
         if (layer.srcType === 'data' && layer.srcFilename) {
+          // Ya escrito por otra capa con la misma imagen (dedupe por contenido):
+          // no lo volvemos a meter, pero sí limpiamos su dataURL del JSON.
+          if (_writtenFiles.has(layer.srcFilename)) {
+            delete layer.src;
+            delete layer.srcOriginal;
+            continue;
+          }
           // Siempre que exista, guardamos el original (4K). Si solo había proxy
           // — caso raro de proyecto cargado sin original — usamos lo que haya.
           const sourceUrl = layer.srcOriginal || layer.src;
@@ -264,6 +301,7 @@ const Project = (() => {
           try {
             const blob = await (await fetch(sourceUrl)).blob();
             imgFolder.file(layer.srcFilename, blob);
+            _writtenFiles.add(layer.srcFilename);
             // El binario en imagenes/ es la fuente canónica; no duplicamos
             // base64 dentro del JSON (ahorra >20 MB por capa 4K).
             delete layer.src;

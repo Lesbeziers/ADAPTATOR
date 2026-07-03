@@ -470,14 +470,32 @@ const Layers = (() => {
           // tamaño) quedan clavados sin tener que reescalar a mano.
           const mimeType = file.type || 'image/png';
           const proxy = _makeProxy(img, mimeType);
-          layer.src           = proxy || ev.target.result;
-          if (proxy) layer.srcOriginal = ev.target.result;
-          else       delete layer.srcOriginal;
-          layer.naturalWidth  = img.naturalWidth;
-          layer.naturalHeight = img.naturalHeight;
-          layer.originalMimeType = mimeType;
+          const newSrc         = proxy || ev.target.result;
+          const newSrcOriginal = proxy ? ev.target.result : null;
+
+          // Capas destino: la propia MÁS todas las que comparten la MISMA imagen de
+          // origen (típicamente duplicados). Así, reemplazar una sustituye todas y,
+          // al guardar, la imagen se almacena una sola vez (misma content).
+          const oldKey = layer.srcOriginal || layer.src;
+          const targets = State.layers.filter(l =>
+            l === layer || (l.src && !l.isLogo && (l.srcOriginal || l.src) === oldKey)
+          );
+
+          targets.forEach(l => {
+            l.src = newSrc;
+            if (newSrcOriginal) l.srcOriginal = newSrcOriginal;
+            else                delete l.srcOriginal;
+            l.naturalWidth     = img.naturalWidth;
+            l.naturalHeight    = img.naturalHeight;
+            l.originalMimeType = mimeType;
+            // Al guardar, la imagen conserva el nombre del archivo ORIGINAL importado
+            // (no el nombre de la capa). Como el reemplazo mete un archivo nuevo,
+            // actualizamos el nombre original al del que acaba de entrar.
+            l.originalFilename = file.name;
+          });
+
           _detectContentBounds(ev.target.result, mimeType, img.naturalWidth, img.naturalHeight, bounds => {
-            layer.contentBounds = bounds || null;
+            targets.forEach(l => { l.contentBounds = bounds || null; });
             if (typeof Canvas !== 'undefined') Canvas.render();
             _render();
           });
