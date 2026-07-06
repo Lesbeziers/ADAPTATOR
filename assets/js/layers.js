@@ -50,17 +50,30 @@ const Layers = (() => {
   // ── IMPORTAR ──────────────────────────────────────────────
 
   // Lote de importación — dispara AutoLayout al terminar
+  const _IMG_EXT = /\.(png|jpe?g|webp|gif|bmp|avif|tiff?|heic|heif)$/i;
   function _importLayerBatch(files) {
-    const imageFiles = files.filter(f => f.type.startsWith('image/'));
-    if (!imageFiles.length) return;
+    // Aceptar por MIME de imagen O, si el MIME viene vacío (según el origen del
+    // archivo), por extensión de imagen. Así no se descartan assets en silencio.
+    const imageFiles = files.filter(f => (f.type && f.type.startsWith('image/')) || (!f.type && _IMG_EXT.test(f.name)));
+    if (!imageFiles.length) {
+      if (files.length) alert('Ninguno de los archivos seleccionados es una imagen reconocible.');
+      return;
+    }
 
     let pending = imageFiles.length;
     const newLayers = [];
+    const failed    = [];
 
-    const onDone = (layer) => {
+    const onDone = (layer, failedName) => {
       if (layer) newLayers.push(layer);
+      else if (failedName) failed.push(failedName);
       pending--;
       if (pending === 0) {
+        if (failed.length) {
+          alert('No se pudieron importar ' + failed.length + ' archivo(s) porque el navegador no los sabe decodificar ' +
+                '(formatos no soportados, p.ej. TIFF/PSD/EPS):\n\n' + failed.join('\n') +
+                '\n\nEl resto se ha importado con normalidad. Conviértelos a PNG/JPG y vuelve a importarlos.');
+        }
         setTimeout(() => {
           if (typeof AutoLayout === 'undefined') return;
           const rolesEmpty = !State.layerRoles || Object.keys(State.layerRoles).length === 0;
@@ -236,7 +249,20 @@ const Layers = (() => {
           }
         });
       };
+      img.onerror = () => {
+        // El navegador no pudo decodificar el asset (formato no soportado: TIFF,
+        // PSD, EPS, a veces HEIC…). SIN esto, img.onload no se dispara nunca, el
+        // contador `pending` del lote no baja y el modal de roles NO salta — todo
+        // en silencio, sin error en consola. Liberamos el contador saltándonos
+        // este archivo para que la automaquetación arranque con el resto.
+        console.warn('[Import] No se pudo decodificar la imagen (¿formato no soportado, p.ej. TIFF/PSD/EPS?):', file.name);
+        if (onDone) onDone(null, file.name);
+      };
       img.src = e.target.result;
+    };
+    reader.onerror = () => {
+      console.warn('[Import] No se pudo leer el archivo:', file.name);
+      if (onDone) onDone(null, file.name);
     };
     reader.readAsDataURL(file);
   }
