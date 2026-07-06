@@ -511,7 +511,7 @@ const Formats = (() => {
   // Formatos con composición horneada VERTICAL por defecto (los que quedan en vertical)
   const TEXT_VARIANT_V_DEFAULT = [];
   // Formatos que NO reciben texto (sin variante)
-  const TEXT_VARIANT_NONE = ['FANART', 'FANART MÓVIL', 'FANART DEST.', 'FANART MOD N', 'PERFIL',
+  const TEXT_VARIANT_NONE = ['FANART', 'FANART MÓVIL', 'FANART DEST.', 'FANART MOD N', 'MOD N', 'PERFIL',
                              'MUX4 FONDO', 'MOVIL MUX FONDO', 'AMAZON BG', 'TÍTULO FICHA',
                              'MUX4 TXT', 'MOVIL TXT', 'AMAZON LOGO', 'TEXTO HORIZONTAL', 'TEXTO VERTICAL'];
 
@@ -536,6 +536,9 @@ const Formats = (() => {
 
   // Devuelve la variante de un formato: 'H' | 'V' | 'MUX4' | 'MOVIL' | null (override del usuario o default)
   function getTextVariant(fid) {
+    // Formatos "sin texto" (MOD N, FANART, PERFIL…): NUNCA muestran composición de
+    // texto, ignorando cualquier variante que hubiera quedado guardada.
+    if (TEXT_VARIANT_NONE.includes(fid)) return null;
     const v = State.formatTextVariant?.[fid];
     if (TEXT_VARIANT_VALUES.includes(v)) return v;
     return _defaultTextVariant(fid);
