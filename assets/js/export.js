@@ -47,6 +47,25 @@ const Export = (() => {
     'PERFIL':             { suffix: 'PERFIL',                       type: 'png', maxMB: 10    },
     'SONY':               { suffix: 'SONY',                         type: 'png', maxMB: 10    },
     'XIAOMI BANNER':      { suffix: 'XIAOMI_BANNER_MES',            type: 'jpg', maxMB: 10    },
+
+    // ── COMERCIAL (pack web responsive) ───────────────────────
+    // maxMB: 100 = sin límite real por ahora, mismo criterio que CARÁTULA y
+    // CARTEL COM. Si producción fija pesos, se cambian aquí y en state.js.
+    'Mosaico-Horizontal':                 { suffix: 'MOSAICO_HORIZONTAL',                 type: 'jpg', maxMB: 100 },
+    'Mosaico-Vertical':                   { suffix: 'MOSAICO_VERTICAL',                   type: 'jpg', maxMB: 100 },
+    'Modulo-Escritorio':                  { suffix: 'MODULO_ESCRITORIO',                  type: 'jpg', maxMB: 100 },
+    'Modulo-Movil':                       { suffix: 'MODULO_MOVIL',                       type: 'jpg', maxMB: 100 },
+    'Cabecera-Detalle-Escritorio':        { suffix: 'CABECERA_DETALLE_ESCRITORIO',        type: 'jpg', maxMB: 100 },
+    'Cabecera-Detalle-Movil':             { suffix: 'CABECERA_DETALLE_MOVIL',             type: 'jpg', maxMB: 100 },
+    'Carrusel-Vertical':                  { suffix: 'CARRUSEL_VERTICAL',                  type: 'jpg', maxMB: 100 },
+    'Carrusel-Horizontal':                { suffix: 'CARRUSEL_HORIZONTAL',                type: 'jpg', maxMB: 100 },
+    'Cabecera-Slider-Escritorio':         { suffix: 'CABECERA_SLIDER_ESCRITORIO',         type: 'jpg', maxMB: 100 },
+    'Cabecera-Slider-Movil':              { suffix: 'CABECERA_SLIDER_MOVIL',              type: 'jpg', maxMB: 100 },
+    'Cabecera-Slider-TT':                 { suffix: 'CABECERA_SLIDER_TT',                 type: 'jpg', maxMB: 100 },
+    'Cabecera-Slider-Mediano-Escritorio': { suffix: 'CABECERA_SLIDER_MEDIANO_ESCRITORIO', type: 'jpg', maxMB: 100 },
+    'Slider-Mediano-Escritorio':          { suffix: 'SLIDER_MEDIANO_ESCRITORIO',          type: 'jpg', maxMB: 100 },
+    'Cabecera-Slider-Mediano-Movil':      { suffix: 'CABECERA_SLIDER_MEDIANO_MOVIL',      type: 'jpg', maxMB: 100 },
+    'Slider-Mediano-Movil':               { suffix: 'SLIDER_MEDIANO_MOVIL',               type: 'jpg', maxMB: 100 },
   };
 
   // Formatos con capa de sistema 'mockup' real (no zona de seguridad).
@@ -60,6 +79,11 @@ const Export = (() => {
     'AMAZON BG',
     'AD PAUSE',
     'FANART',
+    // COMERCIAL: los 4 que traen MK_ además de su SF_
+    'Cabecera-Detalle-Escritorio',
+    'Cabecera-Detalle-Movil',
+    'Cabecera-Slider-Escritorio',
+    'Cabecera-Slider-Movil',
   ];
 
   function isMockupFormat(formatName) {

@@ -83,8 +83,41 @@ const Formats = (() => {
 
   // ── ETIQUETAS VISIBLES ────────────────────────────────────
   // Nombre que ve el usuario. La clave INTERNA del formato no cambia (evita romper refs).
-  const DISPLAY_LABELS = { 'MOVIL TXT': 'Smartphone TEXT', 'MUX4 TXT': 'MUX4 TEXT' };
+  const DISPLAY_LABELS = {
+    'MOVIL TXT': 'Smartphone TEXT',
+    'MUX4 TXT':  'MUX4 TEXT',
+
+    // ── COMERCIAL ────────────────────────────────────────────
+    // Abreviadas para que quepan en el botón; el nombre completo sale en el
+    // tooltip al pasar el ratón. No hace falta repetir "Comercial": ya lo dice
+    // el desplegable de modalidad.
+    'Mosaico-Horizontal':                 'MOSAIC HOR',
+    'Mosaico-Vertical':                   'MOSAIC VER',
+    'Modulo-Escritorio':                  'MOD ESCRIT.',
+    'Modulo-Movil':                       'MOD MOVIL',
+    'Cabecera-Detalle-Escritorio':        'CAB. DET. ESCRIT.',
+    'Cabecera-Detalle-Movil':             'CAB. DET. MOVIL',
+    'Carrusel-Vertical':                  'CARRUSEL VER.',
+    'Carrusel-Horizontal':                'CARRUSEL HOR.',
+    'Cabecera-Slider-Escritorio':         'CAB. SLID. ESCRIT.',
+    'Cabecera-Slider-Movil':              'CAB. SLID. MOVIL.',
+    'Cabecera-Slider-TT':                 'CAB. SLIDER TT',
+    'Cabecera-Slider-Mediano-Escritorio': 'CAB. SLID. MED. ESCRIT.',
+    'Slider-Mediano-Escritorio':          'SLID. MED. ESCRIT.',
+    'Cabecera-Slider-Mediano-Movil':      'CAB. SLID. MED. MOVIL',
+    'Slider-Mediano-Movil':               'SLID. MED. MOVIL',
+  };
   function displayLabel(name) { return DISPLAY_LABELS[name] || name; }
+
+  // Modalidades con nombres de formato largos: TODOS sus botones van a doble
+  // ancho (2 por fila). Se hace por modalidad y no formato a formato porque
+  // mezclar anchos deja la rejilla descuadrada; así todos los botones miden
+  // igual y las filas quedan alineadas.
+  //
+  // Caben de sobra: medido con la fuente real (Apercu Movistar 10px bold), un
+  // botón ancho deja 141 px útiles y la etiqueta más larga
+  // ("CAB. SLID. MED. ESCRIT.") necesita 117 px.
+  const WIDE_MODALITIES = ['comercial'];
 
   function _renderFormatGrid() {
     const grid = document.getElementById('formats-grid');
@@ -102,8 +135,17 @@ const Formats = (() => {
     modality.formats.forEach(formatName => {
       const btn = document.createElement('button');
       btn.className = 'btn-format';
-      if (WIDE_FORMATS.includes(formatName)) btn.classList.add('btn-format--wide');
-      btn.textContent = displayLabel(formatName);
+      if (WIDE_MODALITIES.includes(modality.id) || WIDE_FORMATS.includes(formatName)) {
+        btn.classList.add('btn-format--wide');
+      }
+      const label = displayLabel(formatName);
+      btn.textContent = label;
+      // Si la etiqueta está abreviada, el nombre completo y el tamaño se ven al
+      // pasar el ratón (tooltip gestionado por ui.js vía [data-tooltip]).
+      if (label !== formatName) {
+        const s = State.formatSizes?.[formatName];
+        btn.dataset.tooltip = formatName + (s ? ' — ' + s.w + '×' + s.h + ' px' : '');
+      }
       btn.dataset.format = formatName;
       if (State.activeFormat === formatName) btn.classList.add('active');
       if (State.formatOk[formatName])        btn.classList.add('done');

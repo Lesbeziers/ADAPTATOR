@@ -92,6 +92,25 @@ const State = {
     'PERFIL':           { w: 425,  h: 479,  maxMB: 10, maskCircle: { cx: 0, cy: 26, r: 195 }, maskRect: { x: 0, y: -110, w: 390, h: 260, r: 0 } },
     'SONY':             { w: 204,  h: 306,  maxMB: 10   },
     'XIAOMI BANNER':    { w: 1280, h: 360,  maxMB: 10   },
+
+    // ── COMERCIAL (pack web responsive) ────────────────────
+    // maxMB: 100 = sin límite real de peso, el mismo criterio que CARÁTULA y
+    // CARTEL COM. Cuando producción fije pesos, se cambia aquí y en export.js.
+    'Mosaico-Horizontal':                 { w: 1000, h: 750,  maxMB: 100 },
+    'Mosaico-Vertical':                   { w: 1000, h: 1580, maxMB: 100 },
+    'Modulo-Escritorio':                  { w: 2800, h: 1575, maxMB: 100 },
+    'Modulo-Movil':                       { w: 1200, h: 1200, maxMB: 100 },
+    'Cabecera-Detalle-Escritorio':        { w: 3840, h: 2160, maxMB: 100 },
+    'Cabecera-Detalle-Movil':             { w: 2160, h: 3840, maxMB: 100 },
+    'Carrusel-Vertical':                  { w: 1200, h: 1800, maxMB: 100 },
+    'Carrusel-Horizontal':                { w: 800,  h: 450,  maxMB: 100 },
+    'Cabecera-Slider-Escritorio':         { w: 3840, h: 2160, maxMB: 100 },
+    'Cabecera-Slider-Movil':              { w: 2160, h: 3840, maxMB: 100 },
+    'Cabecera-Slider-TT':                 { w: 1156, h: 348,  maxMB: 100 },
+    'Cabecera-Slider-Mediano-Escritorio': { w: 3840, h: 1200, maxMB: 100 },
+    'Slider-Mediano-Escritorio':          { w: 3840, h: 1200, maxMB: 100 },
+    'Cabecera-Slider-Mediano-Movil':      { w: 1536, h: 1536, maxMB: 100 },
+    'Slider-Mediano-Movil':               { w: 1536, h: 1536, maxMB: 100 },
   },
 
   // ── MAQUETACIÓN AUTOMÁTICA ───────────────────────────────
@@ -175,6 +194,37 @@ const State = {
     'PERFIL':            [ { key: 'mockup', label: 'ZONA DE SEGURIDAD', src: 'assets/img/checkers/perfil_checker.png' } ],
     'SONY':              [ { key: 'mockup', label: 'ZONA DE SEGURIDAD', src: 'assets/img/checkers/SONY_Checker.png' } ],
     'XIAOMI BANNER':     [],
+
+    // ── COMERCIAL (pack web responsive) ────────────────────
+    // SF_* = zona de seguridad, MK_* = mockup. Los formatos que no tienen
+    // ninguno de los dos van con [] (igual que XIAOMI BANNER).
+    'Mosaico-Horizontal':          [ { key: 'mockup', label: 'ZONA DE SEGURIDAD', src: 'assets/img/checkers/SF_Mosaico_Horizontal.png' } ],
+    'Mosaico-Vertical':            [ { key: 'mockup', label: 'ZONA DE SEGURIDAD', src: 'assets/img/checkers/SF_Mosaico_Vertical.png' } ],
+    'Modulo-Escritorio':           [],
+    'Modulo-Movil':                [],
+    'Cabecera-Detalle-Escritorio': [
+      { key: 'mockup',    label: 'MOCKUP',            src: 'assets/img/checkers/MK_Cabecera_Detalle_Escritorio.png' },
+      { key: 'seguridad', label: 'ZONA DE SEGURIDAD', src: 'assets/img/checkers/SF_Cabecera_Detalle_Escritorio.png' },
+    ],
+    'Cabecera-Detalle-Movil': [
+      { key: 'mockup',    label: 'MOCKUP',            src: 'assets/img/checkers/MK_Cabecera_Detalle_Movil.png' },
+      { key: 'seguridad', label: 'ZONA DE SEGURIDAD', src: 'assets/img/checkers/SF_Cabecera_Detalle_Movil.png' },
+    ],
+    'Carrusel-Vertical':           [],
+    'Carrusel-Horizontal':         [],
+    'Cabecera-Slider-Escritorio': [
+      { key: 'mockup',    label: 'MOCKUP',            src: 'assets/img/checkers/MK_Cabecera_Slider_Escritorio.png' },
+      { key: 'seguridad', label: 'ZONA DE SEGURIDAD', src: 'assets/img/checkers/SF_Cabecera_Slider_Escritorio.png' },
+    ],
+    'Cabecera-Slider-Movil': [
+      { key: 'mockup',    label: 'MOCKUP',            src: 'assets/img/checkers/MK_Cabecera_Slider_Movil.png' },
+      { key: 'seguridad', label: 'ZONA DE SEGURIDAD', src: 'assets/img/checkers/SF_Cabecera_Slider_Movil.png' },
+    ],
+    'Cabecera-Slider-TT':                 [],
+    'Cabecera-Slider-Mediano-Escritorio': [ { key: 'mockup', label: 'ZONA DE SEGURIDAD', src: 'assets/img/checkers/SF_Cabecera_Slider_Mediano_Escritorio.png' } ],
+    'Slider-Mediano-Escritorio':          [ { key: 'mockup', label: 'ZONA DE SEGURIDAD', src: 'assets/img/checkers/SF_Slider_Mediano_Escritorio.png' } ],
+    'Cabecera-Slider-Mediano-Movil':      [ { key: 'mockup', label: 'ZONA DE SEGURIDAD', src: 'assets/img/checkers/SF_Cabecera_Slider_Mediano_Movil.png' } ],
+    'Slider-Mediano-Movil':               [ { key: 'mockup', label: 'ZONA DE SEGURIDAD', src: 'assets/img/checkers/SF_Slider_Mediano_Movil.png' } ],
   },
 
   // ── MODALIDADES Y FORMATOS ─────────────────────────────────
@@ -213,6 +263,20 @@ const State = {
         'DEST. DOBLE 1', 'DEST. DOBLE 1 SIL', 'DEST. DOBLE 2',
         'DEST. DOBLE 2 SIL', 'DEST. DOBLE 4', 'DEST. DOBLE 4 SIL',
         'MOD N', 'FANART MOD N', 'MOD N SIL'
+      ]
+    },
+    {
+      id: 'comercial',
+      label: 'Comercial',
+      formats: [
+        'Mosaico-Horizontal', 'Mosaico-Vertical',
+        'Modulo-Escritorio', 'Modulo-Movil',
+        'Cabecera-Detalle-Escritorio', 'Cabecera-Detalle-Movil',
+        'Carrusel-Vertical', 'Carrusel-Horizontal',
+        'Cabecera-Slider-Escritorio', 'Cabecera-Slider-Movil',
+        'Cabecera-Slider-TT',
+        'Cabecera-Slider-Mediano-Escritorio', 'Slider-Mediano-Escritorio',
+        'Cabecera-Slider-Mediano-Movil', 'Slider-Mediano-Movil'
       ]
     },
     {
