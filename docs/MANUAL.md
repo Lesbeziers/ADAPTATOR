@@ -32,6 +32,9 @@ Una sola maquetación, todos los formatos resueltos. Si lo tocas en uno, se prop
 - **[03 — Importar y organizar capas](03-importar-capas.md)**
   Imágenes, logos oficiales, texto, sólidos, degradados. Roles de capa (sujeto, fondo, fanart, título). Orden Z, bloqueo, enlace.
 
+- **[03b — Importar un PSD](03b-importar-psd.md)**
+  Abrir un PSD o PSB de Photoshop y elegir qué capas importar y con qué rol. Capas de anotación, grupos aplanados, recorte al contenido y límites de tamaño.
+
 ### Componer
 
 - **[04 — Textos y composiciones](04-textos.md)**
@@ -68,6 +71,12 @@ Una sola maquetación, todos los formatos resueltos. Si lo tocas en uno, se prop
 ## ¿Qué es nuevo?
 
 Las versiones recientes han añadido:
+
+**Octubre 2026**
+
+- **Importar PSD y PSB** ([capítulo 03b](03b-importar-psd.md)) — Adaptator lee archivos de Photoshop directamente: abres el PSD, ves su árbol de capas con miniaturas y eliges qué importar y con qué rol. Se acabó exportar capa por capa a PNG antes de empezar. Pensado también para los PSDs de partners (HBO, Apple…), que llegan con las capas en inglés y hay que mapear a los roles de Adaptator.
+- **Un solo botón para importar** — el botón `+` del panel CAPAS acepta ahora imágenes y PSDs, y decide solo el camino: si son imágenes sueltas, la importación de siempre; si es un PSD, el asistente de capas.
+- **Capas de anotación descartadas solas** — las capas de especificaciones, márgenes de seguridad y áreas de reserva que traen las plantillas llegan desmarcadas y atenuadas, en vez de colarse como contenido.
 
 **Julio 2026**
 

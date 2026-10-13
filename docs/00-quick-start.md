@@ -52,6 +52,8 @@ Para esta prueba:
 
 Pulsa **APLICAR**.
 
+> 💡 **Tip** — Ese mismo botón `+` acepta también **archivos PSD de Photoshop**. Si en vez de PNGs sueltos seleccionas un `.psd`, Adaptator abre un asistente para que elijas qué capas del PSD quieres importar y con qué rol, sin tener que exportarlas a mano. Lo tienes en [Importar un PSD](03b-importar-psd.md).
+
 ---
 
 ## 4. La magia: ya está maquetado
