@@ -782,7 +782,13 @@ const AutoLayout = (() => {
   }
 
   // ── MODAL DE ASIGNACIÓN DE ROLES ─────────────────────────
-  function showRoleModal(layers, onConfirm) {
+  // `preRoles` (opcional): { layerId: rol } ya decidido por quien llama. Si
+  // viene, NO se muestra el modal y se continúa directo con esos roles. Lo usa
+  // la importación de PSD, que pregunta el rol en su propio modal (árbol de
+  // capas) y no debe encadenar un segundo modal al confirmar.
+  function showRoleModal(layers, onConfirm, preRoles) {
+    if (preRoles) { onConfirm(preRoles); return; }
+
     // Solo capas de imagen (no texto, sólido, degradado, sistema)
     const imageLayers = layers.filter(l =>
       !['text', 'solid', 'gradient'].includes(l.type) &&
@@ -1587,8 +1593,9 @@ const AutoLayout = (() => {
 
   // ── API PÚBLICA ───────────────────────────────────────────
 
-  // Llamado al importar imágenes por primera vez
-  function onFirstImport(layers) {
+  // Llamado al importar imágenes por primera vez.
+  // `preRoles` (opcional) salta el modal de roles — ver showRoleModal.
+  function onFirstImport(layers, preRoles) {
     if (_rolesAssigned) return;
     showRoleModal(layers, async roles => {
       // Guardar roles en State
@@ -1686,13 +1693,14 @@ const AutoLayout = (() => {
       } else {
         runLayoutLoop();
       }
-    });
+    }, preRoles);
   }
 
   // Importaciones POSTERIORES: muestra el modal de roles SOLO con las imágenes nuevas
   // (roles pre-detectados por nombre; el usuario confirma o cambia). Tras cerrar, aplica
   // roles, regenera composiciones si hay nuevo título, re-maqueta y reordena.
-  function onAdditionalImport(newLayers) {
+  // `preRoles` (opcional) salta el modal de roles — ver showRoleModal.
+  function onAdditionalImport(newLayers, preRoles) {
     if (!newLayers || newLayers.length === 0) return;
     showRoleModal(newLayers, async roles => {
       if (!State.layerRoles) State.layerRoles = {};
@@ -1787,7 +1795,7 @@ const AutoLayout = (() => {
       } else {
         runLayoutLoop();
       }
-    });
+    }, preRoles);
   }
 
   // Reordena State.layers según jerarquía de rol. Índice 0 = arriba (z-index alto).

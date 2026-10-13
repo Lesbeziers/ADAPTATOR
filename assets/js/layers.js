@@ -32,8 +32,8 @@ const Layers = (() => {
     document.getElementById('file-input-layer')
       ?.addEventListener('change', e => {
         const files = [...e.target.files];
-        _importLayerBatch(files);
         e.target.value = '';
+        _routeImport(files);
       });
 
     document.getElementById('btn-dup-layer')
@@ -48,6 +48,53 @@ const Layers = (() => {
   }
 
   // ── IMPORTAR ──────────────────────────────────────────────
+
+  // Un solo botón para todo. Según lo que haya seleccionado el usuario, esto
+  // decide el camino: imágenes sueltas → importación normal; un PSD/PSB → el
+  // asistente de capas de ImportPSD.
+  //
+  // Importante: con accept="image/*" macOS ya dejaba elegir PSDs, así que la
+  // gente los seleccionaba aquí y se topaba con el error de "formato no
+  // soportado". Ahora se enrutan solos.
+  const _PSD_EXT = /\.ps[db]$/i;
+  const _isPsd = f => _PSD_EXT.test(f.name) || f.type === 'image/vnd.adobe.photoshop';
+
+  function _routeImport(files) {
+    if (!files.length) return;
+
+    const psds   = files.filter(_isPsd);
+    const images = files.filter(f => !_isPsd(f));
+
+    // Mezclar los dos caminos no se admite: cada uno termina en su propio paso
+    // de asignación de roles (y el de imágenes puede abrir además el encuadre
+    // focal), así que encadenarlos daría dos modales peleándose. No se importa
+    // nada: el proyecto se queda como estaba.
+    if (psds.length && images.length) {
+      alert('No se pueden importar PSD e imágenes sueltas en la misma operación.\n\n' +
+            'Has seleccionado ' + psds.length + ' PSD y ' + images.length + ' imagen(es). ' +
+            'No se ha importado nada.\n\n' +
+            'Hazlo en dos pasos, con este mismo botón: primero una cosa y luego la otra.');
+      return;
+    }
+
+    if (psds.length > 1) {
+      alert('Los PSD se importan de uno en uno, porque cada uno abre su propio asistente ' +
+            'para elegir qué capas quieres.\n\n' +
+            'Has seleccionado ' + psds.length + '. No se ha importado nada.');
+      return;
+    }
+
+    if (psds.length === 1) {
+      if (typeof ImportPSD === 'undefined' || !ImportPSD.importFile) {
+        alert('No se puede importar PSD: falta el módulo de importación (import-psd.js).');
+        return;
+      }
+      ImportPSD.importFile(psds[0]);
+      return;
+    }
+
+    _importLayerBatch(images);
+  }
 
   // Lote de importación — dispara AutoLayout al terminar
   const _IMG_EXT = /\.(png|jpe?g|webp|gif|bmp|avif|tiff?|heic|heif)$/i;
@@ -70,8 +117,10 @@ const Layers = (() => {
       pending--;
       if (pending === 0) {
         if (failed.length) {
+          // Los PSD/PSB ya no llegan aquí: _routeImport los manda al asistente
+          // de ImportPSD antes de empezar el lote.
           alert('No se pudieron importar ' + failed.length + ' archivo(s) porque el navegador no los sabe decodificar ' +
-                '(formatos no soportados, p.ej. TIFF/PSD/EPS):\n\n' + failed.join('\n') +
+                '(formatos no soportados, p.ej. TIFF/EPS):\n\n' + failed.join('\n') +
                 '\n\nEl resto se ha importado con normalidad. Conviértelos a PNG/JPG y vuelve a importarlos.');
         }
         setTimeout(() => {

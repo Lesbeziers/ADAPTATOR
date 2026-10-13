@@ -54,11 +54,11 @@
           <div class="panel-section-title collapsible" data-target="section-capas-body">Capas <span class="section-chevron"><svg width="12" height="8" viewBox="0 0 12 8" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 1L6 7L11 1" stroke="#f0c020" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span></div>
           <div id="section-capas-body">
             <div class="layers-box">
-              <input type="file" id="file-input-layer" accept="image/*" multiple style="display:none" />
+              <input type="file" id="file-input-layer" accept="image/*,.psd,.psb,image/vnd.adobe.photoshop" multiple style="display:none" />
               <div id="layers-list"></div>
               <div class="layers-header">
                 <div class="layers-header-left">
-                  <button class="btn-layer-action" id="btn-add-layer" data-tooltip="Añadir capa">
+                  <button class="btn-layer-action" id="btn-add-layer" data-tooltip="Añadir capa (imágenes o PSD)">
                     <img class="icon-up"   src="assets/img/mas_up.svg"   alt="+" />
                     <img class="icon-down" src="assets/img/mas_down.svg" alt="+" />
                   </button>
@@ -228,6 +228,9 @@
 <script src="assets/js/layout.js"></script>
 <script src="assets/js/mod-n-editor.js"></script>
 <script src="assets/js/focal-frames.js"></script>
+<!-- assets/js/ag-psd.js NO se carga aquí: import-psd.js lo pide bajo demanda
+     (~830 KB) la primera vez que se abre el modal de importar PSD. -->
+<script src="assets/js/import-psd.js"></script>
 <script src="assets/js/app.js"></script>
 
 <!-- PANELES FLOTANTES -->
