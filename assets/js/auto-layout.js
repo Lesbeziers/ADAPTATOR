@@ -57,24 +57,32 @@ const AutoLayout = (() => {
   //    Los definitivos los fijarán los diseñadores en reunión y se sustituirán
   //    en bloque. No pulirlos ni construir nada que dependa de ellos.
   const BIG_LAYOUT = {
-    // ── DISPOSITIVOS ───────────────────────────────────────
-    '199 PUBLI':       { img: { scale: 45,   x:  -26, y:  462 }, txt: { H: { scale: 41.9, x: -450, y: -12 } } },
-    'AD PAUSE':        { img: { scale: 36,   x:    0, y:  302 }, txt: { H: { scale: 39,   x: -240, y:   0 } } },
-    'APPLE TV':        { img: { scale: 20.4, x:   -4, y:  152 }, txt: { H: { scale: 24.1, x: -175, y: -40 } } },
+    // ── DISPOSITIVOS ───────────────────────────────────── COMPLETA
+    // Los tres sin `txt` (FANART DEST., MUX4 FONDO, MOVIL MUX FONDO) no llevan
+    // texto por diseño: el suyo viaja en otro asset y se edita en la modalidad
+    // TEXTOS. No es que falte medirlos.
+    '199 PUBLI':       { img: { scale: 45,   x:  -26, y:  462 },
+                         txt: { H: { scale: 41.9, x: -450, y: -12 }, V: { scale: 100, x: -426, y: -12 } } },
+    'AD PAUSE':        { img: { scale: 36,   x:    0, y:  302 },
+                         txt: { H: { scale: 39,   x: -240, y:   0 }, V: { scale: 100, x: -269, y:   0 } } },
+    'APPLE TV':        { img: { scale: 20.4, x:   -4, y:  152 },
+                         txt: { H: { scale: 24.1, x: -175, y:   0 }, V: { scale:  73, x: -205, y:   0 } } },
     'FANART DEST.':    { img: { scale: 100,  x: -442, y: 1134 } },
-    'IPLUS PUBLI':     { img: { scale: 25,   x:   94, y:  164 }, txt: { H: { scale: 22.9, x:  -91, y: -87 } } },
-    'MOD DEST 1':      { img: { scale: 36.6, x:   -2, y:  481 }, txt: { H: { scale: 30.4, x: -352, y:   0 } } },
-    'MOD DEST 2':      { img: { scale: 31,   x: -117, y:  392 }, txt: { H: { scale: 19.2, x: -193, y:   0 } } },
-    // El TITLE_V de MOD DEST 3 se midió sobre el título CRUDO de esta campaña
-    // (688×596): en otro proyecto ese % dará otro tamaño. Vale para la demo.
-    // Falta su H, que es la variante por defecto del formato.
-    'MOD DEST 3':      { img: { scale: 35,   x: -168, y:  474 }, txt: { TITLE_V: { scaleX: 23, scaleY: 22, x: -108, y: 0 } } },
+    'IPLUS PUBLI':     { img: { scale: 25,   x:   94, y:  164 },
+                         txt: { H: { scale: 27,   x:  -61, y: -87 }, V: { scale:  78, x:  -53, y: -54 } } },
+    'MOD DEST 1':      { img: { scale: 36.6, x:   -2, y:  481 },
+                         txt: { H: { scale: 30.4, x: -352, y:   0 }, V: { scale:  56, x: -352, y:   0 } } },
+    'MOD DEST 2':      { img: { scale: 31,   x: -117, y:  392 },
+                         txt: { H: { scale: 19.2, x: -170, y:   0 }, V: { scaleX: 54, scaleY: 55, x: -193, y: 0 } } },
+    'MOD DEST 3':      { img: { scale: 35,   x: -168, y:  474 },
+                         txt: { H: { scale: 12,   x: -108, y:   0 }, V: { scale:  46, x: -108, y:   0 } } },
     'MUX4 FONDO':      { img: { scale: 50,   x:  -20, y:  350 } },
     'MOVIL MUX FONDO': { img: { scale: 84,   x: -655, y:  253 } },
-    // WEB PUBLI solo tiene medida la VERTICAL, que no es su variante por
-    // defecto: hasta que llegue su H, con la horizontal usará encaje automático.
-    'WEB PUBLI':       { img: { scale: 55,   x: -205, y:  698 }, txt: { V: { scale: 75,   x: -250, y: -23 } } },
-    'WOW PUBLI':       { img: { scale: 43,   x: -113, y:  590 }, txt: { H: { scale: 26.5, x: -225, y:   0 } } },
+    'WEB PUBLI':       { img: { scale: 55,   x: -205, y:  698 },
+                         txt: { H: { scale: 28,   x: -222, y: -23 }, V: { scaleX: 78, scaleY: 77, x: -250, y: -23 } } },
+    'WOW PUBLI':       { img: { scale: 43,   x: -113, y:  590 },
+                         txt: { H: { scale: 26.5, x: -199, y:   0 }, V: { scale:  60, x: -275, y:   0 } } },
+    // TÍTULO FICHA no entra: es maestro de texto, no muestra la imagen BIG.
 
     // ── TEXTOS ─────────────────────────────────────────────
     // Los 4 maestros ocultan las capas normales: la imagen BIG no se dibuja ahí.
