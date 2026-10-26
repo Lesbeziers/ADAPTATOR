@@ -667,6 +667,14 @@ const Formats = (() => {
       if (comp && typeof AutoLayout !== 'undefined' && AutoLayout.repositionTextComp) {
         AutoLayout.repositionTextComp(comp, variant);
       }
+      // En modo IMAGEN BIG el título tiene colocación medida POR VARIANTE, así
+      // que al cambiarla hay que re-estamparla. Va después de
+      // repositionTextComp a propósito: esa acaba de re-encajar el título y
+      // pisaría los valores buenos. Si esa variante no está medida, no hace
+      // nada y queda el encaje automático.
+      if (isBigMode() && typeof AutoLayout !== 'undefined' && AutoLayout.applyBigTitle) {
+        AutoLayout.applyBigTitle(fid);
+      }
       if (typeof Canvas !== 'undefined') Canvas.render();
       if (typeof Layers !== 'undefined') Layers.render();
     };
