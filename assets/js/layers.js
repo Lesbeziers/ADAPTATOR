@@ -203,19 +203,37 @@ const Layers = (() => {
     img.src = src;
   }
 
-  // Genera una versión bajada de la imagen (max 1920x1080) para usar durante la
-  // edición. El original se guarda aparte (layer.srcOriginal) y solo se vuelve
-  // a tocar al exportar. Devuelve null si la imagen ya cabe en el target.
+  // Genera una versión bajada de la imagen para usar durante la EDICIÓN. El
+  // original se guarda aparte (layer.srcOriginal) y solo se vuelve a tocar al
+  // exportar, así que esto no afecta ni a la calidad final ni al peso de los
+  // proyectos guardados (el proxy se regenera al abrir, ver project.js).
+  // Devuelve null si la imagen ya es lo bastante pequeña.
   // Conserva PNG para mantener transparencia; el resto va a JPEG 0.9.
-  const PROXY_MAX_W = 1920;
-  const PROXY_MAX_H = 1080;
+  //
+  // ── POR QUÉ EL LÍMITE ES POR LADO Y NO POR CAJA ──────────────────────────
+  // Antes el tope era una caja de 1920×1080, aplicada por el lado más
+  // restrictivo. Eso castigaba a las imágenes CUADRADAS y VERTICALES: un
+  // máster de 4500×4500 quedaba en 1080×1080 porque mandaba la altura.
+  //
+  // ── DE DÓNDE SALE EL 3200 ────────────────────────────────────────────────
+  // Medido en la app, no estimado. El lienzo de edición se dibuja como <img>
+  // escalado por CSS, y en una pantalla retina (DPR 2) llega a ocupar hasta
+  // ~2764 px FÍSICOS de ancho (el peor caso medido es TÍTULO FICHA; CARÁTULA H
+  // y CARTEL COM. H van a 2514). Con el tope viejo el <img> solo aportaba 1080
+  // y el navegador lo estiraba: de ahí que se viera borroso al maquetar.
+  // 3200 cubre ese peor caso con margen para monitores mayores y para ampliar
+  // la imagen dentro del formato. Si algún día se queda corto, subir este
+  // número es inocuo: no toca los archivos guardados ni la exportación.
+  const PROXY_MAX_SIDE = 3200;
   function _makeProxy(img, mimeType) {
     const nw = img.naturalWidth;
     const nh = img.naturalHeight;
     if (!nw || !nh) return null;
-    if (nw <= PROXY_MAX_W && nh <= PROXY_MAX_H) return null;
 
-    const scale = Math.min(PROXY_MAX_W / nw, PROXY_MAX_H / nh);
+    const longest = Math.max(nw, nh);
+    if (longest <= PROXY_MAX_SIDE) return null;
+
+    const scale = PROXY_MAX_SIDE / longest;
     const pw = Math.max(1, Math.round(nw * scale));
     const ph = Math.max(1, Math.round(nh * scale));
 
