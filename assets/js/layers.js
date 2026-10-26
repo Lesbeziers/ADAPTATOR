@@ -466,6 +466,9 @@ const Layers = (() => {
       _render();
       if (typeof Canvas !== 'undefined') Canvas.render();
       if (typeof UI !== 'undefined') UI.updateSliders();
+      // Si lo borrado era la capa IMAGEN BIG, el modo BIG se apaga y los
+      // formatos ocultos (SIL, PERFIL, MOD N) deben reaparecer en la rejilla.
+      if (typeof Formats !== 'undefined' && Formats.refreshGrid) Formats.refreshGrid();
     });
   }
 

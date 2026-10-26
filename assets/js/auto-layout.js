@@ -1692,6 +1692,10 @@ const AutoLayout = (() => {
 
         if (typeof Canvas !== 'undefined') Canvas.render();
         if (typeof Layers !== 'undefined') Layers.render();
+        // La rejilla de formatos puede cambiar: al entrar una IMAGEN BIG se
+        // ocultan los formatos que no se pueden producir con ella (SIL,
+        // PERFIL, MOD N). Ver Formats.isBigMode().
+        if (typeof Formats !== 'undefined' && Formats.refreshGrid) Formats.refreshGrid();
       };
 
       // Encuadre focal: si hay EXACTAMENTE un sujeto, abrir el encuadre por
@@ -1793,6 +1797,10 @@ const AutoLayout = (() => {
 
         if (typeof Canvas !== 'undefined') Canvas.render();
         if (typeof Layers !== 'undefined') Layers.render();
+        // La rejilla de formatos puede cambiar: al entrar una IMAGEN BIG se
+        // ocultan los formatos que no se pueden producir con ella (SIL,
+        // PERFIL, MOD N). Ver Formats.isBigMode().
+        if (typeof Formats !== 'undefined' && Formats.refreshGrid) Formats.refreshGrid();
       };
 
       // Encuadre focal solo si llega un SUJETO NUEVO sin frames (no reabrir al

@@ -119,6 +119,42 @@ const Formats = (() => {
   // ("CAB. SLID. MED. ESCRIT.") necesita 117 px.
   const WIDE_MODALITIES = ['comercial'];
 
+  // ── MODO IMAGEN BIG ───────────────────────────────────────
+  // Hay formatos que NO se pueden producir a partir de una creatividad plana,
+  // así que desaparecen de la rejilla mientras haya una capa IMAGEN BIG:
+  //
+  //  · Los SIL: su gracia es que el sujeto se salga del marco, y aquí no hay
+  //    sujeto que recortar. Se detectan por GEOMETRÍA, no por nombre, con la
+  //    misma regla que ya usan export.js, canvas.js y ver-todas.js: maskRect
+  //    sin maskCircle. Por eso PERFIL no cae por esta vía (lleva maskCircle, y
+  //    de hecho un recorte circular sí saldría de una imagen plana); se excluye
+  //    aparte, por el motivo de abajo.
+  //
+  //  · PERFIL y MOD N: maquetación ad-hoc que exige un sujeto recortado
+  //    (`layers.find(l => roles[l.id]==='subject'); if (!subject) return;`), y
+  //    cuya gracia —autocentrar la cara, o duplicar el sujeto y desenfocarlo de
+  //    fondo— no tiene sentido sobre una creatividad ya resuelta.
+  //
+  // No hace falta filtrar además la exportación: solo se marca OK el formato
+  // ACTIVO, y solo puede activarse un formato presente en esta rejilla.
+  const BIG_HIDDEN_FORMATS = ['PERFIL', 'MOD N'];
+
+  function _isSilFormat(fid) {
+    const s = State.formatSizes?.[fid];
+    return !!(s && s.maskRect && !s.maskCircle);
+  }
+
+  // Se mira sobre las CAPAS vivas y no sobre State.layerRoles: así, al borrar
+  // la capa BIG, los formatos reaparecen solos (layerRoles puede conservar
+  // entradas de capas ya eliminadas).
+  function isBigMode() {
+    return (State.layers || []).some(l => State.layerRoles?.[l.id] === 'imagen_big');
+  }
+
+  function _hiddenInBigMode(fid) {
+    return _isSilFormat(fid) || BIG_HIDDEN_FORMATS.includes(fid);
+  }
+
   function _renderFormatGrid() {
     const grid = document.getElementById('formats-grid');
     if (!grid) return;
@@ -132,7 +168,19 @@ const Formats = (() => {
     // Los 4 maestros de texto se muestran anchos (2 por fila → rejilla 2×2 en "Textos")
     const WIDE_FORMATS = ['TEXTO HORIZONTAL', 'TEXTO VERTICAL', 'MUX4 TXT', 'MOVIL TXT'];
 
-    modality.formats.forEach(formatName => {
+    const bigMode  = isBigMode();
+    const visibles = modality.formats.filter(f => !(bigMode && _hiddenInBigMode(f)));
+
+    // Si el formato activo acaba de desaparecer (estabas en un SIL y se importa
+    // una IMAGEN BIG), saltamos al primero que quede. Se difiere porque
+    // setActiveFormat() vuelve a pintar esta rejilla y entraríamos en recursión.
+    if (State.activeFormat && visibles.length &&
+        !visibles.includes(State.activeFormat) &&
+        modality.formats.includes(State.activeFormat)) {
+      setTimeout(() => setActiveFormat(visibles[0]), 0);
+    }
+
+    visibles.forEach(formatName => {
       const btn = document.createElement('button');
       btn.className = 'btn-format';
       if (WIDE_MODALITIES.includes(modality.id) || WIDE_FORMATS.includes(formatName)) {
@@ -841,6 +889,7 @@ const Formats = (() => {
   }
 
   return { init, setActiveFormat, toggleOk, getLayerParams, setLayerParam, resolveVisual, isVisualExclusive, setVisualExclusive, linkLayers, unlinkLayer, refreshGrid: _renderFormatGrid, getTextVariant, setTextVariant, getTextVariantOptions, displayLabel, getTextPair, propagateTextAttributes, isFanartFormat, fanartRoleVisibility, syncMaskAcrossFormats, recomputeMaskForFormat,
+    isBigMode,
     getActiveTitleForFormat, isActiveTitleForFormat,
     getGuides, hasGuides, areGuidesVisible, areGuidesLocked, isSnapEnabled,
     addGuide, moveGuide, deleteGuide, toggleGuidesVisible, toggleGuidesLocked, toggleSnap };
