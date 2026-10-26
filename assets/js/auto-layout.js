@@ -20,6 +20,115 @@ const AutoLayout = (() => {
     title_v:    ['TITULO_V', 'TITLE_V', 'TITULO_VERTICAL'],
   };
 
+  // ══════════════════════════════════════════════════════════
+  // COLOCACIÓN FIJA DEL MODO IMAGEN BIG
+  // ══════════════════════════════════════════════════════════
+  //
+  // Tabla viva: una línea por formato, agrupada por modalidad. La rellena el
+  // diseñador midiendo a mano en la app (caja de coordenadas, Ctrl+Shift+C) y
+  // pasando los valores. Cambiar un formato es tocar UNA línea; una tanda
+  // entera se pega de golpe.
+  //
+  //   img → la capa con rol IMAGEN BIG
+  //   txt → el título que ese formato tenga activo (composición horneada o
+  //         título crudo, según la variante del lapicero)
+  //
+  // Un formato AUSENTE no es un error: cae al encaje automático de siempre. Por
+  // eso añadir formatos nuevos a la herramienta no obliga a medir nada.
+  //
+  // scale es un PORCENTAJE DEL TAMAÑO NATURAL de la capa, y x/y son
+  // desplazamientos EN PÍXELES DESDE EL CENTRO del formato (no desde la
+  // esquina). Si una capa cambia de tamaño natural, su línea deja de valer.
+  //
+  // ⚠️ VALORES PROVISIONALES (medidos el 2026-10-20 para la demo del viernes).
+  //    Los definitivos los fijarán los diseñadores en reunión y se sustituirán
+  //    en bloque. No pulirlos ni construir nada que dependa de ellos.
+  const BIG_LAYOUT = {
+    // ── DISPOSITIVOS ───────────────────────────────────────
+    '199 PUBLI':       { img: { scale: 45,   x:  -26, y:  462 }, txt: { scale: 41.9, x: -450, y: -12 } },
+    'AD PAUSE':        { img: { scale: 36,   x:    0, y:  302 }, txt: { scale: 39,   x: -240, y:   0 } },
+    'APPLE TV':        { img: { scale: 20.4, x:   -4, y:  152 }, txt: { scale: 24.1, x: -175, y: -40 } },
+    'FANART DEST.':    { img: { scale: 100,  x: -442, y: 1134 } },
+    'IPLUS PUBLI':     { img: { scale: 25,   x:   94, y:  164 }, txt: { scale: 22.9, x:  -91, y: -87 } },
+    'MOD DEST 1':      { img: { scale: 36.6, x:   -2, y:  481 }, txt: { scale: 30.4, x: -352, y:   0 } },
+    'MOD DEST 2':      { img: { scale: 31,   x: -117, y:  392 }, txt: { scale: 19.2, x: -193, y:   0 } },
+    // El título de MOD DEST 3 se midió sobre el título CRUDO de esta campaña
+    // (688×596), no sobre una composición: en otro proyecto ese % dará otro
+    // tamaño. Vale para la demo; re-medir con la composición al consolidar.
+    'MOD DEST 3':      { img: { scale: 35,   x: -168, y:  474 }, txt: { scaleX: 23, scaleY: 22, x: -108, y: 0 } },
+    'MUX4 FONDO':      { img: { scale: 50,   x:  -20, y:  350 } },
+    'MOVIL MUX FONDO': { img: { scale: 84,   x: -655, y:  253 } },
+    // WEB PUBLI lleva a propósito la composición VERTICAL (el resto usa la
+    // horizontal): experimento pedido por el usuario para ver qué da.
+    'WEB PUBLI':       { img: { scale: 55,   x: -205, y:  698 }, txt: { scale: 75,   x: -250, y: -23 } },
+    'WOW PUBLI':       { img: { scale: 43,   x: -113, y:  590 }, txt: { scale: 26.5, x: -225, y:   0 } },
+
+    // ── TEXTOS ─────────────────────────────────────────────
+    // Los 4 maestros ocultan las capas normales: la imagen BIG no se dibuja ahí.
+
+    // ── GRÁFICA OFICIAL ────────────────────────────────────
+    // pendiente de medir
+
+    // ── MÓDULOS DOBLES + N ─────────────────────────────────
+    // pendiente de medir
+
+    // ── COMERCIAL ──────────────────────────────────────────
+    // pendiente de medir
+
+    // ── OTROS ──────────────────────────────────────────────
+    // pendiente de medir
+  };
+
+  // Traduce una entrada de la tabla a los params que entiende el motor.
+  function _bigParams(v) {
+    const p = { x: v.x ?? 0, y: v.y ?? 0 };
+    if (v.scale  != null) { p.scaleX = v.scale; p.scaleY = v.scale; }
+    if (v.scaleX != null) p.scaleX = v.scaleX;
+    if (v.scaleY != null) p.scaleY = v.scaleY;
+    return p;
+  }
+
+  // Resuelve qué capa de título está REALMENTE activa en un formato. No sirve
+  // Formats.getActiveTitleForFormat(): esa devuelve siempre el título crudo, y
+  // la mayoría de formatos muestran la COMPOSICIÓN horneada. Quien manda es la
+  // variante del lapicero, que apunta a un flag de capa distinto en cada caso.
+  function _tituloActivo(formatName) {
+    if (typeof Formats === 'undefined' || !Formats.getTextVariant) return null;
+    const variant = Formats.getTextVariant(formatName);
+    if (!variant) return null;
+    const opts = Formats.getTextVariantOptions ? Formats.getTextVariantOptions() : [];
+    const opt  = opts.find(o => o.value === variant);
+    return opt ? (State.layers.find(l => l[opt.flag]) || null) : null;
+  }
+
+  // Estampa la colocación fija. Se ejecuta DESPUÉS de la maquetación normal, a
+  // modo de override: así un formato sin entrada —o con img pero sin txt—
+  // conserva el encaje automático y nunca queda nada sin colocar.
+  function _applyBigLayout(formatName, layers) {
+    const entry = BIG_LAYOUT[formatName];
+    if (!entry) return;
+
+    if (entry.img) {
+      const big = (layers || []).find(l => State.layerRoles?.[l.id] === 'imagen_big');
+      if (big) _setParams(formatName, big.id, _bigParams(entry.img));
+    }
+
+    if (entry.txt) {
+      const t = _tituloActivo(formatName);
+      if (t) {
+        // Se marca `titleManual` junto con los valores, y no es un adorno: sin
+        // él, repositionTextComp() —que corre DESPUÉS de toda la maquetación y
+        // vuelve a encajar el título en TODOS los formatos de esa variante—
+        // pisaba la colocación medida. Ese flag es justo el candado que esa
+        // función respeta, y semánticamente encaja: estos valores los colocó el
+        // diseñador a mano, solo que una vez y para siempre.
+        // El botón AUTO del formato suelta el candado, y al re-maquetar se
+        // vuelve a estampar desde la tabla.
+        _setParams(formatName, t.id, Object.assign(_bigParams(entry.txt), { titleManual: true }));
+      }
+    }
+  }
+
   // ── CONFIGURACIÓN DE ZONAS POR FORMATO ───────────────────
   // textZone:    zona donde se coloca el TÍTULO (proporcional 0-1)
   // focusZone:   zona donde se ancla el SUJETO (proporcional 0-1)
@@ -1054,6 +1163,12 @@ const AutoLayout = (() => {
         }
       }
     });
+
+    // MODO IMAGEN BIG: la colocación fija se estampa AL FINAL, pisando lo que
+    // acaba de calcular el encaje automático. Hacerlo así (override y no
+    // sustitución) garantiza que un formato sin valores medidos —o con imagen
+    // pero sin título— siga quedando colocado de forma razonable.
+    _applyBigLayout(formatName, layers);
   }
 
   function _applyBackground(formatName, layer, W, H, mirrored) {
