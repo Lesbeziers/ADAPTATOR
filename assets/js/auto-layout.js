@@ -5,7 +5,12 @@
 const AutoLayout = (() => {
 
   // ── PALABRAS CLAVE PARA DETECCIÓN DE ROL ─────────────────
+  // OJO con el orden: detectRole() devuelve la PRIMERA coincidencia, así que lo
+  // más específico va arriba. '_BIG' es una convención explícita acordada con
+  // producción (el asset llega ya nombrado así), por eso gana incluso ante
+  // nombres tipo "FONDO_BIG" o "FANART_BIG".
   const ROLE_KEYWORDS = {
+    imagen_big: ['_BIG'],     // creatividad completa, ya resuelta en Photoshop
     fanart:     ['FANART'],   // prioridad: si el nombre lleva FANART, gana sobre el resto
     background: ['FONDO', 'BACKGROUND', 'BG_'],
     subject:    ['MUJER', 'HOMBRE', 'PERSONA', 'SUBJECT', 'FIGURA',
@@ -834,6 +839,7 @@ const AutoLayout = (() => {
 
     // Filas de capas
     const roleOptions = [
+      { value: 'imagen_big', label: 'IMAGEN BIG' },
       { value: 'background', label: 'FONDO' },
       { value: 'subject',    label: 'IMAGEN' },
       { value: 'title_h',    label: 'TÍTULO HORIZONTAL' },
@@ -989,9 +995,13 @@ const AutoLayout = (() => {
       const role = roles[layer.id];
       if (!role) return;
       if (role === 'fanart') return; // el fanart se coloca aparte (y solo en formatos FANART)
-      if (useFanart && (role === 'background' || role === 'subject')) return; // tapados por el fanart
+      if (useFanart && (role === 'background' || role === 'subject' || role === 'imagen_big')) return; // tapados por el fanart
 
-      if (role === 'background') {
+      // IMAGEN BIG se coloca POR AHORA igual que un fondo (encaje cover-fit).
+      // Es el punto de partida mientras no exista la tabla de valores fijos por
+      // formato (fase 4), que lo sobrescribirá donde haya medición. Sin esto el
+      // rol caería por todas las ramas y la imagen se quedaría sin colocar.
+      if (role === 'background' || role === 'imagen_big') {
         _applyBackground(formatName, layer, W, H, mirrored);
         // Enmascarar automáticamente si el formato lo requiere
         if (cfg.autoMaskBackground) {
@@ -1818,7 +1828,10 @@ const AutoLayout = (() => {
       if (l.isTitleLayer)            { title.push(l);  return; }
       const role = State.layerRoles?.[l.id];
       if (role === 'fanart')         { fanart.push(l); return; }
-      if (role === 'background')     { bg.push(l);     return; }
+      // IMAGEN BIG va al grupo de fondos: es la creatividad completa, así que
+      // debe quedar DEBAJO de todo lo que se le añada encima (títulos, logos…).
+      if (role === 'background' ||
+          role === 'imagen_big')     { bg.push(l);     return; }
       // 'subject', sin rol o cualquier otro → grupo "imágenes"
       subjects.push(l);
     });

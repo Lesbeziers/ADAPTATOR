@@ -52,6 +52,7 @@ const ImportPSD = (() => {
   // añaden con el módulo Logos, no como rol de maquetación.
   const ROLE_OPTIONS = [
     { value: '',           label: 'NINGUNO' },
+    { value: 'imagen_big', label: 'IMAGEN BIG' },
     { value: 'background', label: 'FONDO' },
     { value: 'subject',    label: 'IMAGEN' },
     { value: 'title_h',    label: 'TÍTULO HORIZONTAL' },
