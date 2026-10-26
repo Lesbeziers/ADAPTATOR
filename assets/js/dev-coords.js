@@ -40,7 +40,11 @@ const DevCoords = (() => {
     s.id = 'dev-coords-styles';
     s.textContent = `
       #dev-coords {
-        position: fixed; top: 64px; right: 18px; z-index: 99800;
+        /* Por encima de TODO. La app tiene overlays a 99990 (velo del
+           siluetado, inset:0), 99998, 99999 (el encuadre focal, a pantalla
+           completa) y 999999 (menú de variante). A 99800 la caja quedaba
+           tapada justo cuando más falta hace: al terminar de importar. */
+        position: fixed; top: 64px; right: 18px; z-index: 2000000;
         width: 212px; background: #141414; border: 1px solid #3a3a3a;
         border-radius: 5px; box-shadow: 0 10px 30px rgba(0,0,0,.6);
         font-family: var(--font, sans-serif); color: #ccc; user-select: none;
@@ -155,6 +159,10 @@ const DevCoords = (() => {
 
   function _refresh() {
     if (!_box) return;
+    // Autocuración: si algo saca la caja del DOM (un modal que limpia, un
+    // re-render), se vuelve a enganchar en el siguiente sondeo en vez de
+    // desaparecer para siempre.
+    if (!_box.isConnected) document.body.appendChild(_box);
     const body = _box.querySelector('#dev-coords-body');
     const d = _read();
 
