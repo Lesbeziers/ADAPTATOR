@@ -215,16 +215,29 @@ const Layers = (() => {
   // restrictivo. Eso castigaba a las imágenes CUADRADAS y VERTICALES: un
   // máster de 4500×4500 quedaba en 1080×1080 porque mandaba la altura.
   //
-  // ── DE DÓNDE SALE EL 3200 ────────────────────────────────────────────────
-  // Medido en la app, no estimado. El lienzo de edición se dibuja como <img>
-  // escalado por CSS, y en una pantalla retina (DPR 2) llega a ocupar hasta
-  // ~2764 px FÍSICOS de ancho (el peor caso medido es TÍTULO FICHA; CARÁTULA H
-  // y CARTEL COM. H van a 2514). Con el tope viejo el <img> solo aportaba 1080
-  // y el navegador lo estiraba: de ahí que se viera borroso al maquetar.
-  // 3200 cubre ese peor caso con margen para monitores mayores y para ampliar
-  // la imagen dentro del formato. Si algún día se queda corto, subir este
-  // número es inocuo: no toca los archivos guardados ni la exportación.
-  const PROXY_MAX_SIDE = 3200;
+  // ── DE DÓNDE SALE EL 5000 ────────────────────────────────────────────────
+  // Medido en la app, no estimado. Primero se puso 3200, calculado a partir de
+  // lo que ocupa el LIENZO en pantalla (hasta ~2764 px físicos en retina). Ese
+  // criterio estaba MAL: daba por hecho que la imagen nunca es más grande que
+  // su marco, y casi siempre lo es — un fondo que cubre o un sujeto ampliado
+  // desbordan el formato por definición, se dibujan enteros y luego se
+  // recortan, así que lo que manda no es el tamaño del lienzo sino el de la
+  // imagen ya escalada.
+  //
+  // Caso real que lo destapó: fondo de 6340×2160 al 50% en 199 PUBLI. Ocupa
+  // 4564 px físicos en pantalla, y el proxy de 3200 se estiraba ×1.43: se veía
+  // "crispy" pese a estar reducido al 50%, porque ese 50% es del ORIGINAL, no
+  // del proxy.
+  //
+  // 5000 cubre ese caso con margen y deja limpio el trabajo normal (escalas del
+  // 30-70%). Ojo: NINGÚN tope fijo aguanta cualquier ampliación — ese mismo
+  // fondo al 100% pediría 9128 px, más que el propio original. A partir de ahí
+  // el límite es el asset, no el proxy.
+  //
+  // Coste: ~34 MB de memoria por capa grande en vez de 14. No se usa el
+  // original directamente (máxima calidad) porque un PSD con 20 capas grandes
+  // se comería la memoria.
+  const PROXY_MAX_SIDE = 5000;
   function _makeProxy(img, mimeType) {
     const nw = img.naturalWidth;
     const nh = img.naturalHeight;
