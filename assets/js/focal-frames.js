@@ -14,15 +14,22 @@
 const FocalFrames = (() => {
 
   // ── BANDAS ────────────────────────────────────────────────
-  // Orden de pestañas en la UI. SQUARE no existe como banda editable: su único
-  // formato (PERFIL) se trabaja aparte, así que cae a fallback genérico.
-  const BANDS = ['VERTICAL', '16:9', 'PANO', 'ULTRA'];
+  // Orden de pestañas en la UI, de más vertical a más apaisado.
+  //
+  // CUADRADO se añadió al llegar la modalidad COMERCIAL. Antes no existía, y
+  // con razón: el único formato que rozaba el 1:1 era PERFIL, que va por otro
+  // camino (se excluye por maskCircle). Comercial trajo tres cuadrados de
+  // verdad —Modulo-Movil 1200×1200 y los dos Slider-Mediano-Movil 1536×1536—
+  // que sin esta banda caían a fallback genérico y se quedaban sin el encuadre
+  // que el diseñador había definido.
+  const BANDS = ['VERTICAL', 'CUADRADO', '16:9', 'PANO', 'ULTRA'];
 
   // Proporción de referencia (w/h) del marco que el usuario encuadra por banda.
   // Es el AR representativo de la banda; cada formato concreto re-deriva su
   // colocación por cover-fit, así que un AR de formato algo distinto se absorbe.
   const BAND_REP_AR = {
     'VERTICAL': 9 / 16,   // 0.5625
+    'CUADRADO': 1,        // 1.0
     '16:9':     16 / 9,   // 1.7778
     'PANO':     3 / 1,    // 3.0
     'ULTRA':    5 / 1,    // 5.0
@@ -31,6 +38,7 @@ const FocalFrames = (() => {
   // Etiqueta visible por banda
   const BAND_LABEL = {
     'VERTICAL': 'VERTICAL · 9:16',
+    'CUADRADO': 'CUADRADO · 1:1',
     '16:9':     'HORIZONTAL · 16:9',
     'PANO':     'PANORÁMICO · 3:1',
     'ULTRA':    'TIRA ULTRA · 5:1',
@@ -42,8 +50,8 @@ const FocalFrames = (() => {
   // ── CLASIFICACIÓN: FORMATO → BANDA ────────────────────────
   // Usa la proporción del área VISIBLE real (maskRect / safeArea /
   // displayContext.contentW-H), no el lienzo bruto. Devuelve null cuando el
-  // formato no entra en ninguna banda editable (square / PERFIL) → el motor
-  // hace fallback a la colocación genérica.
+  // formato no entra en ninguna banda editable (PERFIL, por su máscara
+  // circular) → el motor hace fallback a la colocación genérica.
   function bandForFormat(fid) {
     const s = State.formatSizes?.[fid];
     if (!s) return null;
@@ -66,7 +74,8 @@ const FocalFrames = (() => {
 
     const ar = w / h;
     if (ar < 0.85) return 'VERTICAL';
-    if (ar < 1.2)  return null;                     // square → fallback genérico
+    if (ar < 1.2)  return 'CUADRADO';               // Modulo-Movil, Slider-Mediano-Movil…
+                                                    // (PERFIL ya salió antes por maskCircle)
     if (ar < 2.2)  return '16:9';
     if (ar < 3.9)  return 'PANO';
     return 'ULTRA';
