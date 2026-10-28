@@ -119,16 +119,74 @@ const FocalFrames = (() => {
     return { x: rx, y: ry, w: rw, h: rh };
   }
 
-  // Rect focal → params del marco fantasma (cover: el rect llena el marco).
-  // Inverso de paramsToRect; usado para sembrar el viewport con un rect guardado.
-  function rectToParams(nw, nh, FW, FH, fr) {
-    const sCover = Math.max(FW / (nw * fr.w), FH / (nh * fr.h));
-    const s = sCover * 100;
-    const drawW = nw * sCover;
-    const drawH = nh * sCover;
-    const x = drawW / 2 - (fr.x + fr.w / 2) * drawW;
-    const y = drawH / 2 - (fr.y + fr.h / 2) * drawH;
-    return { x: Math.round(x), y: Math.round(y), scaleX: Math.round(s * 10) / 10, scaleY: Math.round(s * 10) / 10, rotation: 0 };
+  // Coloca un eje al encajar: devuelve el offset respecto al centro del marco.
+  //
+  // Al encajar sobra sitio, y de qué lado va la holgura lo dice el propio rect: si
+  // toca un borde de la imagen y el otro no, es que la imagen se acababa por ahí y
+  // la holgura estaba de ese lado. Respetando el borde en contacto en vez de
+  // centrar, se recupera el descentrado EXACTO. Tocando los dos bordes (imagen
+  // completa) o ninguno (corte interior), centrar es lo correcto.
+  function _ejeOffset(nat, s, r0, rLen, F) {
+    const draw = nat * s;
+    const ini = r0 * draw, fin = (r0 + rLen) * draw;
+    const tocaIni = r0 <= 0.001, tocaFin = r0 + rLen >= 0.999;
+    const bordeIni = (tocaFin && !tocaIni) ? -ini                      // holgura al final
+                   : (tocaIni && !tocaFin) ? F - fin                   // holgura al principio
+                   :                         F / 2 - (ini + fin) / 2;  // centrado
+    return bordeIni + draw / 2 - F / 2;
+  }
+
+  // Params de ARRANQUE del marco fantasma: encaja el rect focal DENTRO del marco.
+  //
+  // Antes se sembraba en COVER (el rect llena el marco) y en la primera visita el
+  // rect es la imagen entera, así que cubrir disparaba la escala: en ULTRA
+  // (4500x900) una vertical 3000x4000 entraba al 150% y solo se veía una tira del
+  // centro, obligando a alejarse a mano antes de poder encuadrar. En CONTAIN la
+  // imagen se ajusta por el lado que lo necesite —el lateral o el alto— y se ve
+  // ENTERA, que es desde donde se encuadra cómodo.
+  //
+  // CONTAIN no es solo más cómodo, es más correcto. `paramsToRect` RECORTA el rect
+  // a los bordes de la imagen, y ese recorte pierde información. Si no recortó
+  // nada, los dos ejes devuelven exactamente la escala original (FW/rectW == FH/rectH
+  // == s), con lo que min y max coinciden y CONTAIN reconstruye igual que COVER. Si
+  // recortó un eje, ese eje da una razón MAYOR, así que min se queda con el eje
+  // bueno y recupera la escala exacta — mientras que max se quedaba con el malo.
+  //
+  // Por eso esto arregla además una ida y vuelta que estaba latente: al dejar la
+  // imagen más pequeña que el marco, el rect se guardaba tocando el borde y COVER
+  // la reabría ampliada (60% -> 135%). Antes casi no se daba, porque sembrar en
+  // COVER dejaba la imagen cubriendo siempre; con CONTAIN pasa a ser el caso normal.
+  //
+  // Qué SÍ importa conservar: cuando se recorta un eje de verdad (subir la imagen
+  // para cortar el 4% de arriba), el rect guarda ese 0.044 -> 1 y hay que devolverlo
+  // igual. De eso se encarga `_ejeOffset` leyendo qué borde de la imagen toca el
+  // rect; sin él, al cambiar de banda y volver el recorte se desplazaba solo
+  // (0.044 -> 0.022), es decir, la herramienta cambiaba la parte visible sin que
+  // nadie tocara nada.
+  //
+  // Qué NO importa: dónde se deja la imagen dentro del marco cuando es más pequeña
+  // que él (a la izquierda, centrada o a la derecha). Este paso solo responde a QUÉ
+  // PARTE de la imagen se ve; la colocación en la pieza la decide la `FORMAT_CONFIG`
+  // de cada formato. Si la imagen no llega a los lados, en ese eje se ve toda y el
+  // rect graba w:1 — la posición no se guarda porque no significa nada.
+  function _seedParams(nw, nh, FW, FH, fr) {
+    // Rect degenerado (ancho o alto 0): no debería llegar —paramsToRect nunca graba
+    // por debajo de 0.01 y `open` rechaza capas sin medidas—, pero si llega de un
+    // proyecto viejo o tocado a mano se cae a la imagen entera, en vez de dividir
+    // por cero y colocar la capa en cualquier parte.
+    if (!(nw * fr.w > 0) || !(nh * fr.h > 0)) fr = { x: 0, y: 0, w: 1, h: 1 };
+
+    const sFit = Math.min(FW / (nw * fr.w), FH / (nh * fr.h));
+    // Truncar, NO redondear: al alza la imagen sobresale del marco y confirmar
+    // sin tocar nada dejaría un recorte de un pelo (506 de marco contra 507
+    // dibujados = rect 0.998 en vez de 1). El epsilon protege los valores
+    // exactos de la coma flotante (1.2 llega como 1.1999...; sin él, 120% -> 119.9%).
+    const s = Math.floor(sFit * 1000 + 1e-6) / 10;
+    return {
+      x: Math.round(_ejeOffset(nw, s / 100, fr.x, fr.w, FW)),
+      y: Math.round(_ejeOffset(nh, s / 100, fr.y, fr.h, FH)),
+      scaleX: s, scaleY: s, rotation: 0,
+    };
   }
 
   // Tamaño en px del marco fantasma para una banda
@@ -167,7 +225,7 @@ const FocalFrames = (() => {
     State.activeFormat = SYNTH;
 
     const rect = getFrame(_layerId, band) || { x: 0, y: 0, w: 1, h: 1 };
-    const p = rectToParams(nw, nh, fs.w, fs.h, rect);
+    const p = _seedParams(nw, nh, fs.w, fs.h, rect);
     if (!State.formatParams[SYNTH]) State.formatParams[SYNTH] = {};
     State.formatParams[SYNTH][_layerId] = { ...p };
 
@@ -392,7 +450,7 @@ const FocalFrames = (() => {
   return {
     BANDS, BAND_REP_AR, BAND_LABEL, FRAME_H,
     bandForFormat, getFrame, hasAnyFrame, setFrame,
-    paramsToRect, rectToParams, frameSize,
+    paramsToRect, frameSize,
     open, close, setBand, isActive,
   };
 })();
