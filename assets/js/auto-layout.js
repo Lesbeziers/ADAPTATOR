@@ -1052,7 +1052,11 @@ const AutoLayout = (() => {
       scaleModeDefault: 'crop',
     },
     'Cabecera-Detalle-Escritorio': {                           // 3840x2160 ar 1.78
-      focusZone:   { x: 0.000, y: 0.000, w: 1.000, h: 1.000 },
+      // El diseñador marcó una GUÍA VERTICAL en x=2650: la imagen va centrada
+      // en ella. 2650/3840 = 0,690, así que la zona se hace simétrica respecto
+      // a ese centro (0,380 + 0,620/2 = 0,690). Encaja con la pieza: el texto
+      // ocupa la izquierda y el sujeto se va a la derecha.
+      focusZone:   { x: 0.380, y: 0.000, w: 0.620, h: 1.000 },
       anchorPoint: { x: 0.50,  y: 0.22  },
       crop: { fill: 1.50, anchorFraction: 0.25 },
       fit:  { fill: 1.00, anchorFraction: 0.30 },
