@@ -41,13 +41,6 @@ const TEXT_BLOCK_FORMATS = [
   'COM TITULO H',
 ];
 
-// La PASTILLA FREEMIUM viajaba pegada a TEXT_BLOCK_FORMATS, pero es otra cosa:
-// "qué formatos llevan la pastilla de precio". COM TITULO H tiene maquetación de
-// bloque y autotexto como los demás, pero NO lleva pastilla (ni zona de
-// seguridad): es un asset de título suelto que la web compone por su cuenta.
-const FREEMIUM_PASTILLA_FORMATS = [
-  'MUX4 TXT', 'MOVIL TXT', 'TEXTO HORIZONTAL', 'TEXTO VERTICAL',
-];
 
 const State = {
 

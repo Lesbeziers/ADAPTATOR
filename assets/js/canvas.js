@@ -1312,9 +1312,14 @@ const Canvas = (() => {
           isVisible = fmtVisible !== undefined ? fmtVisible : true;
         }
       } else if (layer.isComposicionTextoH || layer.isComposicionTextoV) {
-        // Enrutado por variante: cada formato muestra su composición H o V
+        // Enrutado por variante: cada formato muestra su composición H o V.
+        // Salvo donde haya TÍTULO FIJO: ahí el título es la composición clavada
+        // y la H/V no se pinta, o saldrían los dos.
         const _v = (typeof Formats !== 'undefined' && Formats.getTextVariant) ? Formats.getTextVariant(State.activeFormat) : null;
-        isVisible = (layer.isComposicionTextoH && _v === 'H') || (layer.isComposicionTextoV && _v === 'V');
+        const _hayFijo = !!(typeof AutoLayout !== 'undefined' && AutoLayout.tituloFijoConfig
+                            && AutoLayout.tituloFijoConfig(State.activeFormat));
+        isVisible = !_hayFijo &&
+          ((layer.isComposicionTextoH && _v === 'H') || (layer.isComposicionTextoV && _v === 'V'));
         if (isVisible) {
           const fmtVisible = State.formatParams?.[State.activeFormat]?.[layer.id]?.visible;
           isVisible = fmtVisible !== undefined ? fmtVisible : true;

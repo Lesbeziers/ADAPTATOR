@@ -1159,7 +1159,7 @@ const Layers = (() => {
     }
 
     // Pastilla Freemium — solo si la versión activa es Freemium
-    if (FREEMIUM_PASTILLA_FORMATS.includes(State.activeFormat) &&
+    if (TEXT_BLOCK_FORMATS.includes(State.activeFormat) &&
         typeof Layout !== 'undefined' && Layout.isFreemium() &&
         typeof Pastilla !== 'undefined') {
       list.appendChild(_buildPastillaFreemiumItem());
@@ -1529,6 +1529,12 @@ const Layers = (() => {
                  && AutoLayout.tituloFijoConfig(State.activeFormat);
       if (!_fijo) return null;
     }
+    // Donde hay TÍTULO FIJO, la composición H/V normal NO se pinta: el título
+    // de ese formato es la composición clavada, y si no saldrían los dos.
+    if (typeof AutoLayout !== 'undefined' && AutoLayout.tituloFijoConfig
+        && AutoLayout.tituloFijoConfig(State.activeFormat)
+        && (layer.isComposicionTextoH || layer.isComposicionTextoV)) return null;
+
     // Composiciones H/V: solo se listan en los formatos cuya variante coincide
     if (layer.isComposicionTextoH || layer.isComposicionTextoV) {
       const _v = (typeof Formats !== 'undefined' && Formats.getTextVariant) ? Formats.getTextVariant(State.activeFormat) : null;

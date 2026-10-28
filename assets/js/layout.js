@@ -656,7 +656,7 @@ const Layout = (() => {
               // Escalar para ocupar todo el alto de la zona verde
               let scale = ((zoneH - MARGIN * 2) / imgH) * 100;
               // Si con ese alto se sale del ancho seguro, reducir por ancho
-              const SAFE_MARGIN_X = fid === 'MUX4 TXT' ? 40 : fid === 'TEXTO HORIZONTAL' ? 98 : fid === 'TEXTO VERTICAL' ? 36 : 48;
+              const SAFE_MARGIN_X = fid === 'MUX4 TXT' ? 40 : fid === 'TEXTO HORIZONTAL' ? 98 : fid === 'TEXTO VERTICAL' ? 36 : fid === 'COM TITULO H' ? 0 : 48;
               const safeW = fmtW - SAFE_MARGIN_X * 2;
               if (imgW * (scale / 100) > safeW) {
                 scale = (safeW / imgW) * 100;
@@ -673,7 +673,7 @@ const Layout = (() => {
 
             } else {
               // Cálculo dinámico estándar (cine, deportes)
-              const SAFE_MARGIN_X = fid === 'MUX4 TXT' ? 40 : fid === 'TEXTO HORIZONTAL' ? 98 : fid === 'TEXTO VERTICAL' ? 36 : 48;
+              const SAFE_MARGIN_X = fid === 'MUX4 TXT' ? 40 : fid === 'TEXTO HORIZONTAL' ? 98 : fid === 'TEXTO VERTICAL' ? 36 : fid === 'COM TITULO H' ? 0 : 48;
               const safeW = fmtW - SAFE_MARGIN_X * 2;
               let scale = (safeW / imgW) * 100;
               let scaledH = imgH * (scale / 100);
@@ -691,8 +691,13 @@ const Layout = (() => {
                 const minY = Math.min(...yValues);
                 const maxY = Math.max(...yValues);
                 const TEXT_H = 40;
-                yTop    = minY - TEXT_H / 2 + MARGIN;
-                yBottom = maxY + TEXT_H / 2 - MARGIN;
+                // El hueco va ENTRE los textos, no abarcándolos: se parte del
+                // borde INTERIOR de cada uno. Antes se sumaba medio texto hacia
+                // fuera, así que el título podía pisarlos. No se notaba porque
+                // en MUX4/TEXTO H manda el ancho y el título sale pequeño; en un
+                // lienzo muy apaisado el ancho deja de mandar y el fallo aflora.
+                yTop    = minY + TEXT_H / 2 + MARGIN;
+                yBottom = maxY - TEXT_H / 2 - MARGIN;
               }
 
               const availableH = Math.abs(yBottom - yTop);
