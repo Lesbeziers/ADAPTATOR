@@ -161,6 +161,7 @@ const Project = (() => {
       isComposicionAmazon:  _saveComp('isComposicionAmazon'),
       isComposicionTextoH:  _saveComp('isComposicionTextoH'),
       isComposicionTextoV:  _saveComp('isComposicionTextoV'),
+      isComposicionComTituloH: _saveComp('isComposicionComTituloH'),
     };
 
     // Preservar orden exacto, excluir TODAS las capas auto-generadas:
@@ -619,6 +620,7 @@ const Project = (() => {
       isComposicionAmazon: 'COMPOSICIÓN AMAZON LOGO',
       isComposicionTextoH: 'COMPOSICIÓN TEXTO HORIZONTAL',
       isComposicionTextoV: 'COMPOSICIÓN TEXTO VERTICAL',
+      isComposicionComTituloH: 'COMPOSICIÓN COM TITULO H',
     };
     (data.layers || []).forEach(l => {
       Object.entries(_OFFICIAL_COMP_NAMES).forEach(([flag, officialName]) => {
@@ -713,6 +715,7 @@ const Project = (() => {
       { flag: 'isComposicionAmazon', name: 'COMPOSICIÓN AMAZON LOGO' },
       { flag: 'isComposicionTextoH', name: 'COMPOSICIÓN TEXTO HORIZONTAL' },
       { flag: 'isComposicionTextoV', name: 'COMPOSICIÓN TEXTO VERTICAL' },
+      { flag: 'isComposicionComTituloH', name: 'COMPOSICIÓN COM TITULO H' },
     ];
     const _preInsertComp = (flag, name, id, params) => {
       if (!id) return;
@@ -757,6 +760,7 @@ const Project = (() => {
       if (typeof ComposicionTexto  !== 'undefined') {
         tasks.push(ComposicionTexto.generate('TEXTO HORIZONTAL', 'COMPOSICIÓN TEXTO HORIZONTAL', 'isComposicionTextoH'));
         tasks.push(ComposicionTexto.generate('TEXTO VERTICAL',   'COMPOSICIÓN TEXTO VERTICAL',   'isComposicionTextoV'));
+        tasks.push(ComposicionTexto.generate('COM TITULO H',    'COMPOSICIÓN COM TITULO H',    'isComposicionComTituloH'));
       }
       Promise.all(tasks).then(() => {
         if (typeof Canvas !== 'undefined') Canvas.render();

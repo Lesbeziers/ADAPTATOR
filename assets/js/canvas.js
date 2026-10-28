@@ -1301,6 +1301,16 @@ const Canvas = (() => {
         } else {
           isVisible = false;
         }
+      // COMPOSICIÓN COM TITULO H: no se enruta por variante como las H/V. Solo se
+      // ve donde esté declarada en TITULO_FIJO (auto-layout.js), y ahí va clavada.
+      // En cualquier otro formato no pinta nada.
+      } else if (layer.isComposicionComTituloH) {
+        isVisible = !!(typeof AutoLayout !== 'undefined' && AutoLayout.tituloFijoConfig
+                       && AutoLayout.tituloFijoConfig(State.activeFormat));
+        if (isVisible) {
+          const fmtVisible = State.formatParams?.[State.activeFormat]?.[layer.id]?.visible;
+          isVisible = fmtVisible !== undefined ? fmtVisible : true;
+        }
       } else if (layer.isComposicionTextoH || layer.isComposicionTextoV) {
         // Enrutado por variante: cada formato muestra su composición H o V
         const _v = (typeof Formats !== 'undefined' && Formats.getTextVariant) ? Formats.getTextVariant(State.activeFormat) : null;

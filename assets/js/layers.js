@@ -355,6 +355,11 @@ const Layers = (() => {
     'TÍTULO FICHA':     { x: 0.003, y: 0.020, w: 0.993, h: 0.950, alignLeft: true },
     'TEXTO HORIZONTAL': { x: 0.051, y: 0.132, w: 0.897, h: 0.739 }, // misma zona que MUX4 TXT escalada
     'TEXTO VERTICAL':   { x: 0.014, y: 0.043, w: 0.971, h: 0.912 }, // misma zona que MOVIL TXT escalada
+    // COM TITULO H — el bloque va pegado ABAJO y a la IZQUIERDA, a ras del
+    // borde, sin margen. Replica la capa inteligente de la plantilla, donde el
+    // título se apoya en la base del documento. Por eso la zona es el lienzo
+    // entero: el aire que sobre queda arriba y a la derecha, no repartido.
+    'COM TITULO H':     { x: 0, y: 0, w: 1, h: 1, alignLeft: true, alignBottom: true },
   };
 
   function _applyTitleFitZones(layer) {
@@ -392,7 +397,11 @@ const Layers = (() => {
         const cx = fitZone.alignLeft
           ? zoneX + drawW / 2
           : zoneX + (zoneW - drawW) / 2 + drawW / 2;
-        const cy = zoneY + (zoneH - drawH) / 2 + drawH / 2;
+        // alignBottom: el borde inferior del contenido se apoya en la base de
+        // la zona; centrado por defecto en los demás formatos
+        const cy = fitZone.alignBottom
+          ? zoneY + zoneH - drawH / 2
+          : zoneY + (zoneH - drawH) / 2 + drawH / 2;
         State.formatParams[fid][layer.id] = {
           scaleX:   Math.round(scale * 1000) / 10,
           scaleY:   Math.round(scale * 1000) / 10,
@@ -1150,7 +1159,7 @@ const Layers = (() => {
     }
 
     // Pastilla Freemium — solo si la versión activa es Freemium
-    if (TEXT_BLOCK_FORMATS.includes(State.activeFormat) &&
+    if (FREEMIUM_PASTILLA_FORMATS.includes(State.activeFormat) &&
         typeof Layout !== 'undefined' && Layout.isFreemium() &&
         typeof Pastilla !== 'undefined') {
       list.appendChild(_buildPastillaFreemiumItem());
@@ -1514,6 +1523,12 @@ const Layers = (() => {
     // Rol FANART: el fanart solo en formatos FANART; subject/fondo ocultos en FANART si hay fanart
     if (typeof Formats !== 'undefined' && Formats.fanartRoleVisibility &&
         Formats.fanartRoleVisibility(layer.id, State.activeFormat) === false) return null;
+    // COMPOSICIÓN COM TITULO H: se lista donde esté declarada como título fijo.
+    if (layer.isComposicionComTituloH) {
+      const _fijo = typeof AutoLayout !== 'undefined' && AutoLayout.tituloFijoConfig
+                 && AutoLayout.tituloFijoConfig(State.activeFormat);
+      if (!_fijo) return null;
+    }
     // Composiciones H/V: solo se listan en los formatos cuya variante coincide
     if (layer.isComposicionTextoH || layer.isComposicionTextoV) {
       const _v = (typeof Formats !== 'undefined' && Formats.getTextVariant) ? Formats.getTextVariant(State.activeFormat) : null;

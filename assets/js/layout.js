@@ -436,6 +436,7 @@ const Layout = (() => {
   const DERIVE = {
     'TEXTO HORIZONTAL': { from: 'MUX4 TXT',  fx: 1920 / 784,  fy: 779 / 318 },
     'TEXTO VERTICAL':   { from: 'MOVIL TXT', fx: 1080 / 1440, fy: 350 / 466 },
+    'COM TITULO H':     { from: 'MUX4 TXT',  fx: 1706 / 784,  fy: 514 / 318 },
   };
   // Fallback: si el preset no define MOVIL TXT, derivamos desde MUX4 TXT
   const MOVIL_FALLBACK_FROM_MUX4 = { from: 'MUX4 TXT', fx: 1440 / 784, fy: 466 / 318 };

@@ -23,6 +23,7 @@ const Export = (() => {
     'MOVIL MUX FONDO':    { suffix: 'SMARTPHONE_MUX_FONDO_PUBLI',   type: 'jpg', maxMB: 1.5   },
     'MOVIL TXT':          { suffix: 'SMARTPHONE_MUX_TXT_PUBLI',     type: 'png', maxMB: 0.6   },
     'TEXTO HORIZONTAL':   { suffix: 'TEXTO_HORIZONTAL',             type: 'png', maxMB: 0.6   },
+    'COM TITULO H':       { suffix: 'COM_TITULO_H',                 type: 'png', maxMB: 0.6   },
     'TEXTO VERTICAL':     { suffix: 'TEXTO_VERTICAL',               type: 'png', maxMB: 0.6   },
     'WEB PUBLI':          { suffix: 'WEB_PUBLI',                    type: 'jpg', maxMB: 1     },
     'WOW PUBLI':          { suffix: 'WOW_PUBLI',                    type: 'jpg', maxMB: 0.25  },
@@ -437,7 +438,7 @@ const Export = (() => {
     // Pastilla Freemium (solo en MUX4 TXT y MOVIL TXT cuando versión es Freemium)
     if (typeof Layout !== 'undefined' && Layout.isFreemium(formatName) &&
         typeof Pastilla !== 'undefined' &&
-        TEXT_BLOCK_FORMATS.includes(formatName)) {
+        FREEMIUM_PASTILLA_FORMATS.includes(formatName)) {
       const src = Pastilla.getFreemiumSrc();
       const _presetPF = typeof Layout !== 'undefined' && Layout.getPreset && Layout.getPreset(formatName);
       const posY = (_presetPF && _presetPF['PASTILLA_FREEMIUM']?.y) ?? 95;
@@ -606,7 +607,7 @@ const Export = (() => {
     // editor en _applyParams (canvas.js) — por eso no pueden descuadrarse.
     if (typeof AutoLayout !== 'undefined' && AutoLayout.tituloFijoConfig
         && AutoLayout.tituloFijoConfig(formatName)) {
-      const comp = State.layers.find(l => l.isComposicionTextoH);
+      const comp = State.layers.find(l => l.isComposicionComTituloH);
       if (comp && comp.src) {
         const r = AutoLayout.tituloFijoRect(formatName, comp);
         if (r) await _drawImage(ctx, comp.src, r.left, r.top, r.drawW, r.drawH);
@@ -863,6 +864,12 @@ const Export = (() => {
     // _drawCompositionOverlay (mismo criterio que AMAZON BG).
     if (typeof AutoLayout !== 'undefined' && AutoLayout.esTituloFijo
         && AutoLayout.esTituloFijo(formatName, layer)) return false;
+
+    // COMPOSICIÓN COM TITULO H: no se enruta por variante como las H/V. Solo se
+    // ve donde esté declarada en TITULO_FIJO (auto-layout.js), y ahí va clavada.
+    // En cualquier otro formato no pinta nada. Tampoco se exporta: la web
+    // compone el texto por su cuenta (sí sale en el MOCKUP).
+    if (layer.isComposicionComTituloH) return false;
 
     // Composiciones H/V: según la variante del formato
     if (layer.isComposicionTextoH || layer.isComposicionTextoV) {

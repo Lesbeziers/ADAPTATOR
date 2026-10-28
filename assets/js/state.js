@@ -17,6 +17,7 @@
 // aquí: este formato no es la pieza, es el taller.
 const TEXT_HOST_FORMATS = [
   'MUX4 TXT', 'MOVIL TXT', 'TEXTO HORIZONTAL', 'TEXTO VERTICAL',
+  'COM TITULO H',
   'AMAZON LOGO', 'TÍTULO FICHA',
 ];
 
@@ -25,6 +26,7 @@ const TEXT_HOST_FORMATS = [
 // queda fuera: no se le añaden capas de estas.
 const TEXT_TOOL_FORMATS = [
   'MUX4 TXT', 'MOVIL TXT', 'TEXTO HORIZONTAL', 'TEXTO VERTICAL',
+  'COM TITULO H',
   'AMAZON LOGO',
 ];
 
@@ -35,6 +37,15 @@ const TEXT_TOOL_FORMATS = [
 // esto: el orden de los botones en `modalities.textos` (que es UI) y el
 // `DERIVE` de layout.js (que es el origen del preset de cada uno).
 const TEXT_BLOCK_FORMATS = [
+  'MUX4 TXT', 'MOVIL TXT', 'TEXTO HORIZONTAL', 'TEXTO VERTICAL',
+  'COM TITULO H',
+];
+
+// La PASTILLA FREEMIUM viajaba pegada a TEXT_BLOCK_FORMATS, pero es otra cosa:
+// "qué formatos llevan la pastilla de precio". COM TITULO H tiene maquetación de
+// bloque y autotexto como los demás, pero NO lleva pastilla (ni zona de
+// seguridad): es un asset de título suelto que la web compone por su cuenta.
+const FREEMIUM_PASTILLA_FORMATS = [
   'MUX4 TXT', 'MOVIL TXT', 'TEXTO HORIZONTAL', 'TEXTO VERTICAL',
 ];
 
@@ -105,6 +116,11 @@ const State = {
     'MOVIL TXT':        { w: 1440, h: 466,  maxMB: 0.6  },
     'TEXTO HORIZONTAL': { w: 1920, h: 779,  maxMB: 0.6  },
     'TEXTO VERTICAL':   { w: 1080, h: 350,  maxMB: 0.6  },
+    // COM TITULO H — asset de título del pack COMERCIAL. El tamaño NO es
+    // arbitrario: es el de la capa inteligente de la plantilla de Photoshop
+    // (2312x696) colocada a su escala real (73,79 %). Ver TITULO_FIJO en
+    // auto-layout.js para la reconstrucción completa.
+    'COM TITULO H':     { w: 1706, h: 514,  maxMB: 0.6  },
     'WEB PUBLI':        { w: 2000, h: 465,  maxMB: 1, displayContext: { w: 1920, h: 850, contentX: 26, contentY: 115, contentW: 1868, contentH: 434 } },
     'WOW PUBLI':        { w: 1280, h: 258,  maxMB: 0.25 },
     'TÍTULO FICHA':     { w: 2172, h: 300,  maxMB: 0.6  },
@@ -192,6 +208,8 @@ const State = {
     ],
     'MOVIL TXT':         [ { key: 'mockup', label: 'ZONA DE SEGURIDAD', src: 'assets/img/checkers/SMARTPHONE_MUX_TXT_Check.png' } ],
     'TEXTO HORIZONTAL':  [ { key: 'mockup', label: 'ZONA DE SEGURIDAD', src: 'assets/img/checkers/MUX4_TXT_Check.png' } ],
+    // COM TITULO H va SIN zona de seguridad: el asset es el título a pelo.
+    'COM TITULO H':      [],
     'TEXTO VERTICAL':    [ { key: 'mockup', label: 'ZONA DE SEGURIDAD', src: 'assets/img/checkers/SMARTPHONE_MUX_TXT_Check.png' } ],
     'WEB PUBLI': [
       { key: 'mockup',   label: 'MOCKUP',             src: 'assets/img/checkers/WEB_MOCKUP.png' },
@@ -270,7 +288,8 @@ const State = {
       id: 'textos',
       label: 'Textos',
       formats: [
-        'TEXTO HORIZONTAL', 'TEXTO VERTICAL', 'MUX4 TXT', 'MOVIL TXT'
+        'TEXTO HORIZONTAL', 'TEXTO VERTICAL', 'MUX4 TXT', 'MOVIL TXT',
+        'COM TITULO H'
       ]
     },
     {

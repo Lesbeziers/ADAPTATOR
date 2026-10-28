@@ -2445,9 +2445,10 @@ const AutoLayout = (() => {
   // Contrastado por tres vías que coinciden en 0,2 px: Properties de Photoshop,
   // medición del PNG de referencia y la derivación desde la escala.
   const TITULO_FIJO = {
-    // PENDIENTE: apunta a la composición "Com. Titulo H" (1706x514), que aún no
-    // existe. Hasta que exista, este formato no pinta título de referencia.
-    // 'Cabecera-Detalle-Escritorio': { x: 176, y: 324 },
+    // x=180 (y no 175,6) porque el bloque va a ras del borde izquierdo de la
+    // composición: los 2300 del título contra los 2312 del documento no son
+    // 6 px a cada lado, son 12 px de sobra a la derecha que ese título no usa.
+    'Cabecera-Detalle-Escritorio': { x: 180, y: 324 },
   };
 
   function tituloFijoConfig(formatName) {
@@ -2456,7 +2457,7 @@ const AutoLayout = (() => {
 
   // ¿Esta capa es el título de referencia fijo de este formato?
   function esTituloFijo(formatName, layer) {
-    return !!(layer && layer.isComposicionTextoH && TITULO_FIJO[formatName]);
+    return !!(layer && layer.isComposicionComTituloH && TITULO_FIJO[formatName]);
   }
 
   // Rectángulo donde dibujar la CAJA de la capa, en coordenadas del formato.

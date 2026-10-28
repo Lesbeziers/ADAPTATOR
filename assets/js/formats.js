@@ -86,6 +86,7 @@ const Formats = (() => {
   const DISPLAY_LABELS = {
     'MOVIL TXT': 'Smartphone TEXT',
     'MUX4 TXT':  'MUX4 TEXT',
+    'COM TITULO H': 'COM. TÍTULO H',
 
     // ── COMERCIAL ────────────────────────────────────────────
     // Abreviadas para que quepan en el botón; el nombre completo sale en el
@@ -252,6 +253,16 @@ const Formats = (() => {
         ComposicionTexto.generate('TEXTO HORIZONTAL', 'COMPOSICIÓN TEXTO HORIZONTAL', 'isComposicionTextoH').then(() => {
           const comp = State.layers.find(l => l.isComposicionTextoH);
           if (comp && typeof AutoLayout !== 'undefined') AutoLayout.repositionTextComp(comp, 'H');
+          if (typeof Canvas !== 'undefined') Canvas.render();
+        });
+      }
+    }
+
+    // Al salir de COM TITULO H, generar su composición. NO se reposiciona: va
+    // clavada por TITULO_FIJO en los formatos que la usan (ver auto-layout.js).
+    if (previous === 'COM TITULO H' && formatName !== 'COM TITULO H') {
+      if (typeof ComposicionTexto !== 'undefined') {
+        ComposicionTexto.generate('COM TITULO H', 'COMPOSICIÓN COM TITULO H', 'isComposicionComTituloH').then(() => {
           if (typeof Canvas !== 'undefined') Canvas.render();
         });
       }
@@ -717,7 +728,7 @@ const Formats = (() => {
   // Devuelve la capa de título (isTitleLayerH/V) que debe mostrarse en este formato.
   // Con fallback: si solo hay uno, se usa para los dos.
   function _formatNeedsTitleOrient(fid) {
-    if (fid === 'MUX4 TXT' || fid === 'TEXTO HORIZONTAL' || fid === 'AMAZON LOGO' || fid === 'TÍTULO FICHA') return 'H';
+    if (fid === 'MUX4 TXT' || fid === 'TEXTO HORIZONTAL' || fid === 'COM TITULO H' || fid === 'AMAZON LOGO' || fid === 'TÍTULO FICHA') return 'H';
     if (fid === 'MOVIL TXT' || fid === 'TEXTO VERTICAL') return 'V';
     // Receptores no-maestros: según la variante de texto que tengan
     const v = getTextVariant(fid);

@@ -197,7 +197,7 @@ var VerTodas = (() => {
     // Pastilla Freemium (solo en MUX4 TXT y MOVIL TXT cuando versión es Freemium)
     if (typeof Layout !== 'undefined' && Layout.isFreemium(formatName) &&
         typeof Pastilla !== 'undefined' &&
-        TEXT_BLOCK_FORMATS.includes(formatName)) {
+        FREEMIUM_PASTILLA_FORMATS.includes(formatName)) {
       const src = Pastilla.getFreemiumSrc();
       const _presetPF = typeof Layout !== 'undefined' && Layout.getPreset && Layout.getPreset(formatName);
       const posY = (_presetPF && _presetPF['PASTILLA_FREEMIUM']?.y) ?? 95;
@@ -257,6 +257,12 @@ var VerTodas = (() => {
     // TODAS enseña lo que va a salir, y esto no sale (lo compone la web).
     if (typeof AutoLayout !== 'undefined' && AutoLayout.esTituloFijo
         && AutoLayout.esTituloFijo(formatName, layer)) return false;
+
+    // COMPOSICIÓN COM TITULO H: no se enruta por variante como las H/V. Solo se
+    // ve donde esté declarada en TITULO_FIJO (auto-layout.js), y ahí va clavada.
+    // En cualquier otro formato no pinta nada. Tampoco se exporta: la web
+    // compone el texto por su cuenta (sí sale en el MOCKUP).
+    if (layer.isComposicionComTituloH) return false;
 
     // Composiciones H/V: según la variante del formato
     if (layer.isComposicionTextoH || layer.isComposicionTextoV) {
