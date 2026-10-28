@@ -370,6 +370,49 @@ const Layout = (() => {
   // Formatos que activan la maquetación automática
   const LAYOUT_FORMATS = TEXT_BLOCK_FORMATS;
 
+  // ── ANCLAJE DEL BLOQUE ────────────────────────────────────
+  // Normalmente el preset deja el contenido centrado en el lienzo. En algunos
+  // formatos el conjunto va apoyado en una esquina: se aplica la maquetación
+  // igual que siempre y DESPUÉS se desplaza el BLOQUE ENTERO. La disposición
+  // interna no se toca — se mueve todo el mismo dx/dy.
+  const BLOCK_ANCHOR = {
+    'COM TITULO H': { h: 'left', v: 'bottom' },
+  };
+
+  // Mide el bloque por PÍXELES REALES y lo desplaza. Medir analíticamente
+  // obligaría a replicar el cálculo de métricas de texto, que vive duplicado
+  // en tres sitios de composicion.js; en vez de eso se genera la composición
+  // (que ya calcula su contentBounds sobre el canvas pintado), se mide, se
+  // desplaza y se regenera. Así vale igual para textos, logos y sólidos.
+  async function _anclarBloque(format) {
+    const cfg = BLOCK_ANCHOR[format];
+    if (!cfg || typeof ComposicionTexto === 'undefined') return;
+    const size = State.formatSizes[format];
+    if (!size) return;
+
+    const NOMBRE = 'COMPOSICIÓN COM TITULO H', FLAG = 'isComposicionComTituloH';
+    await ComposicionTexto.generate(format, NOMBRE, FLAG);
+    const comp = State.layers.find(l => l[FLAG]);
+    const cb = comp && comp.contentBounds;
+    if (!cb || !(cb.w > 0) || !(cb.h > 0)) return;
+
+    const dx = cfg.h === 'left'   ? -cb.x * size.w
+             : cfg.h === 'right'  ? size.w - (cb.x + cb.w) * size.w : 0;
+    const dy = cfg.v === 'bottom' ? size.h - (cb.y + cb.h) * size.h
+             : cfg.v === 'top'    ? -cb.y * size.h : 0;
+    if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) return;
+
+    const params = State.formatParams[format] || {};
+    State.layers.forEach(l => {
+      if (l[FLAG]) return;                       // la propia composición, no
+      const p = params[l.id];
+      if (!p || p.visible === false) return;
+      p.x = Math.round((p.x || 0) + dx);
+      p.y = Math.round((p.y || 0) + dy);
+    });
+    await ComposicionTexto.generate(format, NOMBRE, FLAG);
+  }
+
   // ── INIT ──────────────────────────────────────────────────
 
   function init() {
@@ -754,6 +797,9 @@ const Layout = (() => {
             await ComposicionTexto.generate('TEXTO HORIZONTAL', 'COMPOSICIÓN TEXTO HORIZONTAL', 'isComposicionTextoH');
             const c = State.layers.find(l => l.isComposicionTextoH);
             if (c && typeof AutoLayout !== 'undefined' && AutoLayout.repositionTextComp) AutoLayout.repositionTextComp(c, 'H');
+          } else if (format === 'COM TITULO H' && typeof ComposicionTexto !== 'undefined') {
+            // El anclaje genera, mide y regenera; no hace falta generar antes.
+            await _anclarBloque(format);
           } else if (format === 'TEXTO VERTICAL' && typeof ComposicionTexto !== 'undefined') {
             await ComposicionTexto.generate('TEXTO VERTICAL', 'COMPOSICIÓN TEXTO VERTICAL', 'isComposicionTextoV');
             const c = State.layers.find(l => l.isComposicionTextoV);

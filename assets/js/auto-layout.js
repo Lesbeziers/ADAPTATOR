@@ -2071,6 +2071,8 @@ const AutoLayout = (() => {
         if (typeof ComposicionTexto !== 'undefined') {
           await ComposicionTexto.generate('TEXTO HORIZONTAL', 'COMPOSICIÓN TEXTO HORIZONTAL', 'isComposicionTextoH');
           await ComposicionTexto.generate('TEXTO VERTICAL',   'COMPOSICIÓN TEXTO VERTICAL',   'isComposicionTextoV');
+          await ComposicionTexto.generate('COM TITULO H',    'COMPOSICIÓN COM TITULO H',    'isComposicionComTituloH');
+          await ComposicionTexto.generate('COM TITULO H',    'COMPOSICIÓN COM TITULO H',    'isComposicionComTituloH');
         }
       }
 
