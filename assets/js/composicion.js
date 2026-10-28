@@ -1,3 +1,37 @@
+// ── CONTENIDO REAL DE LAS COMPOSICIONES ──────────────────────
+// Las composiciones se GENERAN, no se importan, así que nunca pasaban por
+// _detectContentBounds() de layers.js (que solo corre en el camino de
+// importación). Se quedaban sin `contentBounds`, y entonces _applyTitle las
+// coloca por su BOUNDING BOX: el aire transparente que llevan alrededor cuenta
+// como si fuera parte del título. Al pegar un título a una zona de seguridad
+// quedaba separado de ella justo por ese margen.
+//
+// Se mide aquí sobre el canvas recién pintado: es síncrono, exacto y no hay
+// que recargar la imagen.
+function _contentBoundsDeCanvas(cv) {
+  try {
+    const w = cv.width, h = cv.height;
+    const d = cv.getContext('2d').getImageData(0, 0, w, h).data;
+    let x0 = w, y0 = h, x1 = -1, y1 = -1;
+    for (let y = 0; y < h; y++) {
+      const off = y * w * 4;
+      for (let x = 0; x < w; x++) {
+        if (d[off + x * 4 + 3] > 8) {
+          if (x < x0) x0 = x;
+          if (x > x1) x1 = x;
+          if (y < y0) y0 = y;
+          if (y > y1) y1 = y;
+        }
+      }
+    }
+    if (x1 < 0) return null;                    // lienzo totalmente transparente
+    return { x: x0 / w, y: y0 / h, w: (x1 - x0 + 1) / w, h: (y1 - y0 + 1) / h };
+  } catch (e) {
+    console.warn('[Composicion] no se pudo medir el contenido real:', e);
+    return null;
+  }
+}
+
 // ============================================================
 // COMPOSICION.JS — Genera capa "COMPOSICIÓN TÍTULO" desde MUX4 TXT
 // ============================================================
@@ -334,6 +368,8 @@ const Composicion = (() => {
       }
 
       comp.src           = dataUrl;
+
+      comp.contentBounds = _contentBoundsDeCanvas(cv);   // sin esto se colocaría por bounding box
       comp.srcFondo      = dataUrlFondo;
       comp.naturalWidth  = W;
       comp.naturalHeight = H;
@@ -658,6 +694,8 @@ const ComposicionMovil = (() => {
       }
 
       comp.src           = dataUrl;
+
+      comp.contentBounds = _contentBoundsDeCanvas(cv);   // sin esto se colocaría por bounding box
       comp.srcMovilFondo = dataUrl;
       comp.naturalWidth  = W;
       comp.naturalHeight = H;
@@ -946,6 +984,8 @@ const ComposicionAmazon = (() => {
       }
 
       comp.src           = dataUrl;
+
+      comp.contentBounds = _contentBoundsDeCanvas(cv);   // sin esto se colocaría por bounding box
       comp.naturalWidth  = W;
       comp.naturalHeight = H;
 
@@ -1321,6 +1361,8 @@ const ComposicionTexto = (() => {
       }
 
       comp.src           = dataUrl;
+
+      comp.contentBounds = _contentBoundsDeCanvas(cv);   // sin esto se colocaría por bounding box
       comp.srcFondo      = dataUrlFondo;
       comp.naturalWidth  = W;
       comp.naturalHeight = H;

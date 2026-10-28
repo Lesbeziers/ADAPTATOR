@@ -911,6 +911,148 @@ const AutoLayout = (() => {
       anchorEdge: 'top',
       useTitleLayer: true,
     },
+
+    // ══════════════════════════════════════════════════════════
+    // COMERCIAL — punto de partida, pendiente de afinar
+    // ══════════════════════════════════════════════════════════
+    // Primera pasada: el sujeto CENTRADO en la pieza, sin zonas de texto. El
+    // diseñador irá dando feedback formato a formato sobre esto.
+    //
+    //   focusZone  x:0 y:0 w:1 h:1  → toda la pieza, sin desplazar a un lado
+    //                                 (los formatos antiguos la desplazan para
+    //                                 dejar hueco al texto; aquí aún no hay).
+    //   anchorPoint 0.50 / 0.22     → el criterio de la casa: la cara del
+    //                                 sujeto al 22% desde arriba.
+    //   crop.fill                   → cuánto desborda el sujeto. Se escala con
+    //                                 lo apaisado que sea el formato, igual que
+    //                                 en los existentes: ~1.2 en verticales,
+    //                                 1.5 en 16:9, 3.0 en panorámicos.
+    //
+    // SIN textZone a propósito: los títulos se definen después. Mientras no
+    // esté, el motor no coloca título en estos formatos.
+    'Mosaico-Horizontal': {                                    // 1000x750  ar 1.33
+      // AFINADO con el diseñador (1ª pasada). Una sola opción:
+      //   título centrado, pegado por encima del área de seguridad, al 37%
+      //   figura centrada (su tamaño lo fija el encuadre focal)
+      //
+      // La textZone sale de medir el checker SF_Mosaico_Horizontal.png: la
+      // banda reservada empieza en y=608 de 750, o sea al 0.811 del alto.
+      //
+      // La zona encierra el TEXTO VISIBLE, no el lienzo de la composición (que
+      // trae aire transparente alrededor), y va ANCLADA ABAJO: así el último
+      // píxel del texto se apoya en la banda sea cual sea el título. Sin
+      // `align`, el texto se centra en la zona y queda flotando en cuanto su
+      // proporción no coincide con la de la caja — que es lo que pasaba.
+      //
+      // El ANCHO es lo que fija la escala: 0.592 del lienzo = 592 px, que es el
+      // texto al 37% que pidió el diseñador. El ALTO va holgado a propósito,
+      // para que quepan títulos más largos sin que la zona los encoja.
+      textZone:    { x: 0.204, y: 0.461, w: 0.592, h: 0.350, align: 'bottom' },
+      focusZone:   { x: 0.000, y: 0.000, w: 1.000, h: 1.000 },
+      anchorPoint: { x: 0.50,  y: 0.22  },
+      crop: { fill: 1.40, anchorFraction: 0.25 },
+      fit:  { fill: 1.00, anchorFraction: 0.30 },
+      scaleModeDefault: 'crop',
+    },
+    'Mosaico-Vertical': {                                      // 1000x1580 ar 0.63
+      focusZone:   { x: 0.000, y: 0.000, w: 1.000, h: 1.000 },
+      anchorPoint: { x: 0.50,  y: 0.22  },
+      crop: { fill: 1.20, anchorFraction: 0.25 },
+      fit:  { fill: 1.00, anchorFraction: 0.30 },
+      scaleModeDefault: 'crop',
+    },
+    'Modulo-Escritorio': {                                     // 2800x1575 ar 1.78
+      focusZone:   { x: 0.000, y: 0.000, w: 1.000, h: 1.000 },
+      anchorPoint: { x: 0.50,  y: 0.22  },
+      crop: { fill: 1.50, anchorFraction: 0.25 },
+      fit:  { fill: 1.00, anchorFraction: 0.30 },
+      scaleModeDefault: 'crop',
+    },
+    'Modulo-Movil': {                                          // 1200x1200 ar 1.00
+      focusZone:   { x: 0.000, y: 0.000, w: 1.000, h: 1.000 },
+      anchorPoint: { x: 0.50,  y: 0.22  },
+      crop: { fill: 1.30, anchorFraction: 0.25 },
+      fit:  { fill: 1.00, anchorFraction: 0.30 },
+      scaleModeDefault: 'crop',
+    },
+    'Cabecera-Detalle-Escritorio': {                           // 3840x2160 ar 1.78
+      focusZone:   { x: 0.000, y: 0.000, w: 1.000, h: 1.000 },
+      anchorPoint: { x: 0.50,  y: 0.22  },
+      crop: { fill: 1.50, anchorFraction: 0.25 },
+      fit:  { fill: 1.00, anchorFraction: 0.30 },
+      scaleModeDefault: 'crop',
+    },
+    'Cabecera-Detalle-Movil': {                                // 2160x3840 ar 0.56
+      focusZone:   { x: 0.000, y: 0.000, w: 1.000, h: 1.000 },
+      anchorPoint: { x: 0.50,  y: 0.22  },
+      crop: { fill: 1.20, anchorFraction: 0.25 },
+      fit:  { fill: 1.00, anchorFraction: 0.30 },
+      scaleModeDefault: 'crop',
+    },
+    'Carrusel-Vertical': {                                     // 1200x1800 ar 0.67
+      focusZone:   { x: 0.000, y: 0.000, w: 1.000, h: 1.000 },
+      anchorPoint: { x: 0.50,  y: 0.22  },
+      crop: { fill: 1.20, anchorFraction: 0.25 },
+      fit:  { fill: 1.00, anchorFraction: 0.30 },
+      scaleModeDefault: 'crop',
+    },
+    'Carrusel-Horizontal': {                                   // 800x450   ar 1.78
+      focusZone:   { x: 0.000, y: 0.000, w: 1.000, h: 1.000 },
+      anchorPoint: { x: 0.50,  y: 0.22  },
+      crop: { fill: 1.50, anchorFraction: 0.25 },
+      fit:  { fill: 1.00, anchorFraction: 0.30 },
+      scaleModeDefault: 'crop',
+    },
+    'Cabecera-Slider-Escritorio': {                            // 3840x2160 ar 1.78
+      focusZone:   { x: 0.000, y: 0.000, w: 1.000, h: 1.000 },
+      anchorPoint: { x: 0.50,  y: 0.22  },
+      crop: { fill: 1.50, anchorFraction: 0.25 },
+      fit:  { fill: 1.00, anchorFraction: 0.30 },
+      scaleModeDefault: 'crop',
+    },
+    'Cabecera-Slider-Movil': {                                 // 2160x3840 ar 0.56
+      focusZone:   { x: 0.000, y: 0.000, w: 1.000, h: 1.000 },
+      anchorPoint: { x: 0.50,  y: 0.22  },
+      crop: { fill: 1.20, anchorFraction: 0.25 },
+      fit:  { fill: 1.00, anchorFraction: 0.30 },
+      scaleModeDefault: 'crop',
+    },
+    'Cabecera-Slider-TT': {                                    // 1156x348  ar 3.32
+      focusZone:   { x: 0.000, y: 0.000, w: 1.000, h: 1.000 },
+      anchorPoint: { x: 0.50,  y: 0.22  },
+      crop: { fill: 3.00, anchorFraction: 0.25 },
+      fit:  { fill: 1.00, anchorFraction: 0.30 },
+      scaleModeDefault: 'crop',
+    },
+    'Cabecera-Slider-Mediano-Escritorio': {                    // 3840x1200 ar 3.20
+      focusZone:   { x: 0.000, y: 0.000, w: 1.000, h: 1.000 },
+      anchorPoint: { x: 0.50,  y: 0.22  },
+      crop: { fill: 3.00, anchorFraction: 0.25 },
+      fit:  { fill: 1.00, anchorFraction: 0.30 },
+      scaleModeDefault: 'crop',
+    },
+    'Slider-Mediano-Escritorio': {                             // 3840x1200 ar 3.20
+      focusZone:   { x: 0.000, y: 0.000, w: 1.000, h: 1.000 },
+      anchorPoint: { x: 0.50,  y: 0.22  },
+      crop: { fill: 3.00, anchorFraction: 0.25 },
+      fit:  { fill: 1.00, anchorFraction: 0.30 },
+      scaleModeDefault: 'crop',
+    },
+    'Cabecera-Slider-Mediano-Movil': {                         // 1536x1536 ar 1.00
+      focusZone:   { x: 0.000, y: 0.000, w: 1.000, h: 1.000 },
+      anchorPoint: { x: 0.50,  y: 0.22  },
+      crop: { fill: 1.30, anchorFraction: 0.25 },
+      fit:  { fill: 1.00, anchorFraction: 0.30 },
+      scaleModeDefault: 'crop',
+    },
+    'Slider-Mediano-Movil': {                                  // 1536x1536 ar 1.00
+      focusZone:   { x: 0.000, y: 0.000, w: 1.000, h: 1.000 },
+      anchorPoint: { x: 0.50,  y: 0.22  },
+      crop: { fill: 1.30, anchorFraction: 0.25 },
+      fit:  { fill: 1.00, anchorFraction: 0.30 },
+      scaleModeDefault: 'crop',
+    },
+
   };
 
   // Estado del motor
@@ -1384,9 +1526,27 @@ const AutoLayout = (() => {
     const contentCxInDraw = cb ? (cb.x + cb.w / 2) * drawW : drawW / 2;
     const contentCyInDraw = cb ? (cb.y + cb.h / 2) * drawH : drawH / 2;
 
-    // Centrar el CONTENIDO REAL en la zona (no el bounding box)
+    // Colocar el CONTENIDO REAL en la zona (no el bounding box).
+    //
+    // Por defecto se CENTRA, que es lo que quieren casi todos los formatos.
+    // Pero centrar solo deja el borde inferior en su sitio si la zona tiene
+    // exactamente la proporción del texto: en cuanto manda el ancho, en
+    // vertical sobra holgura y el título queda flotando dentro de la zona.
+    // Eso se nota cuando el diseñador pide "pegado justo encima del área de
+    // seguridad": con centrado solo acierta por casualidad, y cambia con cada
+    // título porque cada uno tiene su propia proporción.
+    //
+    // `align` en la textZone permite fijar el borde en vez del centro:
+    //   'bottom' → el último píxel del texto toca el borde inferior de la zona
+    //   'top'    → el primero toca el superior
+    //   (ausente)→ centrado, comportamiento de siempre
+    const alignV = tz.align;
+    const contentH = cb ? cb.h * drawH : drawH;
     const contentDrawX = zoneX + zoneW / 2;
-    const contentDrawY = zoneY + zoneH / 2;
+    const contentDrawY =
+        alignV === 'bottom' ? zoneY + zoneH - contentH / 2
+      : alignV === 'top'    ? zoneY + contentH / 2
+      :                       zoneY + zoneH / 2;
 
     // Centro del bounding box del asset = contentDrawX/Y - offset del contenido dentro del asset
     const cx = contentDrawX - contentCxInDraw + drawW / 2;
