@@ -1030,6 +1030,21 @@ const AutoLayout = (() => {
       scaleModeDefault: 'crop',
     },
     'Modulo-Movil': {                                          // 1200x1200 ar 1.00
+      // AFINADO con el diseñador. Una sola opción: imagen centrada y título
+      // centrado apoyado sobre la banda inferior.
+      //
+      // Sin checker, igual que Modulo-Escritorio: las referencias las marcó el
+      // diseñador sobre la pieza.
+      //   · sólidos verdes laterales de 60 px -> el título crece hasta ellos,
+      //     así que el ancho útil va de x=60 a x=1140
+      //   · sólido rojo inferior de 100 px    -> el título se apoya en y=1100
+      //   · guía horizontal en y=760          -> techo de altura, para que un
+      //     título corto y alto tipo "IT" no siga creciendo
+      //
+      // SIN `scale`: aquí interesa el ENCAJE, no una escala fija. El título
+      // llena el ancho disponible salvo que antes choque con el techo, que es
+      // la doble condición de _applyTitle. Mismo criterio que en Mosaico-Vertical.
+      textZone:    { x: 0.050, y: 0.633, w: 0.900, h: 0.283, align: 'bottom' },
       focusZone:   { x: 0.000, y: 0.000, w: 1.000, h: 1.000 },
       anchorPoint: { x: 0.50,  y: 0.22  },
       crop: { fill: 1.30, anchorFraction: 0.25 },
