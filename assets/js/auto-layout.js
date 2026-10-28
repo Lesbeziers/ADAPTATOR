@@ -955,6 +955,31 @@ const AutoLayout = (() => {
       scaleModeDefault: 'crop',
     },
     'Mosaico-Vertical': {                                      // 1000x1580 ar 0.63
+      // AFINADO con el diseñador. Una sola opción: el título se escala hasta
+      // que sus laterales coinciden con los del área de seguridad, y su último
+      // píxel se apoya en la banda inferior. Figura centrada.
+      //
+      // Medido del checker SF_Mosaico_Vertical.png: el área útil va de x=37 a
+      // x=970 y la banda inferior empieza en y=1437 de 1580.
+      //
+      // OJO: el checker está DESCENTRADO 8 px (37 de margen izquierdo frente a
+      // 29 del derecho, constante en todas las filas). La zona sigue al área
+      // de seguridad, así que el título queda centrado respecto a ELLA y no
+      // respecto al lienzo: su centro cae en x=503.5. Si algún día se corrige
+      // el checker, esta zona se recalcula sola midiéndolo otra vez.
+      //
+      // El tamaño sale de la DOBLE CONDICIÓN que ya aplica _applyTitle:
+      //     scale = min(ancho_zona / ancho_texto, alto_zona / alto_texto)
+      // o sea, el título crece hasta tocar los laterales del área segura SALVO
+      // que antes choque con el techo de altura. Sin ese techo, un título corto
+      // y alto tipo "IT" se escalaría hasta llenar media creatividad.
+      //
+      // El TECHO lo puso el diseñador como guía en la propia app, en y=1093, y
+      // la zona llega hasta el inicio de la banda inferior (y=1437): 344 px de
+      // alto. Así, "hasta dónde puede crecer el título" deja de ser un número
+      // inventado y pasa a ser una decisión visual que se ve en el lienzo.
+      // Si se mueve la guía, este valor se recalcula: h = (1437 - pos) / 1580.
+      textZone:    { x: 0.037, y: 0.692, w: 0.934, h: 0.218, align: 'bottom' },
       focusZone:   { x: 0.000, y: 0.000, w: 1.000, h: 1.000 },
       anchorPoint: { x: 0.50,  y: 0.22  },
       crop: { fill: 1.20, anchorFraction: 0.25 },
@@ -962,7 +987,43 @@ const AutoLayout = (() => {
       scaleModeDefault: 'crop',
     },
     'Modulo-Escritorio': {                                     // 2800x1575 ar 1.78
-      focusZone:   { x: 0.000, y: 0.000, w: 1.000, h: 1.000 },
+      // AFINADO con el diseñador. Tres composiciones.
+      //
+      // Este formato NO tiene checker SF_, así que no hay área de seguridad que
+      // medir: las referencias las marcó el diseñador con sólidos y una guía
+      // sobre la propia pieza.
+      //   · sólido inferior de 151 px -> en la variante centrada el título se
+      //     apoya en y=1425 (redondeando la banda a 150)
+      //   · sólido lateral de 150 px  -> en las laterales el título arranca
+      //     justo donde acaba, en x=150
+      //   · guía vertical en x=2083   -> la figura se centra ahí (se usa 2080)
+      //
+      // El título va a ESCALA FIJA del 70%, no encajado: la composición de texto
+      // es un lienzo fijo que el diseñador ya ha compuesto, y se quiere que el
+      // título mida lo mismo venga el que venga. Por eso `scale: 70` y la zona
+      // solo marca la POSICIÓN:
+      //   A/B -> `alignH` pega el título al borde (x=150 o x=2650) y en
+      //          vertical va centrado (la zona está centrada en la pieza)
+      //   C   -> `align: 'bottom'` lo apoya en y=1425
+      variants: {
+        A: {
+          label: 'Texto izquierda / Imagen derecha',
+          textZone:  { x: 0.054, y: 0.180, w: 0.400, h: 0.640, scale: 70, alignH: 'left' },
+          focusZone: { x: 0.493, y: 0.000, w: 0.500, h: 1.000 },
+        },
+        B: {
+          label: 'Texto derecha / Imagen izquierda',
+          textZone:  { x: 0.546, y: 0.180, w: 0.400, h: 0.640, scale: 70, alignH: 'right' },
+          focusZone: { x: 0.007, y: 0.000, w: 0.500, h: 1.000 },
+        },
+        C: {
+          label: 'Imagen centrada / Texto centrado abajo',
+          textZone:  { x: 0.300, y: 0.665, w: 0.400, h: 0.240, scale: 70, align: 'bottom' },
+          focusZone: { x: 0.000, y: 0.000, w: 1.000, h: 1.000 },
+        },
+      },
+      textZone:    { x: 0.054, y: 0.180, w: 0.400, h: 0.640, scale: 70, alignH: 'left' },
+      focusZone:   { x: 0.493, y: 0.000, w: 0.500, h: 1.000 },
       anchorPoint: { x: 0.50,  y: 0.22  },
       crop: { fill: 1.50, anchorFraction: 0.25 },
       fit:  { fill: 1.00, anchorFraction: 0.30 },
@@ -1514,10 +1575,21 @@ const AutoLayout = (() => {
     const zoneX = W * tzX;
     const zoneY = H * tz.y;
 
-    // Fit dentro de la zona usando las dimensiones reales del contenido
-    const scaleToFitW = zoneW / fitW;
-    const scaleToFitH = zoneH / fitH;
-    const scale = Math.min(scaleToFitW, scaleToFitH);
+    // ESCALA FIJA vs ENCAJE.
+    //
+    // Por defecto el título se ENCAJA en la zona: crece hasta tocar uno de sus
+    // bordes. Eso hace que cada título salga de un tamaño distinto según su
+    // forma, lo cual vale cuando la zona es un hueco físico que no se puede
+    // invadir (una banda de seguridad, por ejemplo).
+    //
+    // Pero la composición de texto es un lienzo FIJO (1920x779) donde el
+    // diseñador ya ha compuesto el título a su gusto. Para esos casos interesa
+    // lo contrario: una escala constante, para que el título mida igual en
+    // todas las campañas. Eso es `tz.scale` (en %), y entonces la zona solo
+    // sirve de referencia de POSICIÓN, no de tamaño.
+    const scale = tz.scale != null
+      ? tz.scale / 100
+      : Math.min(zoneW / fitW, zoneH / fitH);
 
     const drawW = nw * scale;
     const drawH = nh * scale;
@@ -1540,9 +1612,23 @@ const AutoLayout = (() => {
     //   'bottom' → el último píxel del texto toca el borde inferior de la zona
     //   'top'    → el primero toca el superior
     //   (ausente)→ centrado, comportamiento de siempre
+    // `align` (vertical) y `alignH` (horizontal) fijan un BORDE en vez del
+    // centro. Sin ellos se centra, que es el comportamiento de siempre.
+    //   align : 'bottom' | 'top'    alignH: 'left' | 'right'
+    // Igual que en vertical, centrar en horizontal solo deja el borde en su
+    // sitio si la zona tiene justo el ancho del texto; en cuanto sobra espacio
+    // el título flota y deja de arrancar donde el diseñador quería.
+    // Con `mirrored` los bordes se intercambian, para que las variantes
+    // espejadas no haya que escribirlas al revés a mano.
     const alignV = tz.align;
+    let alignH = tz.alignH;
+    if (mirrored) alignH = alignH === 'left' ? 'right' : alignH === 'right' ? 'left' : alignH;
+    const contentW = cb ? cb.w * drawW : drawW;
     const contentH = cb ? cb.h * drawH : drawH;
-    const contentDrawX = zoneX + zoneW / 2;
+    const contentDrawX =
+        alignH === 'left'  ? zoneX + contentW / 2
+      : alignH === 'right' ? zoneX + zoneW - contentW / 2
+      :                      zoneX + zoneW / 2;
     const contentDrawY =
         alignV === 'bottom' ? zoneY + zoneH - contentH / 2
       : alignV === 'top'    ? zoneY + contentH / 2
