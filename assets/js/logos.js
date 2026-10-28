@@ -379,7 +379,7 @@ const Logos = (() => {
         params: { opacity: 100, blur: 0, noise: 0, brightness: 0, contrast: 0, saturation: 0, tintAmount: 0, tintColor: '#000000' },
       };
       // Formatos maestros de texto: el logo importado se queda exclusivo de su formato.
-      if (['MUX4 TXT', 'MOVIL TXT', 'AMAZON LOGO', 'TEXTO HORIZONTAL', 'TEXTO VERTICAL'].includes(formatAtImport)) layer.exclusiveFormat = formatAtImport;
+      if (TEXT_TOOL_FORMATS.includes(formatAtImport)) layer.exclusiveFormat = formatAtImport;
 
       let _ci = 0;
     while (_ci < State.layers.length && (State.layers[_ci].isComposicion || State.layers[_ci].isComposicionMovil || State.layers[_ci].isMarcaIplus || State.layers[_ci].isTitleLayer)) {
@@ -407,7 +407,7 @@ const Logos = (() => {
         params: { opacity: 100, blur: 0, noise: 0, brightness: 0, contrast: 0, saturation: 0, tintAmount: 0, tintColor: '#000000' },
       };
       // Formatos maestros de texto: el logo importado se queda exclusivo de su formato.
-      if (['MUX4 TXT', 'MOVIL TXT', 'AMAZON LOGO', 'TEXTO HORIZONTAL', 'TEXTO VERTICAL'].includes(formatAtImport)) layer.exclusiveFormat = formatAtImport;
+      if (TEXT_TOOL_FORMATS.includes(formatAtImport)) layer.exclusiveFormat = formatAtImport;
       let _ci = 0;
     while (_ci < State.layers.length && (State.layers[_ci].isComposicion || State.layers[_ci].isComposicionMovil || State.layers[_ci].isMarcaIplus || State.layers[_ci].isTitleLayer)) {
       _ci++;

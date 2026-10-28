@@ -3,7 +3,7 @@
 // ============================================================
 
 const SolidLayers = (() => {
-  const SPECIAL_FORMATS = ['MUX4 TXT', 'MOVIL TXT', 'AMAZON LOGO', 'TEXTO HORIZONTAL', 'TEXTO VERTICAL'];
+  const SPECIAL_FORMATS = TEXT_TOOL_FORMATS;
 
   let _activeLayerId = null;
   let _draggingPanel = false;

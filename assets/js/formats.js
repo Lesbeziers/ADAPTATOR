@@ -14,7 +14,7 @@ const Formats = (() => {
   ];
   // Formatos MAESTROS donde se edita el texto (no son receptores): ahí no se
   // marca el candado manual.
-  const _TITLE_MASTER_FORMATS = ['TEXTO HORIZONTAL', 'TEXTO VERTICAL', 'MUX4 TXT', 'MOVIL TXT'];
+  const _TITLE_MASTER_FORMATS = TEXT_BLOCK_FORMATS;
 
   function init() {
     _buildDropdown();
@@ -166,7 +166,7 @@ const Formats = (() => {
     if (!modality) return;
 
     // Los 4 maestros de texto se muestran anchos (2 por fila → rejilla 2×2 en "Textos")
-    const WIDE_FORMATS = ['TEXTO HORIZONTAL', 'TEXTO VERTICAL', 'MUX4 TXT', 'MOVIL TXT'];
+    const WIDE_FORMATS = TEXT_BLOCK_FORMATS;
 
     const bigMode  = isBigMode();
     const visibles = modality.formats.filter(f => !(bigMode && _hiddenInBigMode(f)));
@@ -600,10 +600,12 @@ const Formats = (() => {
   ];
   // Formatos con composición horneada VERTICAL por defecto (los que quedan en vertical)
   const TEXT_VARIANT_V_DEFAULT = [];
-  // Formatos que NO reciben texto (sin variante)
+  // Formatos que NO reciben texto (sin variante): la familia FANART/BG, más
+  // TODOS los anfitriones — en un lienzo de composición no se elige variante,
+  // porque el lienzo ES la composición.
   const TEXT_VARIANT_NONE = ['FANART', 'FANART MÓVIL', 'FANART DEST.', 'FANART MOD N', 'MOD N', 'PERFIL',
-                             'MUX4 FONDO', 'MOVIL MUX FONDO', 'AMAZON BG', 'TÍTULO FICHA',
-                             'MUX4 TXT', 'MOVIL TXT', 'AMAZON LOGO', 'TEXTO HORIZONTAL', 'TEXTO VERTICAL'];
+                             'MUX4 FONDO', 'MOVIL MUX FONDO', 'AMAZON BG',
+                             ...TEXT_HOST_FORMATS];
 
   function _defaultTextVariant(fid) {
     if (TEXT_VARIANT_NONE.includes(fid)) return null;

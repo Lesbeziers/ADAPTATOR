@@ -1291,7 +1291,7 @@ const Canvas = (() => {
         // - cualquier formato cuya variante sea TITLE_H/TITLE_V (imagen original cruda)
         // Si hay 2 títulos (H y V), cada formato muestra solo el activo (con fallback).
         const _v = (typeof Formats !== 'undefined' && Formats.getTextVariant) ? Formats.getTextVariant(State.activeFormat) : null;
-        const inHost = ['MUX4 TXT','MOVIL TXT','TEXTO HORIZONTAL','TEXTO VERTICAL','AMAZON LOGO','TÍTULO FICHA'].includes(State.activeFormat)
+        const inHost = TEXT_HOST_FORMATS.includes(State.activeFormat)
                     || _v === 'TITLE_H' || _v === 'TITLE_V';
         const isActive = typeof Formats !== 'undefined' && Formats.isActiveTitleForFormat
           ? Formats.isActiveTitleForFormat(layer, State.activeFormat) : true;
@@ -1369,7 +1369,7 @@ const Canvas = (() => {
             const fmtVisible = State.formatParams?.[State.activeFormat]?.[layer.id]?.visible;
             isVisible = fmtVisible !== undefined ? fmtVisible : layer.visible;
           }
-        } else if (!layer._layoutGenerated && (State.activeFormat === 'MUX4 TXT' || State.activeFormat === 'MOVIL TXT' || State.activeFormat === 'TÍTULO FICHA' || State.activeFormat === 'AMAZON LOGO' || State.activeFormat === 'TEXTO HORIZONTAL' || State.activeFormat === 'TEXTO VERTICAL')) {
+        } else if (!layer._layoutGenerated && TEXT_HOST_FORMATS.includes(State.activeFormat)) {
           isVisible = false;
         } else {
           const fmtVisible = State.activeFormat && State.formatParams?.[State.activeFormat]?.[layer.id]?.visible;
@@ -1379,9 +1379,13 @@ const Canvas = (() => {
 
       el.style.display = isVisible ? 'block' : 'none';
       const isLocked = typeof Layers !== 'undefined' && Layers.getLocked(layer.id);
-      el.style.pointerEvents = (layer.isMarcaIplus || layer.isMarcaSony || layer.isMolduraFanart || layer.isMascaraBlur || layer.isComposicionMovil || layer.isComposicionAmazon || isLocked) ? 'none' : '';
+      const esTitFijo = (typeof AutoLayout !== 'undefined' && AutoLayout.esTituloFijo)
+        ? AutoLayout.esTituloFijo(State.activeFormat, layer) : false;
+      el.style.pointerEvents = (layer.isMarcaIplus || layer.isMarcaSony || layer.isMolduraFanart || layer.isMascaraBlur || layer.isComposicionMovil || layer.isComposicionAmazon || esTitFijo || isLocked) ? 'none' : '';
 
-      if (layer.isComposicion && State.activeFormat === 'MUX4 FONDO') {
+      if (esTitFijo) {
+        el.classList.remove('canvas-layer-active');
+      } else if (layer.isComposicion && State.activeFormat === 'MUX4 FONDO') {
         el.classList.remove('canvas-layer-active');
       } else if (layer.isComposicionMovil && State.activeFormat === 'MOVIL MUX FONDO') {
         el.classList.remove('canvas-layer-active');
@@ -1611,6 +1615,8 @@ const Canvas = (() => {
         !(selLayer?.isComposicion && State.activeFormat === 'MUX4 FONDO') &&
         !(selLayer?.isComposicionMovil && State.activeFormat === 'MOVIL MUX FONDO') &&
         !(selLayer?.isComposicionAmazon && State.activeFormat === 'AMAZON BG') &&
+        !(typeof AutoLayout !== 'undefined' && AutoLayout.esTituloFijo
+          && AutoLayout.esTituloFijo(State.activeFormat, selLayer)) &&
         !(selLayer?.isMarcaIplus && State.activeFormat === 'IPLUS PUBLI') &&
         !(selLayer?.isMarcaSony && State.activeFormat === 'SONY')) {
       _updateHandles();
@@ -1695,6 +1701,27 @@ const Canvas = (() => {
       el.style.height    = Math.round(nh * _scale * _contentScaleY) + 'px';
       el.style.left      = left + 'px';
       el.style.top       = top  + 'px';
+      el.style.transform = 'translate(-50%, -50%)';
+      el.style.opacity   = '1';
+      el.style.filter    = '';
+      el.style.cursor    = 'default';
+      return;
+    }
+
+    // ── TÍTULO DE REFERENCIA FIJO (Cabecera Detalle Escritorio…) ───
+    // Mismo trato que AMAZON BG: la composición se clava en su sitio y no se
+    // toca. La geometría la calcula AutoLayout para que el MOCKUP la repita
+    // exactamente igual (ver _drawCompositionOverlay en export.js).
+    const _tfRect = (typeof AutoLayout !== 'undefined' && AutoLayout.tituloFijoRect)
+      ? AutoLayout.tituloFijoRect(State.activeFormat, layer) : null;
+    if (_tfRect) {
+      const _tfFs = State.formatSizes[State.activeFormat];
+      const _tfL  = _contentCenterX + (_tfRect.left - _tfFs.w / 2 + _tfRect.drawW / 2) * _scale * _contentScaleX;
+      const _tfT  = _contentCenterY + (_tfRect.top  - _tfFs.h / 2 + _tfRect.drawH / 2) * _scale * _contentScaleY;
+      el.style.width     = Math.round(_tfRect.drawW * _scale * _contentScaleX) + 'px';
+      el.style.height    = Math.round(_tfRect.drawH * _scale * _contentScaleY) + 'px';
+      el.style.left      = _tfL + 'px';
+      el.style.top       = _tfT + 'px';
       el.style.transform = 'translate(-50%, -50%)';
       el.style.opacity   = '1';
       el.style.filter    = '';
@@ -2447,7 +2474,7 @@ const Canvas = (() => {
 
     // Solo visible en formatos de texto cuando la versión es Freemium
     const isFreemium = typeof Layout !== 'undefined' && Layout.isFreemium(fid);
-    const isTextFormat = fid === 'MUX4 TXT' || fid === 'MOVIL TXT' || fid === 'TEXTO HORIZONTAL' || fid === 'TEXTO VERTICAL';
+    const isTextFormat = TEXT_BLOCK_FORMATS.includes(fid);
 
     if (!isFreemium || !isTextFormat || typeof Pastilla === 'undefined') {
       if (el) el.remove();

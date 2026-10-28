@@ -308,8 +308,7 @@ const Layers = (() => {
             // canvas.js): la capa se marca exclusiva de ese formato. Si no, quedaría
             // oculta justo ahí y visible en todos los demás. Esta lista DEBE coincidir
             // con la de esa regla (MUX4/MOVIL TXT, AMAZON LOGO, TEXTO H/V, TÍTULO FICHA).
-            const _TEXT_MASTER_FORMATS = ['MUX4 TXT', 'MOVIL TXT', 'AMAZON LOGO',
-                                          'TEXTO HORIZONTAL', 'TEXTO VERTICAL', 'TÍTULO FICHA'];
+            const _TEXT_MASTER_FORMATS = TEXT_HOST_FORMATS;
             if (_TEXT_MASTER_FORMATS.includes(formatAtImport)) {
               layer.exclusiveFormat = formatAtImport;
             }
@@ -1068,7 +1067,7 @@ const Layers = (() => {
     list.innerHTML = '';
 
     // Indicador de maquetación activa (en los formatos de texto)
-    if ((State.activeFormat === 'MUX4 TXT' || State.activeFormat === 'MOVIL TXT' || State.activeFormat === 'TEXTO HORIZONTAL' || State.activeFormat === 'TEXTO VERTICAL') &&
+    if (TEXT_BLOCK_FORMATS.includes(State.activeFormat) &&
         typeof Layout !== 'undefined') {
       const tipo    = Layout.getType();
       const version = Layout.getVersion();
@@ -1151,7 +1150,7 @@ const Layers = (() => {
     }
 
     // Pastilla Freemium — solo si la versión activa es Freemium
-    if ((State.activeFormat === 'MUX4 TXT' || State.activeFormat === 'MOVIL TXT' || State.activeFormat === 'TEXTO HORIZONTAL' || State.activeFormat === 'TEXTO VERTICAL') &&
+    if (TEXT_BLOCK_FORMATS.includes(State.activeFormat) &&
         typeof Layout !== 'undefined' && Layout.isFreemium() &&
         typeof Pastilla !== 'undefined') {
       list.appendChild(_buildPastillaFreemiumItem());
@@ -1524,7 +1523,7 @@ const Layers = (() => {
     // Título "vivo": en maestros de texto + TÍTULO FICHA, o en formatos con variante TITLE_H/V.
     if (layer.isTitleLayer) {
       const _v = (typeof Formats !== 'undefined' && Formats.getTextVariant) ? Formats.getTextVariant(State.activeFormat) : null;
-      const inHost = ['MUX4 TXT','MOVIL TXT','TEXTO HORIZONTAL','TEXTO VERTICAL','AMAZON LOGO','TÍTULO FICHA'].includes(State.activeFormat)
+      const inHost = TEXT_HOST_FORMATS.includes(State.activeFormat)
                   || _v === 'TITLE_H' || _v === 'TITLE_V';
       if (!inHost) return null;
       if (typeof Formats !== 'undefined' && Formats.isActiveTitleForFormat &&
@@ -1547,7 +1546,7 @@ const Layers = (() => {
 
     // Capas normales importadas: ocultas en MUX4 TXT, MOVIL TXT y TÍTULO FICHA
     if (!layer.isTitleLayer && !layer.isComposicion && !layer.exclusiveFormat && !layer._layoutGenerated) {
-      if (State.activeFormat === 'MUX4 TXT' || State.activeFormat === 'MOVIL TXT' || State.activeFormat === 'TÍTULO FICHA' || State.activeFormat === 'AMAZON LOGO' || State.activeFormat === 'TEXTO HORIZONTAL' || State.activeFormat === 'TEXTO VERTICAL') return null;
+      if (TEXT_HOST_FORMATS.includes(State.activeFormat)) return null;
     }
 
     const item = document.createElement('div');

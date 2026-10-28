@@ -2,6 +2,42 @@
 // STATE.JS — Modelo de datos central
 // ============================================================
 
+// ── TAXONOMÍA DE FORMATOS ANFITRIÓN ─────────────────────────
+// Hay formatos que NO son una pieza a entregar, sino un lienzo donde se COMPONE
+// un asset (el título, el logo) que luego viaja a los demás formatos. Se
+// comportan distinto en media app, y hasta ahora la lista se escribía a mano en
+// cada sitio: 24 copias repartidas por 11 archivos. Añadir uno nuevo obligaba a
+// encontrarlas todas, y olvidar una NO da error — da un fallo silencioso (que no
+// funcionen los degradados ahí, o que no se exporte).
+//
+// OJO: no son la misma lista. Son tres círculos concéntricos, y mezclarlos
+// rompe cosas. De fuera adentro:
+
+// LOS 6 — lienzos de composición. Las capas normales importadas no se dibujan
+// aquí: este formato no es la pieza, es el taller.
+const TEXT_HOST_FORMATS = [
+  'MUX4 TXT', 'MOVIL TXT', 'TEXTO HORIZONTAL', 'TEXTO VERTICAL',
+  'AMAZON LOGO', 'TÍTULO FICHA',
+];
+
+// LOS 5 — de los anteriores, aquellos donde las HERRAMIENTAS DE CAPA
+// (degradado, sólido, texto, logo) cambian de comportamiento. TÍTULO FICHA
+// queda fuera: no se le añaden capas de estas.
+const TEXT_TOOL_FORMATS = [
+  'MUX4 TXT', 'MOVIL TXT', 'TEXTO HORIZONTAL', 'TEXTO VERTICAL',
+  'AMAZON LOGO',
+];
+
+// LOS 4 — los maestros de texto propiamente dichos, con maquetación de bloque
+// y presets. AMAZON LOGO queda fuera: lleva un logo, no un bloque de texto.
+//
+// NO confundir con dos listas que contienen estos mismos 4 nombres y NO son
+// esto: el orden de los botones en `modalities.textos` (que es UI) y el
+// `DERIVE` de layout.js (que es el origen del preset de cada uno).
+const TEXT_BLOCK_FORMATS = [
+  'MUX4 TXT', 'MOVIL TXT', 'TEXTO HORIZONTAL', 'TEXTO VERTICAL',
+];
+
 const State = {
 
   view: 'editor',

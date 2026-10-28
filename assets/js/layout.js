@@ -368,7 +368,7 @@ const Layout = (() => {
   };
 
   // Formatos que activan la maquetación automática
-  const LAYOUT_FORMATS = ['MUX4 TXT', 'MOVIL TXT', 'TEXTO HORIZONTAL', 'TEXTO VERTICAL'];
+  const LAYOUT_FORMATS = TEXT_BLOCK_FORMATS;
 
   // ── INIT ──────────────────────────────────────────────────
 

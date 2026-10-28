@@ -437,7 +437,7 @@ const Export = (() => {
     // Pastilla Freemium (solo en MUX4 TXT y MOVIL TXT cuando versión es Freemium)
     if (typeof Layout !== 'undefined' && Layout.isFreemium(formatName) &&
         typeof Pastilla !== 'undefined' &&
-        (formatName === 'MUX4 TXT' || formatName === 'MOVIL TXT' || formatName === 'TEXTO HORIZONTAL' || formatName === 'TEXTO VERTICAL')) {
+        TEXT_BLOCK_FORMATS.includes(formatName)) {
       const src = Pastilla.getFreemiumSrc();
       const _presetPF = typeof Layout !== 'undefined' && Layout.getPreset && Layout.getPreset(formatName);
       const posY = (_presetPF && _presetPF['PASTILLA_FREEMIUM']?.y) ?? 95;
@@ -600,6 +600,20 @@ const Export = (() => {
   //  - MOVIL MUX FONDO  → COMPOSICIÓN MOVIL TEXTO
   //  - AMAZON BG        → AMAZON LOGO
   async function _drawCompositionOverlay(ctx, formatName) {
+    // Título de REFERENCIA FIJO: excluido del PNG por _isLayerVisible, pero el
+    // mockup existe justo para enseñar cómo queda la página, así que aquí se
+    // repinta. La geometría la da AutoLayout.tituloFijoRect, LA MISMA que usa el
+    // editor en _applyParams (canvas.js) — por eso no pueden descuadrarse.
+    if (typeof AutoLayout !== 'undefined' && AutoLayout.tituloFijoConfig
+        && AutoLayout.tituloFijoConfig(formatName)) {
+      const comp = State.layers.find(l => l.isComposicionTextoH);
+      if (comp && comp.src) {
+        const r = AutoLayout.tituloFijoRect(formatName, comp);
+        if (r) await _drawImage(ctx, comp.src, r.left, r.top, r.drawW, r.drawH);
+      }
+      return;
+    }
+
     if (formatName !== 'MUX4 FONDO' && formatName !== 'MOVIL MUX FONDO' && formatName !== 'AMAZON BG') return;
 
     if (formatName === 'MUX4 FONDO') {
@@ -836,7 +850,7 @@ const Export = (() => {
         Formats.fanartRoleVisibility(layer.id, formatName) === false) return false;
     if (layer.isTitleLayer) {
       const _v = (typeof Formats !== 'undefined' && Formats.getTextVariant) ? Formats.getTextVariant(formatName) : null;
-      const inTextFormat = (formatName === 'MUX4 TXT' || formatName === 'MOVIL TXT' || formatName === 'TEXTO HORIZONTAL' || formatName === 'TEXTO VERTICAL' || formatName === 'AMAZON LOGO' || formatName === 'TÍTULO FICHA')
+      const inTextFormat = TEXT_HOST_FORMATS.includes(formatName)
                        || _v === 'TITLE_H' || _v === 'TITLE_V';
       if (!inTextFormat) return false;
       if (typeof Formats !== 'undefined' && Formats.isActiveTitleForFormat &&
@@ -844,6 +858,12 @@ const Export = (() => {
       const fmtVisible = State.formatParams?.[formatName]?.[layer.id]?.visible;
       return fmtVisible !== false;
     }
+    // Título de REFERENCIA FIJO: se ve en el editor pero NO se exporta — la web
+    // compone el texto por su cuenta. El MOCKUP sí lo pinta, vía
+    // _drawCompositionOverlay (mismo criterio que AMAZON BG).
+    if (typeof AutoLayout !== 'undefined' && AutoLayout.esTituloFijo
+        && AutoLayout.esTituloFijo(formatName, layer)) return false;
+
     // Composiciones H/V: según la variante del formato
     if (layer.isComposicionTextoH || layer.isComposicionTextoV) {
       const _v = (typeof Formats !== 'undefined' && Formats.getTextVariant) ? Formats.getTextVariant(formatName) : null;
@@ -884,7 +904,7 @@ const Export = (() => {
       return fmtVisible !== undefined ? fmtVisible : true;
     }
     if (layer.exclusiveFormat) return layer.exclusiveFormat === formatName;
-    if ((formatName === 'MUX4 TXT' || formatName === 'MOVIL TXT' || formatName === 'TÍTULO FICHA' || formatName === 'AMAZON LOGO' || formatName === 'TEXTO HORIZONTAL' || formatName === 'TEXTO VERTICAL') && !layer._layoutGenerated) return false;
+    if (TEXT_HOST_FORMATS.includes(formatName) && !layer._layoutGenerated) return false;
     const fmtVisible = State.formatParams?.[formatName]?.[layer.id]?.visible;
     return fmtVisible !== undefined ? fmtVisible : layer.visible !== false;
   }

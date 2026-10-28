@@ -2415,11 +2415,74 @@ const AutoLayout = (() => {
     });
   }
 
+  // ── TÍTULO DE REFERENCIA FIJO (se ve, no se toca, no se exporta) ──────────
+  //
+  // Formatos donde la composición de texto NO se maqueta: la web la compone por
+  // su cuenta, siempre en el mismo sitio y al mismo tamaño. Adaptator la pinta
+  // clavada ahí para que el diseñador vea qué zona de la imagen va a quedar
+  // tapada, pero no entra en el PNG exportado. En el MOCKUP sí, que para eso
+  // está. Mismo patrón que AMAZON BG.
+  //
+  // x/y son la esquina superior izquierda de la CAJA de la composición, en
+  // coordenadas ABSOLUTAS del formato (desde la esquina, no desde el centro).
+  // Se dibuja a TAMAÑO NATURAL: la composición ya viene con la medida exacta
+  // que tiene en la plantilla, así que aquí no se escala nada.
+  //
+  // ⚠️ POR QUÉ NO SE ESCALA A UNA ALTURA FIJA (lo intenté y estaba mal):
+  // la primera versión forzaba el título a 330 px de alto de píxel, sacados de
+  // medir "Trigger Point" en la referencia. Pero 330 no es una regla, es una
+  // CASUALIDAD de ese título: la plantilla de Photoshop aplica una ESCALA fija
+  // (73,79%) a lo que haya dentro de la capa inteligente, así que un título más
+  // bajo sale más bajo. Forzar 330 habría inflado un título corto tipo "IT".
+  //
+  // De dónde salen los números (reconstruido con el diseñador, 2026-10-28; la
+  // plantilla original no está documentada en ninguna parte):
+  //   · capa inteligente: documento 2312x696, título dentro 2300x448 pegado abajo
+  //   · colocada en la plantilla al 73,79%
+  //   · → documento 1706x514  ·  título 1697x331
+  //   · el título cae con su píxel en x=180, y=507
+  //   · → la caja arranca en x = 180 − 4,4 = 175,6  y = 838 − 513,6 = 324,0
+  // Contrastado por tres vías que coinciden en 0,2 px: Properties de Photoshop,
+  // medición del PNG de referencia y la derivación desde la escala.
+  const TITULO_FIJO = {
+    // PENDIENTE: apunta a la composición "Com. Titulo H" (1706x514), que aún no
+    // existe. Hasta que exista, este formato no pinta título de referencia.
+    // 'Cabecera-Detalle-Escritorio': { x: 176, y: 324 },
+  };
+
+  function tituloFijoConfig(formatName) {
+    return TITULO_FIJO[formatName] || null;
+  }
+
+  // ¿Esta capa es el título de referencia fijo de este formato?
+  function esTituloFijo(formatName, layer) {
+    return !!(layer && layer.isComposicionTextoH && TITULO_FIJO[formatName]);
+  }
+
+  // Rectángulo donde dibujar la CAJA de la capa, en coordenadas del formato.
+  // Devuelve null si no aplica o si faltan medidas. Lo usan canvas.js (editor)
+  // y export.js (mockup) para no poder desincronizarse.
+  function tituloFijoRect(formatName, layer) {
+    // OJO: canvas.js llama a esto para CADA capa del formato, así que el filtro
+    // de "es la composición de texto" tiene que estar aquí dentro. Sin él se
+    // clavaba también la imagen del sujeto en el sitio del título.
+    if (!esTituloFijo(formatName, layer)) return null;
+    const cfg = TITULO_FIJO[formatName];
+    const nw = layer.naturalWidth, nh = layer.naturalHeight;
+    if (!(nw > 0) || !(nh > 0)) return null;
+
+    // Tamaño natural, sin escalar: la composición ya viene a la medida de la
+    // plantilla y su contenido va pegado abajo a la izquierda, así que el
+    // título alto o bajo cae donde debe sin tocar nada.
+    return { left: cfg.x, top: cfg.y, drawW: nw, drawH: nh };
+  }
+
   return {
     detectRole, onFirstImport, onAdditionalImport, resetFormat,
     toggleScaleMode, toggleMirror, setVariant, getVariant, getVariants,
     getScaleMode, getMirrored, hasConfig, resetSession,
     showRoleModal, repositionTextComp, applyBigTitle,
+    tituloFijoConfig, esTituloFijo, tituloFijoRect,
     dump,
   };
 

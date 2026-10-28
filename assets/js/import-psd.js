@@ -100,9 +100,9 @@ const ImportPSD = (() => {
   // Formatos "maestros de texto": solo muestran capas exclusivas suyas. Si se
   // importa estando en uno de ellos, la capa se marca exclusiva o quedaría
   // oculta justo ahí y visible en todos los demás.
-  // DEBE coincidir con _TEXT_MASTER_FORMATS de layers.js (_importLayer).
-  const TEXT_MASTER_FORMATS = ['MUX4 TXT', 'MOVIL TXT', 'AMAZON LOGO',
-                               'TEXTO HORIZONTAL', 'TEXTO VERTICAL', 'TÍTULO FICHA'];
+  // Antes se escribía a mano aquí y en layers.js, con un comentario avisando de
+  // que las dos copias DEBÍAN coincidir. Ahora la lista es una sola (state.js).
+  const TEXT_MASTER_FORMATS = TEXT_HOST_FORMATS;
 
   let _libPromise = null;
   let _overlay    = null;
