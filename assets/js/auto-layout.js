@@ -131,6 +131,19 @@ const AutoLayout = (() => {
   // variante, en vez de quedarse con los de la otra (que son de una capa de
   // distinto tamaño natural y salía desproporcionado).
   function applyBigTitle(formatName) {
+    // SOLO en modo IMAGEN BIG. Sin esta guarda, _applyBigLayout estampaba las
+    // coordenadas fijas de BIG_LAYOUT en proyectos NORMALES: la parte `img` sí
+    // comprobaba que existiera la capa BIG antes de colocar, pero el título no.
+    // Y como abajo se marca `titleManual` —el candado que impide recolocarlo—,
+    // el título quedaba CLAVADO y las variantes A/B/C/D dejaban de moverlo.
+    // Medido en AD PAUSE: salía siempre en x=400 (640−240) al 39 %, que son
+    // exactamente los valores de BIG_LAYOUT, en vez de seguir a cada variante.
+    //
+    // La guarda va AQUÍ y no en el llamante para que proteja a todos: el otro
+    // punto de entrada (formats.js, al cambiar la variante de texto) sí
+    // comprobaba isBigMode, y por eso el fallo costó tanto de localizar.
+    if (typeof Formats === 'undefined' || !Formats.isBigMode || !Formats.isBigMode()) return;
+
     const entry = BIG_LAYOUT[formatName];
     if (!entry || !entry.txt) return;
     const act = _tituloActivo(formatName);
