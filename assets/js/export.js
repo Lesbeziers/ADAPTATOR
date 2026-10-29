@@ -7,11 +7,9 @@ const Export = (() => {
   // ── CONFIGURACIÓN DE FORMATOS ─────────────────────────────
 
   const FORMAT_CONFIG = {
-    '199 PUBLI':          { suffix: '199_PUBLI',                    type: 'jpg', maxMB: 4     },
     'AD PAUSE':           { suffix: 'AD_PAUSE',                     type: 'jpg', maxMB: 0.1   },
     'APPLE TV':           { suffix: 'APPLETV',                      type: 'jpg', maxMB: 1     },
     'FANART DEST.':       { suffix: 'FANART_DESTACADO',             type: 'jpg', maxMB: 1.5   },
-    'IPLUS PUBLI':        { suffix: 'IPLUS_PUBLI',                  type: 'jpg', maxMB: 0.15  },
     'MOD DEST 1':         { suffix: 'MOD_DESTACADO1',               type: 'jpg', maxMB: 1     },
     'MOD DEST 1 SIL':     { suffix: 'MOD_DESTACADO1_SIL',           type: 'png', maxMB: 1     },
     'MOD DEST 2':         { suffix: 'MOD_DESTACADOS2',              type: 'jpg', maxMB: 1     },
@@ -44,10 +42,7 @@ const Export = (() => {
     'MOD N':              { suffix: 'MODULO_N',                     type: 'jpg', maxMB: 0.6   },
     'FANART MOD N':       { suffix: 'FANART_COLECCION',             type: 'jpg', maxMB: 10    },
     'MOD N SIL':          { suffix: 'MOD_N_SIL',                    type: 'png', maxMB: 0.6   },
-    'AMAZON BG':          { suffix: 'AMAZON_BG',                    type: 'jpg', maxMB: 0.45  },
-    'AMAZON LOGO':        { suffix: 'AMAZON_LOGO',                  type: 'png', maxMB: 0.45  },
     'PERFIL':             { suffix: 'PERFIL',                       type: 'png', maxMB: 10    },
-    'SONY':               { suffix: 'SONY',                         type: 'png', maxMB: 10    },
     'XIAOMI BANNER':      { suffix: 'XIAOMI_BANNER_MES',            type: 'jpg', maxMB: 10    },
 
     // ── COMERCIAL (pack web responsive) ───────────────────────
@@ -77,7 +72,6 @@ const Export = (() => {
     'MOVIL MUX FONDO',
     'WEB PUBLI',
     'FANART MÓVIL',
-    'AMAZON BG',
     'AD PAUSE',
     'FANART',
     // COMERCIAL: los 4 que traen MK_ además de su SF_

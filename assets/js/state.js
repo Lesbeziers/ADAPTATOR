@@ -18,7 +18,7 @@
 const TEXT_HOST_FORMATS = [
   'MUX4 TXT', 'MOVIL TXT', 'TEXTO HORIZONTAL', 'TEXTO VERTICAL',
   'COM TITULO H',
-  'AMAZON LOGO', 'TÍTULO FICHA',
+  'TÍTULO FICHA',
 ];
 
 // LOS 5 — de los anteriores, aquellos donde las HERRAMIENTAS DE CAPA
@@ -27,7 +27,6 @@ const TEXT_HOST_FORMATS = [
 const TEXT_TOOL_FORMATS = [
   'MUX4 TXT', 'MOVIL TXT', 'TEXTO HORIZONTAL', 'TEXTO VERTICAL',
   'COM TITULO H',
-  'AMAZON LOGO',
 ];
 
 // LOS 5 — los maestros de texto: lienzos donde se edita el título. Se muestran
@@ -96,8 +95,6 @@ const State = {
     locked:  {},       // { formatId: bool } — bloqueo por formato
     // Posición y escala por defecto (hardcodeada) — placeholder, Wilson pasa valores reales
     defaults: {
-      '199 PUBLI':        { x: 753,  y: -278,  scale: 0.5   },
-      'IPLUS PUBLI':      { x: 567,  y: -280,  scale: 0.36  },
       'MOD DEST 2':       { x: 294,  y: -94,   scale: 0.47  },
       'MUX4 TXT':         { x: 0,    y: -135,   scale: 0.48  },
       'WEB PUBLI':        { x: 386,  y: -202,  scale: 0.34  },
@@ -106,11 +103,9 @@ const State = {
     },
   },
   formatSizes: {
-    '199 PUBLI':        { w: 1920, h: 636,  maxMB: 4    },
     'AD PAUSE':         { w: 1280, h: 720,  maxMB: 0.1, displayContext: { w: 1920, h: 1080, contentX: 322, contentY: 98 } },
     'APPLE TV':         { w: 908,  h: 512,  maxMB: 1    },
     'FANART DEST.':     { w: 1920, h: 1080, maxMB: 1.5  },
-    'IPLUS PUBLI':      { w: 1280, h: 620,  maxMB: 0.15, safeArea: { x: 160, y: -54, w: 960, h: 512 } },
     'MOD DEST 1':       { w: 1636, h: 296,  maxMB: 1    },
     'MOD DEST 1 SIL':   { w: 1920, h: 400,  maxMB: 1,   maskRect: { x: 0, y: 53,  w: 1636, h: 296, r: 4 } },
     'MOD DEST 2':       { w: 803,  h: 296,  maxMB: 1    },
@@ -147,10 +142,7 @@ const State = {
     'MOD N':            { w: 386,  h: 217,  maxMB: 0.6  },
     'FANART MOD N':     { w: 1920, h: 1080, maxMB: 10   },
     'MOD N SIL':        { w: 449,  h: 300,  maxMB: 0.6, maskRect: { x: 0, y: 42,  w: 385,  h: 217, r: 4 } },
-    'AMAZON BG':        { w: 1920, h: 720,  maxMB: 0.45, displayContext: { w: 1920, h: 1080, contentX: 0, contentY: 0, contentW: 1920, contentH: 720 } },
-    'AMAZON LOGO':      { w: 640,  h: 260,  maxMB: 0.45 },
     'PERFIL':           { w: 425,  h: 479,  maxMB: 10, maskCircle: { cx: 0, cy: 26, r: 195 }, maskRect: { x: 0, y: -110, w: 390, h: 260, r: 0 } },
-    'SONY':             { w: 204,  h: 306,  maxMB: 10   },
     'XIAOMI BANNER':    { w: 1280, h: 360,  maxMB: 10   },
 
     // ── COMERCIAL (pack web responsive) ────────────────────
@@ -189,7 +181,6 @@ const State = {
 
   // Configuración de capas de sistema por formato
   systemLayers: {
-    '199 PUBLI':         [ { key: 'mockup', label: 'ZONA DE SEGURIDAD', src: 'assets/img/checkers/199_PUBLI_Check.png' } ],
     'AD PAUSE': [
       { key: 'fondo',    label: 'FONDO',             src: 'assets/img/checkers/fondo_ad.jpg',          zBase: true },
       { key: 'mockup',   label: 'ZONA DE SEGURIDAD', src: 'assets/img/checkers/AD_PAUSE_Checker.png',  contentArea: true },
@@ -197,7 +188,6 @@ const State = {
     ],
     'APPLE TV':          [ { key: 'mockup', label: 'ZONA DE SEGURIDAD', src: 'assets/img/checkers/APPLETV_Check.png' } ],
     'FANART DEST.':      [ { key: 'mockup', label: 'MOCKUP', src: 'assets/img/checkers/FANART_DESTACADO_PUBLI_Check.png' } ],
-    'IPLUS PUBLI':       [ { key: 'mockup', label: 'ZONA DE SEGURIDAD', src: 'assets/img/checkers/IPLUS_PUBLI_Check.png' } ],
     'MOD DEST 1':        [ { key: 'mockup', label: 'ZONA DE SEGURIDAD', src: 'assets/img/checkers/MOD_DESTACADO1_Check.png' } ],
     'MOD DEST 1 SIL':    [ { key: 'mockup', label: 'ZONA DE SEGURIDAD', src: 'assets/img/checkers/MOD_DESTACADO1_SIL_Check.png' } ],
     'MOD DEST 2':        [ { key: 'mockup', label: 'ZONA DE SEGURIDAD', src: 'assets/img/checkers/MOD_DESTACADO2_Check.png' } ],
@@ -247,13 +237,7 @@ const State = {
     'DEST. DOBLE 4 SIL': [ { key: 'mockup', label: 'ZONA DE SEGURIDAD', src: 'assets/img/checkers/MOD_DES_DOBLE_SIL_4_Checker.png' } ],
     'MOD N':             [ { key: 'mockup', label: 'ZONA DE SEGURIDAD', src: 'assets/img/checkers/MOD_N_Checker.png' } ],
     'MOD N SIL':         [ { key: 'mockup', label: 'ZONA DE SEGURIDAD', src: 'assets/img/checkers/MOD_N_SIL_Checker.png' } ],
-    'AMAZON BG': [
-      { key: 'mockup',    label: 'MOCKUP',    src: 'assets/img/checkers/AMAZON_MOCKUP_Check.png' },
-      { key: 'seguridad', label: 'ZONA DE SEGURIDAD', src: 'assets/img/checkers/AMAZON_SEGURIDAD_Check.png' },
-    ],
-    'AMAZON LOGO':       [ { key: 'mockup', label: 'ZONA DE SEGURIDAD', src: 'assets/img/checkers/AMAZON_LOGO_Checker.png' } ],
     'PERFIL':            [ { key: 'mockup', label: 'ZONA DE SEGURIDAD', src: 'assets/img/checkers/perfil_checker.png' } ],
-    'SONY':              [ { key: 'mockup', label: 'ZONA DE SEGURIDAD', src: 'assets/img/checkers/SONY_Checker.png' } ],
     'XIAOMI BANNER':     [],
 
     // ── COMERCIAL (pack web responsive) ────────────────────
@@ -302,8 +286,8 @@ const State = {
       id: 'dispositivos',
       label: 'Dispositivos',
       formats: [
-        '199 PUBLI', 'AD PAUSE', 'APPLE TV', 'FANART DEST.',
-        'IPLUS PUBLI', 'MOD DEST 1', 'MOD DEST 1 SIL', 'MOD DEST 2',
+        'AD PAUSE', 'APPLE TV', 'FANART DEST.',
+        'MOD DEST 1', 'MOD DEST 1 SIL', 'MOD DEST 2',
         'MOD DEST 2 SIL', 'MOD DEST 3', 'MOD DEST 3 SIL', 'MUX4 FONDO',
         'MOVIL MUX FONDO', 'WEB PUBLI',
         'WOW PUBLI', 'TÍTULO FICHA'
@@ -343,7 +327,7 @@ const State = {
       id: 'otros',
       label: 'Otros',
       formats: [
-        'AMAZON BG', 'AMAZON LOGO', 'PERFIL', 'SONY', 'XIAOMI BANNER'
+        'PERFIL', 'XIAOMI BANNER'
       ]
     }
   ],

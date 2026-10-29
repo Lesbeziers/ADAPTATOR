@@ -61,15 +61,11 @@ const AutoLayout = (() => {
     // Los tres sin `txt` (FANART DEST., MUX4 FONDO, MOVIL MUX FONDO) no llevan
     // texto por diseño: el suyo viaja en otro asset y se edita en la modalidad
     // TEXTOS. No es que falte medirlos.
-    '199 PUBLI':       { img: { scale: 45,   x:  -26, y:  462 },
-                         txt: { H: { scale: 41.9, x: -450, y: -12 }, V: { scale: 100, x: -426, y: -12 } } },
     'AD PAUSE':        { img: { scale: 36,   x:    0, y:  302 },
                          txt: { H: { scale: 39,   x: -240, y:   0 }, V: { scale: 100, x: -269, y:   0 } } },
     'APPLE TV':        { img: { scale: 20.4, x:   -4, y:  152 },
                          txt: { H: { scale: 24.1, x: -175, y:   0 }, V: { scale:  73, x: -205, y:   0 } } },
     'FANART DEST.':    { img: { scale: 100,  x: -442, y: 1134 } },
-    'IPLUS PUBLI':     { img: { scale: 25,   x:   94, y:  164 },
-                         txt: { H: { scale: 27,   x:  -61, y: -87 }, V: { scale:  78, x:  -53, y: -54 } } },
     'MOD DEST 1':      { img: { scale: 36.6, x:   -2, y:  481 },
                          txt: { H: { scale: 30.4, x: -352, y:   0 }, V: { scale:  56, x: -352, y:   0 } } },
     'MOD DEST 2':      { img: { scale: 31,   x: -117, y:  392 },
@@ -182,27 +178,6 @@ const AutoLayout = (() => {
   // crop:        parámetros de escala en modo CROP
   // fit:         parámetros de escala en modo FIT
   const FORMAT_CONFIG = {
-    '199 PUBLI': {
-      variants: {
-        A: {
-          label: 'Imagen derecha / Texto izquierda',
-          textZone:  { x: 0.056, y: 0.164, w: 0.419, h: 0.635 },
-          focusZone: { x: 0.474, y: 0.000, w: 0.467, h: 0.998 },
-        },
-        B: {
-          label: 'Imagen izquierda / Texto derecha',
-          textZone:  { x: 0.525, y: 0.164, w: 0.419, h: 0.635 },
-          focusZone: { x: 0.059, y: 0.000, w: 0.467, h: 0.998 },
-        },
-      },
-      textZone:    { x: 0.056, y: 0.164, w: 0.419, h: 0.635 },
-      focusZone:   { x: 0.474, y: 0.000, w: 0.467, h: 0.998 },
-      anchorPoint: { x: 0.50,  y: 0.22  },
-      crop: { fill: 3.00, anchorFraction: 0.25 },
-      fit:  { fill: 1.00, anchorFraction: 0.30 },
-      scaleModeDefault: 'crop',
-      hasMirror: true,
-    },
     'AD PAUSE': {
       variants: {
         A: {
@@ -564,36 +539,6 @@ const AutoLayout = (() => {
       fit:  { fill: 1.00, anchorFraction: 0.30 },
       scaleModeDefault: 'crop',
     },
-    'IPLUS PUBLI': {
-      variants: {
-        A: {
-          label: 'Centro / Título abajo',
-          textZone:  { x: 0.287, y: 0.511, w: 0.674, h: 0.288 },
-          focusZone: { x: 0.325, y: 0.000, w: 0.599, h: 0.823 },
-        },
-        B: {
-          label: 'Centro / Título arriba',
-          textZone:  { x: 0.287, y: 0.025, w: 0.674, h: 0.288 },
-          focusZone: { x: 0.325, y: 0.000, w: 0.599, h: 0.823 },
-        },
-        C: {
-          label: 'Imagen derecha / Texto izquierda',
-          textZone:  { x: 0.265, y: 0.165, w: 0.337, h: 0.453 },
-          focusZone: { x: 0.625, y: 0.000, w: 0.374, h: 0.823 },
-        },
-        D: {
-          label: 'Imagen izquierda / Texto derecha',
-          textZone:  { x: 0.647, y: 0.165, w: 0.337, h: 0.453 },
-          focusZone: { x: 0.250, y: 0.000, w: 0.374, h: 0.823 },
-        },
-      },
-      textZone:    { x: 0.287, y: 0.511, w: 0.674, h: 0.288 },
-      focusZone:   { x: 0.325, y: 0.000, w: 0.599, h: 0.823 },
-      anchorPoint: { x: 0.50,  y: 0.22  },
-      crop: { fill: 3.00, anchorFraction: 0.25 },
-      fit:  { fill: 1.00, anchorFraction: 0.30 },
-      scaleModeDefault: 'crop',
-    },
     'MUX4 FONDO': {
       variants: {
         A: {
@@ -609,27 +554,7 @@ const AutoLayout = (() => {
       scaleModeDefault: 'crop',
     },
 
-    'AMAZON BG': {
-      variants: {
-        A: {
-          label: 'Imagen derecha',
-          focusZone: { x: 0.420, y: 0.000, w: 0.500, h: 0.999 },
-        },
-      },
-      textZone:    null,
-      focusZone:   { x: 0.370, y: 0.000, w: 0.500, h: 0.999 },
-      anchorPoint: { x: 0.50,  y: 0.22  },
-      crop: { fill: 2.50, anchorFraction: 0.25 },
-      fit:  { fill: 1.00, anchorFraction: 0.30 },
-      scaleModeDefault: 'crop',
-    },
 
-    'AMAZON LOGO': {
-      textZone:    { x: 0.000, y: 0.020, w: 0.960, h: 0.500 },
-      focusZone:   null,
-      scaleModeDefault: 'fit',
-      useTitleLayer: true,
-    },
 
     'PERFIL': {
       textZone:    null,
@@ -640,18 +565,6 @@ const AutoLayout = (() => {
       scaleModeDefault: 'crop',
     },
 
-    'SONY': {
-      // 204×306. La franja MARCA SONY (capa fija) ocupa aprox la mitad inferior (y≈0.55–1.00).
-      // Imagen principal: arriba, encima de la franja. Título: PNG importado, apoyado justo
-      // encima de la franja (sobre la zona de seguridad). Sin COMPOSICION TITULO.
-      textZone:    { x: 0.050, y: 0.400, w: 0.900, h: 0.150 },
-      focusZone:   { x: 0.000, y: 0.000, w: 1.000, h: 0.550 },
-      anchorPoint: { x: 0.50,  y: 0.20  },
-      crop: { fill: 1.80, anchorFraction: 0.15 },
-      fit:  { fill: 1.00, anchorFraction: 0.20 },
-      scaleModeDefault: 'crop',
-      useTitleLayer: true,
-    },
 
     'XIAOMI BANNER': {
       // 1280×360. Mismo layout que 199 PUBLI pero usando el PNG título importado
