@@ -23,7 +23,8 @@ const Export = (() => {
     'MOVIL MUX FONDO':    { suffix: 'SMARTPHONE_MUX_FONDO_PUBLI',   type: 'jpg', maxMB: 1.5   },
     'MOVIL TXT':          { suffix: 'SMARTPHONE_MUX_TXT_PUBLI',     type: 'png', maxMB: 0.6   },
     'TEXTO HORIZONTAL':   { suffix: 'TEXTO_HORIZONTAL',             type: 'png', maxMB: 0.6   },
-    'COM TITULO H':       { suffix: 'COM_TITULO_H',                 type: 'png', maxMB: 0.6   },
+    // El título de COMERCIAL se compone aquí y se entrega como 'cabecera-slider-tt'.
+    'COM TITULO H':       { suffix: 'cabecera-slider-tt', type: 'png', maxMB: 0.6, web: true },
     'TEXTO VERTICAL':     { suffix: 'TEXTO_VERTICAL',               type: 'png', maxMB: 0.6   },
     'WEB PUBLI':          { suffix: 'WEB_PUBLI',                    type: 'jpg', maxMB: 1     },
     'WOW PUBLI':          { suffix: 'WOW_PUBLI',                    type: 'jpg', maxMB: 0.25  },
@@ -52,21 +53,20 @@ const Export = (() => {
     // ── COMERCIAL (pack web responsive) ───────────────────────
     // maxMB: 100 = sin límite real por ahora, mismo criterio que CARÁTULA y
     // CARTEL COM. Si producción fija pesos, se cambian aquí y en state.js.
-    'Mosaico-Horizontal':                 { suffix: 'MOSAICO_HORIZONTAL',                 type: 'jpg', maxMB: 100 },
-    'Mosaico-Vertical':                   { suffix: 'MOSAICO_VERTICAL',                   type: 'jpg', maxMB: 100 },
-    'Modulo-Escritorio':                  { suffix: 'MODULO_ESCRITORIO',                  type: 'jpg', maxMB: 100 },
-    'Modulo-Movil':                       { suffix: 'MODULO_MOVIL',                       type: 'jpg', maxMB: 100 },
-    'Cabecera-Detalle-Escritorio':        { suffix: 'CABECERA_DETALLE_ESCRITORIO',        type: 'jpg', maxMB: 100 },
-    'Cabecera-Detalle-Movil':             { suffix: 'CABECERA_DETALLE_MOVIL',             type: 'jpg', maxMB: 100 },
-    'Carrusel-Vertical':                  { suffix: 'CARRUSEL_VERTICAL',                  type: 'jpg', maxMB: 100 },
-    'Carrusel-Horizontal':                { suffix: 'CARRUSEL_HORIZONTAL',                type: 'jpg', maxMB: 100 },
-    'Cabecera-Slider-Escritorio':         { suffix: 'CABECERA_SLIDER_ESCRITORIO',         type: 'jpg', maxMB: 100 },
-    'Cabecera-Slider-Movil':              { suffix: 'CABECERA_SLIDER_MOVIL',              type: 'jpg', maxMB: 100 },
-    'Cabecera-Slider-TT':                 { suffix: 'CABECERA_SLIDER_TT',                 type: 'jpg', maxMB: 100 },
-    'Cabecera-Slider-Mediano-Escritorio': { suffix: 'CABECERA_SLIDER_MEDIANO_ESCRITORIO', type: 'jpg', maxMB: 100 },
-    'Slider-Mediano-Escritorio':          { suffix: 'SLIDER_MEDIANO_ESCRITORIO',          type: 'jpg', maxMB: 100 },
-    'Cabecera-Slider-Mediano-Movil':      { suffix: 'CABECERA_SLIDER_MEDIANO_MOVIL',      type: 'jpg', maxMB: 100 },
-    'Slider-Mediano-Movil':               { suffix: 'SLIDER_MEDIANO_MOVIL',               type: 'jpg', maxMB: 100 },
+    'Mosaico-Horizontal':                 { suffix: 'mosaico-horizontal',                 type: 'jpg', maxMB: 100 , web: true },
+    'Mosaico-Vertical':                   { suffix: 'mosaico-vertical',                   type: 'jpg', maxMB: 100 , web: true },
+    'Modulo-Escritorio':                  { suffix: 'modulo-escritorio',                  type: 'jpg', maxMB: 100 , web: true },
+    'Modulo-Movil':                       { suffix: 'modulo-movil',                       type: 'jpg', maxMB: 100 , web: true },
+    'Cabecera-Detalle-Escritorio':        { suffix: 'cabecera-detalle-escritorio',        type: 'jpg', maxMB: 100 , web: true },
+    'Cabecera-Detalle-Movil':             { suffix: 'cabecera-detalle-movil',             type: 'jpg', maxMB: 100 , web: true },
+    'Carrusel-Vertical':                  { suffix: 'carrusel-vertical',                  type: 'jpg', maxMB: 100 , web: true },
+    'Carrusel-Horizontal':                { suffix: 'carrusel-horizontal',                type: 'jpg', maxMB: 100 , web: true },
+    'Cabecera-Slider-Escritorio':         { suffix: 'cabecera-slider-escritorio',         type: 'jpg', maxMB: 100 , web: true },
+    'Cabecera-Slider-Movil':              { suffix: 'cabecera-slider-movil',              type: 'jpg', maxMB: 100 , web: true },
+    'Cabecera-Slider-Mediano-Escritorio': { suffix: 'cabecera-slider-mediano-escritorio', type: 'jpg', maxMB: 100 , web: true },
+    'Slider-Mediano-Escritorio':          { suffix: 'slider-mediano-escritorio',          type: 'jpg', maxMB: 100 , web: true },
+    'Cabecera-Slider-Mediano-Movil':      { suffix: 'cabecera-slider-mediano-movil',      type: 'jpg', maxMB: 100 , web: true },
+    'Slider-Mediano-Movil':               { suffix: 'slider-mediano-movil',               type: 'jpg', maxMB: 100 , web: true },
   };
 
   // Formatos con capa de sistema 'mockup' real (no zona de seguridad).
@@ -315,7 +315,7 @@ const Export = (() => {
         }
 
         const sizeMB = blob.size / (1024 * 1024);
-        const filename = `${_buildBaseName(nombre, formatName)}_${cfg.suffix}.${cfg.type}`;
+        const filename = `${_webBase(nombre, formatName, cfg)}${cfg.web ? '-' : '_'}${cfg.suffix}.${cfg.type}`;
 
         if (cfg.type === 'png' && sizeMB > cfg.maxMB) {
           warnings.push(`⚠️ ${formatName}: ${sizeMB.toFixed(2)}MB supera el límite de ${cfg.maxMB}MB (exportado igualmente)`);
@@ -337,7 +337,7 @@ const Export = (() => {
             const mockCv = await _renderMockupVariantCanvas(formatName, mv.key);
             const mockBlob = mockCv ? await _jpgWithMaxSize(mockCv, 5) : null;
             if (mockBlob) {
-              const mockName = `${_buildBaseName(nombre, formatName)}_${cfg.suffix}_${mv.suffix}.jpg`;
+              const mockName = `${_webBase(nombre, formatName, cfg)}${cfg.web ? '-' : '_'}${cfg.suffix}${cfg.web ? '-' : '_'}${cfg.web ? mv.suffix.toLowerCase() : mv.suffix}.jpg`;
               zip.file(mockName, await mockBlob.arrayBuffer());
             } else {
               warnings.push(`⚠️ ${formatName} (${mv.suffix}): no se pudo generar el mockup.`);
@@ -1373,6 +1373,17 @@ const Export = (() => {
 
   // Construye el "base name" del fichero para cada formato.
   // Caso especial: MOD N y FANART MOD N intercalan fecha (MES3+AA, ej. ENE26) entre nombre y suffix.
+  // Los formatos de COMERCIAL siguen la nomenclatura WEB: minúsculas y guiones
+  // normales, no MAYÚSCULAS_CON_GUION_BAJO como el resto de la herramienta. Lo
+  // pide el CMS. Afecta también al nombre del proyecto: "El ser querido" tiene
+  // que salir como "El-ser-querido", porque un espacio en una URL no vale.
+  function _webBase(nombre, formatName, cfg) {
+    const base = _buildBaseName(nombre, formatName);
+    // Ojo: el nombre del proyecto llega ya saneado con guiones BAJOS, así que
+    // hay que convertir ambos — buscar solo espacios no encuentra nada.
+    return cfg && cfg.web ? base.trim().replace(/[\s_]+/g, '-') : base;
+  }
+
   function _buildBaseName(nombre, formatName) {
     if (formatName === 'FANART MOD N' || formatName === 'MOD N') {
       const meses = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];

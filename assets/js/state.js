@@ -126,7 +126,8 @@ const State = {
     // COM TITULO H — asset de título del pack COMERCIAL. Tamaño CONFIRMADO por
     // los diseñadores (2026-10-29) mirando un pack ya exportado de una serie
     // hecha de forma tradicional. Es el tamaño de ENTREGA, y por tanto también
-    // el de exportación. Coincide con el de Cabecera-Slider-TT.
+    // el de exportación, y se entrega con el nombre 'cabecera-slider-tt'.
+    // Ese "formato" no existe como pieza: ES este título, y estaba duplicado.
     'COM TITULO H':     { w: 1156, h: 348,  maxMB: 0.6  },
     'WEB PUBLI':        { w: 2000, h: 465,  maxMB: 1, displayContext: { w: 1920, h: 850, contentX: 26, contentY: 115, contentW: 1868, contentH: 434 } },
     'WOW PUBLI':        { w: 1280, h: 258,  maxMB: 0.25 },
@@ -165,7 +166,6 @@ const State = {
     'Carrusel-Horizontal':                { w: 800,  h: 450,  maxMB: 100 },
     'Cabecera-Slider-Escritorio':         { w: 3840, h: 2160, maxMB: 100 },
     'Cabecera-Slider-Movil':              { w: 2160, h: 3840, maxMB: 100 },
-    'Cabecera-Slider-TT':                 { w: 1156, h: 348,  maxMB: 100 },
     'Cabecera-Slider-Mediano-Escritorio': { w: 3840, h: 1200, maxMB: 100 },
     'Slider-Mediano-Escritorio':          { w: 3840, h: 1200, maxMB: 100 },
     'Cabecera-Slider-Mediano-Movil':      { w: 1536, h: 1536, maxMB: 100 },
@@ -281,7 +281,6 @@ const State = {
       { key: 'mockup',    label: 'MOCKUP',            src: 'assets/img/checkers/MK_Cabecera_Slider_Movil.png' },
       { key: 'seguridad', label: 'ZONA DE SEGURIDAD', src: 'assets/img/checkers/SF_Cabecera_Slider_Movil.png' },
     ],
-    'Cabecera-Slider-TT':                 [],
     'Cabecera-Slider-Mediano-Escritorio': [ { key: 'mockup', label: 'ZONA DE SEGURIDAD', src: 'assets/img/checkers/SF_Cabecera_Slider_Mediano_Escritorio.png' } ],
     'Slider-Mediano-Escritorio':          [ { key: 'mockup', label: 'ZONA DE SEGURIDAD', src: 'assets/img/checkers/SF_Slider_Mediano_Escritorio.png' } ],
     'Cabecera-Slider-Mediano-Movil':      [ { key: 'mockup', label: 'ZONA DE SEGURIDAD', src: 'assets/img/checkers/SF_Cabecera_Slider_Mediano_Movil.png' } ],
@@ -336,7 +335,6 @@ const State = {
         'Cabecera-Detalle-Escritorio', 'Cabecera-Detalle-Movil',
         'Carrusel-Vertical', 'Carrusel-Horizontal',
         'Cabecera-Slider-Escritorio', 'Cabecera-Slider-Movil',
-        'Cabecera-Slider-TT',
         'Cabecera-Slider-Mediano-Escritorio', 'Slider-Mediano-Escritorio',
         'Cabecera-Slider-Mediano-Movil', 'Slider-Mediano-Movil'
       ]

@@ -102,7 +102,6 @@ const Formats = (() => {
     'Carrusel-Horizontal':                'CARRUSEL HOR.',
     'Cabecera-Slider-Escritorio':         'CAB. SLID. ESCRIT.',
     'Cabecera-Slider-Movil':              'CAB. SLID. MOVIL.',
-    'Cabecera-Slider-TT':                 'CAB. SLIDER TT',
     'Cabecera-Slider-Mediano-Escritorio': 'CAB. SLID. MED. ESCRIT.',
     'Slider-Mediano-Escritorio':          'SLID. MED. ESCRIT.',
     'Cabecera-Slider-Mediano-Movil':      'CAB. SLID. MED. MOVIL',
@@ -614,7 +613,8 @@ const Formats = (() => {
   // bloque "original M+ / TÍTULO" que llevan estas piezas es el mismo archivo
   // que se entrega suelto para los Slider (1156x348). TEXTO HORIZONTAL no vale
   // aquí: es otro lienzo, con otra composición y centrado.
-  // Cabecera-Slider-TT queda fuera: no es una pieza, ES el título.
+  // (Cabecera-Slider-TT se retiró: no era una pieza, era este mismo título
+  //  duplicado en la rejilla de COMERCIAL.)
   const TEXT_VARIANT_COM_H_DEFAULT = [
     'Mosaico-Horizontal', 'Mosaico-Vertical', 'Modulo-Escritorio', 'Modulo-Movil',
     'Cabecera-Detalle-Escritorio', 'Cabecera-Detalle-Movil',

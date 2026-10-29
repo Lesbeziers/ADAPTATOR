@@ -1118,13 +1118,6 @@ const AutoLayout = (() => {
       fit:  { fill: 1.00, anchorFraction: 0.30 },
       scaleModeDefault: 'crop',
     },
-    'Cabecera-Slider-TT': {                                    // 1156x348  ar 3.32
-      focusZone:   { x: 0.000, y: 0.000, w: 1.000, h: 1.000 },
-      anchorPoint: { x: 0.50,  y: 0.22  },
-      crop: { fill: 3.00, anchorFraction: 0.25 },
-      fit:  { fill: 1.00, anchorFraction: 0.30 },
-      scaleModeDefault: 'crop',
-    },
     'Cabecera-Slider-Mediano-Escritorio': {                    // 3840x1200 ar 3.20
       focusZone:   { x: 0.000, y: 0.000, w: 1.000, h: 1.000 },
       anchorPoint: { x: 0.50,  y: 0.22  },
