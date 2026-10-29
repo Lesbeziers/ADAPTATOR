@@ -228,7 +228,6 @@ const Formats = (() => {
 
     if (typeof GradientLayers !== 'undefined') GradientLayers.stopPickMode();
     if (typeof SystemLayers   !== 'undefined') SystemLayers.invalidate();
-    if (typeof Layout         !== 'undefined') Layout.onFormatActivated(formatName);
 
     _renderFormatGrid();
 

@@ -378,18 +378,28 @@ const Layout = (() => {
 
   // ── API PÚBLICA ───────────────────────────────────────────
 
-  // Llamado desde formats.js al activar MUX4 TXT o MOVIL TXT
-  function onFormatActivated(formatName) {
-    if (!LAYOUT_FORMATS.includes(formatName)) return;
-    if (!_cfg(formatName).type) {
-      openModal();
-    }
-  }
-
+  // La ventana de maquetación NO se abre sola al entrar en un formato de texto.
+  // Antes saltaba la primera vez que activabas uno sin maquetación elegida, y
+  // con cinco maestros eso descoloca: aparece encima antes de que te hayas
+  // situado, y como no decía de qué formato era, era fácil creer que estabas
+  // tocando uno y estar tocando otro. Ahora el formato se muestra tal cual está
+  // y la ventana la abre el usuario desde el indicador del panel de capas
+  // ("Sin maquetación · Elegir"), que ya existía.
   function openModal() {
     const modal = document.getElementById('layout-modal');
     if (!modal) return;
     _renderModal();
+
+    // Decir SIEMPRE qué formato se está maquetando: es la otra mitad del
+    // problema de arriba, y vale también cuando la abres tú a mano.
+    const t = modal.querySelector('.layout-modal-title');
+    if (t) {
+      const fid = State.activeFormat;
+      const lbl = (typeof Formats !== 'undefined' && Formats.displayLabel)
+        ? Formats.displayLabel(fid) : fid;
+      t.textContent = fid ? 'Maquetación automática · ' + lbl : 'Maquetación automática';
+    }
+
     modal.classList.add('visible');
   }
 
@@ -1040,7 +1050,7 @@ const Layout = (() => {
   }
 
   return {
-    init, onFormatActivated, openModal, closeModal,
+    init, openModal, closeModal,
     getType, getVersion, isFreemium, isUpsell, isUpsellPrecio, getPreset,
     applyPreset, serialize, restore,
     LAYOUT_FORMATS,
