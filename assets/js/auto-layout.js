@@ -1028,13 +1028,17 @@ const AutoLayout = (() => {
       // material se habría ido de madre (ya nos pasó con el 70 % de Módulo
       // Escritorio). Guardando la zona, el encuadre focal sigue decidiendo QUÉ
       // parte del sujeto se ve, y el formato decide DÓNDE y DE QUÉ TAMAÑO queda.
+      // La A es la que sale por defecto (así lo fija _variant[...] || 'A'), y el
+      // diseñador quiere arrancar con la imagen a la derecha. Por eso van en
+      // este orden y no al revés: es intercambiar dos letras en vez de añadir
+      // un `defaultVariant` que habría que respetar en tres sitios.
       variants: {
-        A: { label: 'Imagen centrada',
-             focusZone: { x: 0.2221, y: 0.1266, w: 0.5559, h: 0.5421 } },
-        B: { label: 'Imagen a la derecha',
+        A: { label: 'Imagen a la derecha',
              focusZone: { x: 0.5105, y: 0.1266, w: 0.5559, h: 0.5421 } },
+        B: { label: 'Imagen centrada',
+             focusZone: { x: 0.2221, y: 0.1266, w: 0.5559, h: 0.5421 } },
       },
-      focusZone:   { x: 0.2221, y: 0.1266, w: 0.5559, h: 0.5421 },   // = variante A
+      focusZone:   { x: 0.5105, y: 0.1266, w: 0.5559, h: 0.5421 },   // = variante A
       anchorPoint: { x: 0.50,  y: 0.22  },
       crop: { fill: 1.20, anchorFraction: 0.25 },
       fit:  { fill: 1.00, anchorFraction: 0.30 },
