@@ -1657,6 +1657,10 @@ const Canvas = (() => {
       ComposicionTexto.generate('TEXTO HORIZONTAL', 'COMPOSICIÓN TEXTO HORIZONTAL', 'isComposicionTextoH')
         .then(() => { const c = State.layers.find(l => l.isComposicionTextoH); if (c && typeof AutoLayout !== 'undefined') AutoLayout.repositionTextComp(c, 'H'); });
     }
+    if (State.activeFormat === 'COM TITULO H' && typeof ComposicionTexto !== 'undefined') {
+      ComposicionTexto.generate('COM TITULO H', 'COMPOSICIÓN COM TITULO H', 'isComposicionComTituloH')
+        .then(() => { const c = State.layers.find(l => l.isComposicionComTituloH); if (c && typeof AutoLayout !== 'undefined') AutoLayout.repositionTextComp(c, 'COM_H'); });
+    }
     if (State.activeFormat === 'TEXTO VERTICAL' && typeof ComposicionTexto !== 'undefined') {
       ComposicionTexto.generate('TEXTO VERTICAL', 'COMPOSICIÓN TEXTO VERTICAL', 'isComposicionTextoV')
         .then(() => { const c = State.layers.find(l => l.isComposicionTextoV); if (c && typeof AutoLayout !== 'undefined') AutoLayout.repositionTextComp(c, 'V'); });

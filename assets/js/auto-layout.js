@@ -1021,21 +1021,21 @@ const AutoLayout = (() => {
       variants: {
         A: {
           label: 'Texto izquierda / Imagen derecha',
-          textZone:  { x: 0.054, y: 0.180, w: 0.400, h: 0.640, scale: 70, alignH: 'left' },
+          textZone:  { x: 0.054, y: 0.180, w: 0.400, h: 0.640, scale: 116, alignH: 'left' },
           focusZone: { x: 0.493, y: 0.000, w: 0.500, h: 1.000 },
         },
         B: {
           label: 'Texto derecha / Imagen izquierda',
-          textZone:  { x: 0.546, y: 0.180, w: 0.400, h: 0.640, scale: 70, alignH: 'right' },
+          textZone:  { x: 0.546, y: 0.180, w: 0.400, h: 0.640, scale: 116, alignH: 'right' },
           focusZone: { x: 0.007, y: 0.000, w: 0.500, h: 1.000 },
         },
         C: {
           label: 'Imagen centrada / Texto centrado abajo',
-          textZone:  { x: 0.300, y: 0.665, w: 0.400, h: 0.240, scale: 70, align: 'bottom' },
+          textZone:  { x: 0.300, y: 0.665, w: 0.400, h: 0.240, scale: 116, align: 'bottom' },
           focusZone: { x: 0.000, y: 0.000, w: 1.000, h: 1.000 },
         },
       },
-      textZone:    { x: 0.054, y: 0.180, w: 0.400, h: 0.640, scale: 70, alignH: 'left' },
+      textZone:    { x: 0.054, y: 0.180, w: 0.400, h: 0.640, scale: 116, alignH: 'left' },
       focusZone:   { x: 0.493, y: 0.000, w: 0.500, h: 1.000 },
       anchorPoint: { x: 0.50,  y: 0.22  },
       crop: { fill: 1.50, anchorFraction: 0.25 },

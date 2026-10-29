@@ -256,11 +256,18 @@ const Formats = (() => {
       }
     }
 
-    // Al salir de COM TITULO H, generar su composición. NO se reposiciona: va
-    // clavada por TITULO_FIJO en los formatos que la usan (ver auto-layout.js).
+    // Al salir de COM TITULO H, generar su composición Y RE-ENCAJARLA en los
+    // formatos que la usan. Lo segundo es imprescindible: si el diseñador
+    // encoge el título o lo mueve dentro del maestro, el lienzo sigue midiendo
+    // 1156x348 y la CAJA en el formato receptor no cambia — pero el píxel sí se
+    // ha movido dentro de ella, así que el título aparecería desplazado.
+    // (Antes no se reposicionaba porque este título iba CLAVADO en su único
+    //  formato; desde que se maqueta por zona, hay que re-encajar como las H/V.)
     if (previous === 'COM TITULO H' && formatName !== 'COM TITULO H') {
       if (typeof ComposicionTexto !== 'undefined') {
         ComposicionTexto.generate('COM TITULO H', 'COMPOSICIÓN COM TITULO H', 'isComposicionComTituloH').then(() => {
+          const comp = State.layers.find(l => l.isComposicionComTituloH);
+          if (comp && typeof AutoLayout !== 'undefined') AutoLayout.repositionTextComp(comp, 'COM_H');
           if (typeof Canvas !== 'undefined') Canvas.render();
         });
       }
