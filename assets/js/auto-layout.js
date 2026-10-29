@@ -1084,6 +1084,22 @@ const AutoLayout = (() => {
       scaleModeDefault: 'crop',
     },
     'Cabecera-Detalle-Movil': {                                // 2160x3840 ar 0.56
+      // Título PLANCHADO. Dos reglas del diseñador, las dos MEDIDAS de sus
+      // propios assets, no estimadas:
+      //  · IZQUIERDA, a ras del titular HTML del mockup. La "E" de "El thriller"
+      //    arranca en x=86 de MK_Cabecera_Detalle_Movil.png → 86/2160 = 0.040
+      //  · CENTRADO en la franja libre del safe, que va de y=639 a y=1648
+      //    (medida de SF_Cabecera_Detalle_Movil.png) → y 0.166, h 0.263.
+      //    Sin `align`: centrar es el comportamiento por defecto.
+      //
+      // ESCALA FIJA 119 %, por decisión del diseñador: prefiere una maquetación
+      // por defecto siempre válida y ajustarla a mano si hace falta. El número
+      // sale de medir SU pieza colocada a ojo (el título ocupa 1375 px de ancho)
+      // contra los 1156 del lienzo de COM TITULO H: 1375/1156 = 118,9 %.
+      //
+      // Contraste de que las reglas son las buenas: su colocación a mano cae a
+      // 15 px del margen y 24 px del centro. Es afinar mucho a pulso.
+      textZone:    { x: 0.040, y: 0.166, w: 0.920, h: 0.263, scale: 119, alignH: 'left' },
       focusZone:   { x: 0.000, y: 0.000, w: 1.000, h: 1.000 },
       anchorPoint: { x: 0.50,  y: 0.22  },
       crop: { fill: 1.20, anchorFraction: 0.25 },
