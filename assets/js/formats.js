@@ -14,7 +14,7 @@ const Formats = (() => {
   ];
   // Formatos MAESTROS donde se edita el texto (no son receptores): ahí no se
   // marca el candado manual.
-  const _TITLE_MASTER_FORMATS = TEXT_BLOCK_FORMATS;
+  const _TITLE_MASTER_FORMATS = TEXT_MASTER_FORMATS;
 
   function init() {
     _buildDropdown();
@@ -166,8 +166,8 @@ const Formats = (() => {
     const modality = State.modalities.find(m => m.id === State.activeModality);
     if (!modality) return;
 
-    // Los 4 maestros de texto se muestran anchos (2 por fila → rejilla 2×2 en "Textos")
-    const WIDE_FORMATS = TEXT_BLOCK_FORMATS;
+    // Los maestros de texto se muestran anchos (2 por fila)
+    const WIDE_FORMATS = TEXT_MASTER_FORMATS;
 
     const bigMode  = isBigMode();
     const visibles = modality.formats.filter(f => !(bigMode && _hiddenInBigMode(f)));

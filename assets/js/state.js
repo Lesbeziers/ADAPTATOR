@@ -30,15 +30,29 @@ const TEXT_TOOL_FORMATS = [
   'AMAZON LOGO',
 ];
 
-// LOS 4 — los maestros de texto propiamente dichos, con maquetación de bloque
-// y presets. AMAZON LOGO queda fuera: lleva un logo, no un bloque de texto.
-//
-// NO confundir con dos listas que contienen estos mismos 4 nombres y NO son
-// esto: el orden de los botones en `modalities.textos` (que es UI) y el
-// `DERIVE` de layout.js (que es el origen del preset de cada uno).
-const TEXT_BLOCK_FORMATS = [
+// LOS 5 — los maestros de texto: lienzos donde se edita el título. Se muestran
+// a doble ancho y no marcan el candado manual (no son receptores).
+const TEXT_MASTER_FORMATS = [
   'MUX4 TXT', 'MOVIL TXT', 'TEXTO HORIZONTAL', 'TEXTO VERTICAL',
   'COM TITULO H',
+];
+
+// LOS 4 — de esos, los que llevan BLOQUE DE TEXTO: maquetación automática por
+// presets y pastilla Freemium.
+//
+// COM TITULO H queda FUERA aunque sea maestro. En las piezas WEB de COMERCIAL
+// el texto NO va quemado en la imagen de título, por SEO: la web lo compone en
+// HTML y solo consume el PNG del título. Así que ahí no hay bloque que maquetar
+// ni pastilla que poner — solo el PNG, apoyado abajo a la izquierda.
+//
+// Esto además evita un problema de fondo: los presets dan por supuesto que un
+// formato derivado es un escalado UNIFORME de su origen (TEXTO HORIZONTAL es
+// MUX4 TXT x2,449/2,450), y COM TITULO H no lo es (x2,176/x1,616), así que
+// derivarlos le descuadraba la maquetación.
+//
+// NO confundir con el orden de los botones en `modalities.textos`, que es UI.
+const TEXT_BLOCK_FORMATS = [
+  'MUX4 TXT', 'MOVIL TXT', 'TEXTO HORIZONTAL', 'TEXTO VERTICAL',
 ];
 
 
