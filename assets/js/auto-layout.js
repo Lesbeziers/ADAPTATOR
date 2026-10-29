@@ -1923,10 +1923,15 @@ const AutoLayout = (() => {
     // coleccionM (SVG Colección M+)
     let coleccion = findByName('coleccionM');
     if (!coleccion) {
-      const svg = await _loadSvgAsDataUrl('assets/img/coleccionM.svg');
+      const COLECCION_SVG = 'assets/img/coleccionM.svg';
+      const svg = await _loadSvgAsDataUrl(COLECCION_SVG);
       coleccion = {
         id: mkId('coleccion'), name: 'coleccionM', type: 'image', visible: true,
-        exclusiveFormat: fmt, src: svg.dataUrl,
+        // systemPath: este asset es de la PROPIA herramienta, no del usuario.
+        // Al guardar el proyecto se referencia por ruta en vez de copiarse a
+        // imagenes/, igual que los logos (ver _serializeState en project.js).
+        // En memoria sí va como dataURL, que es lo que el lienzo necesita.
+        exclusiveFormat: fmt, src: svg.dataUrl, systemPath: COLECCION_SVG,
         naturalWidth: svg.naturalWidth, naturalHeight: svg.naturalHeight, params: bp(),
       };
       _setParams(fmt, coleccion.id, { x:-94, y:-67, scaleX:44, scaleY:44, rotation:0 });

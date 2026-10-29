@@ -174,6 +174,7 @@ const Project = (() => {
     const layers = State.layers
       .filter(l => !l.isComposicion && !l.isComposicionMovil && !l.isComposicionAmazon
                 && !l.isComposicionTextoH && !l.isComposicionTextoV
+                && !l.isComposicionComTituloH
                 && !l.isMarcaIplus && !l.isMarcaSony && !l.isMolduraFanart && !l.isMascaraBlur)
       .map(layer => {
         const l = { ...layer, params: { ...layer.params } };
@@ -183,6 +184,17 @@ const Project = (() => {
         if (l.isLogo) {
           l.srcType = 'path';
           l.src     = l.logoPath;
+          return l;
+        }
+
+        // Assets de la PROPIA herramienta (el logo Colección M+ que la
+        // maquetación de MOD N mete como capa): se referencian por ruta, no se
+        // copian a imagenes/. Antes acababan en la carpeta del usuario como un
+        // asset suyo —"coleccionM.png"— cuando no lo son y además ya viven
+        // dentro de Adaptator. Mismo trato que los logos.
+        if (l.systemPath) {
+          l.srcType = 'path';
+          l.src     = l.systemPath;
           return l;
         }
 
