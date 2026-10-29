@@ -1100,7 +1100,28 @@ const AutoLayout = (() => {
       // Contraste de que las reglas son las buenas: su colocación a mano cae a
       // 15 px del margen y 24 px del centro. Es afinar mucho a pulso.
       textZone:    { x: 0.040, y: 0.166, w: 0.920, h: 0.263, scale: 119, alignH: 'left' },
-      focusZone:   { x: 0.000, y: 0.000, w: 1.000, h: 1.000 },
+
+      // DOS OPCIONES DE IMAGEN. El título NO cambia entre ellas: va siempre a la
+      // izquierda para coincidir con el texto HTML del mockup.
+      //
+      // Las zonas NO son un número a ojo: salen de despejar la referencia del
+      // diseñador. Él colocó el sujeto al 140 % en x=623, y=-393, con un recorte
+      // focal de w=0,8176 sobre un asset de 1049x1487. Como `_applySubjectFocal`
+      // hace que el RECORTE llene la focusZone, la zona que produce ese resultado
+      // mide 1201x2082 px (0,5559 x 0,5421) y se centra donde deba.
+      //
+      // Lo que se guarda es la ZONA, no el 140 %. El porcentaje era un resultado,
+      // no una regla: dependía del tamaño en píxeles de ESE recorte, y con otro
+      // material se habría ido de madre (ya nos pasó con el 70 % de Módulo
+      // Escritorio). Guardando la zona, el encuadre focal sigue decidiendo QUÉ
+      // parte del sujeto se ve, y el formato decide DÓNDE y DE QUÉ TAMAÑO queda.
+      variants: {
+        A: { label: 'Imagen centrada',
+             focusZone: { x: 0.2221, y: 0.1266, w: 0.5559, h: 0.5421 } },
+        B: { label: 'Imagen a la derecha',
+             focusZone: { x: 0.5105, y: 0.1266, w: 0.5559, h: 0.5421 } },
+      },
+      focusZone:   { x: 0.2221, y: 0.1266, w: 0.5559, h: 0.5421 },   // = variante A
       anchorPoint: { x: 0.50,  y: 0.22  },
       crop: { fill: 1.20, anchorFraction: 0.25 },
       fit:  { fill: 1.00, anchorFraction: 0.30 },
