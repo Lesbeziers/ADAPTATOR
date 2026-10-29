@@ -1127,7 +1127,6 @@ const AutoLayout = (() => {
       !['text', 'solid', 'gradient'].includes(l.type) &&
       !l.isComposicion && !l.isComposicionMovil &&
       !l.isComposicionTextoH && !l.isComposicionTextoV &&
-      !l.isMarcaIplus && !l.isMarcaSony &&
       l.src
     );
 
@@ -2206,7 +2205,7 @@ const AutoLayout = (() => {
     const isSystemLayer = l =>
       l.isComposicion || l.isComposicionMovil  ||
       l.isComposicionTextoH || l.isComposicionTextoV ||
-      l.isMarcaIplus || l.isMarcaSony || l.isMolduraFanart || l.isMascaraBlur;
+      l.isMolduraFanart || l.isMascaraBlur;
 
     const sys      = [];
     const title    = [];
@@ -2358,7 +2357,7 @@ const AutoLayout = (() => {
       }
       // Flags útiles
       ['isTitleLayer','isComposicion','isComposicionMovil',
-       'isMarcaSony','isMarcaIplus','exclusiveFormat','_layoutGenerated']
+       'exclusiveFormat','_layoutGenerated']
         .forEach(k => { if (layer[k]) item[k] = layer[k]; });
       out.layers.push(item);
     });

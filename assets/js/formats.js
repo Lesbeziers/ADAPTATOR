@@ -608,7 +608,7 @@ const Formats = (() => {
     'DEST. DOBLE 1', 'DEST. DOBLE 1 SIL', 'DEST. DOBLE 2', 'DEST. DOBLE 2 SIL', 'MOD N SIL',
   ];
   const TEXT_VARIANT_TITLE_V_DEFAULT = [
-    'CARÁTULA V', 'CARTEL COM. V', 'SONY', 'DEST. DOBLE 4', 'DEST. DOBLE 4 SIL',
+    'CARÁTULA V', 'CARTEL COM. V', 'DEST. DOBLE 4', 'DEST. DOBLE 4 SIL',
   ];
   // Formatos con composición horneada VERTICAL por defecto (los que quedan en vertical)
   const TEXT_VARIANT_V_DEFAULT = [];
@@ -630,7 +630,7 @@ const Formats = (() => {
   // TODOS los anfitriones — en un lienzo de composición no se elige variante,
   // porque el lienzo ES la composición.
   const TEXT_VARIANT_NONE = ['FANART', 'FANART MÓVIL', 'FANART DEST.', 'FANART MOD N', 'MOD N', 'PERFIL',
-                             'MUX4 FONDO', 'MOVIL MUX FONDO', 'AMAZON BG',
+                             'MUX4 FONDO', 'MOVIL MUX FONDO',
                              ...TEXT_HOST_FORMATS];
 
   function _defaultTextVariant(fid) {
@@ -747,7 +747,7 @@ const Formats = (() => {
   // Devuelve la capa de título (isTitleLayerH/V) que debe mostrarse en este formato.
   // Con fallback: si solo hay uno, se usa para los dos.
   function _formatNeedsTitleOrient(fid) {
-    if (fid === 'MUX4 TXT' || fid === 'TEXTO HORIZONTAL' || fid === 'COM TITULO H' || fid === 'AMAZON LOGO' || fid === 'TÍTULO FICHA') return 'H';
+    if (fid === 'MUX4 TXT' || fid === 'TEXTO HORIZONTAL' || fid === 'COM TITULO H' || fid === 'TÍTULO FICHA') return 'H';
     if (fid === 'MOVIL TXT' || fid === 'TEXTO VERTICAL') return 'V';
     // Receptores no-maestros: según la variante de texto que tengan
     const v = getTextVariant(fid);
@@ -893,8 +893,7 @@ const Formats = (() => {
     while (insertIdx < State.layers.length && (
       State.layers[insertIdx].isComposicion || State.layers[insertIdx].isComposicionMovil ||
       State.layers[insertIdx].isComposicionTextoH ||
-      State.layers[insertIdx].isComposicionTextoV || State.layers[insertIdx].isMarcaIplus ||
-      State.layers[insertIdx].isMarcaSony || State.layers[insertIdx].isTitleLayer
+      State.layers[insertIdx].isComposicionTextoV || State.layers[insertIdx].isTitleLayer
     )) insertIdx++;
 
     // 4. Clonar capas exclusivas del origen → destino (escaladas), conservando el orden

@@ -753,8 +753,7 @@ const ImportPSD = (() => {
     let ci = 0;
     while (ci < State.layers.length && (
       State.layers[ci].isComposicion || State.layers[ci].isComposicionMovil ||
-      State.layers[ci].isMarcaIplus ||
-      State.layers[ci].isMarcaSony || State.layers[ci].isTitleLayer)) {
+      State.layers[ci].isTitleLayer)) {
       ci++;
     }
 

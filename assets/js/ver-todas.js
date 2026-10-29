@@ -166,8 +166,6 @@ var VerTodas = (() => {
     const layers = [...State.layers].reverse();
 
     for (const layer of layers) {
-      if (layer.isMarcaIplus) continue; // se dibuja al final, encima de todo
-      if (layer.isMarcaSony) continue;
       if (layer.isMolduraFanart) continue;
       const isVisible = _isLayerVisible(layer, formatName);
       if (!isVisible) continue;
@@ -218,15 +216,6 @@ var VerTodas = (() => {
       });
     }
 
-    // MARCA IPLUS: siempre al final, por encima de todo
-    const marca = State.layers.find(l => l.isMarcaIplus);
-    if (marca && formatName === 'IPLUS PUBLI') {
-      await _drawLayer(ctx, marca, formatName, W, H);
-    }
-    const marcaSony = State.layers.find(l => l.isMarcaSony);
-    if (marcaSony && formatName === 'SONY') {
-      await _drawLayer(ctx, marcaSony, formatName, W, H);
-    }
     // MOLDURA FANART MOD N — siempre por encima de todo
     const moldura = State.layers.find(l => l.isMolduraFanart);
     if (moldura && formatName === 'FANART MOD N' && _isLayerVisible(moldura, formatName)) {
@@ -300,9 +289,6 @@ var VerTodas = (() => {
       const fmtVisible = State.formatParams?.[formatName]?.[layer.id]?.visible;
       return fmtVisible !== undefined ? fmtVisible : true;
     }
-    if (layer.isComposicionAmazon) return false;
-    if (layer.isMarcaSony) return formatName === 'SONY';
-    if (layer.isMarcaIplus) return formatName === 'IPLUS PUBLI';
     if (layer.isMolduraFanart) {
       if (formatName !== 'FANART MOD N') return false;
       const fmtVisible = State.formatParams?.[formatName]?.[layer.id]?.visible;

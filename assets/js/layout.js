@@ -564,8 +564,6 @@ const Layout = (() => {
     while (insertIdx < State.layers.length && (
       State.layers[insertIdx].isComposicion ||
       State.layers[insertIdx].isComposicionMovil ||
-            State.layers[insertIdx].isMarcaIplus ||
-      State.layers[insertIdx].isMarcaSony ||
       State.layers[insertIdx].isTitleLayer
     )) { insertIdx++; }
 

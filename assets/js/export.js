@@ -404,7 +404,6 @@ const Export = (() => {
 
     const layers = [...State.layers].reverse();
     for (const layer of layers) {
-      if (layer.isMarcaIplus) continue;
       if (layer.isMolduraFanart) continue; // se dibuja al final, por encima de todo
       if (!_isLayerVisible(layer, formatName)) continue;
       await _drawLayerMaybeMasked(ctx, layer, formatName, W, H);
@@ -455,14 +454,6 @@ const Export = (() => {
       });
     }
 
-    const marca = State.layers.find(l => l.isMarcaIplus);
-    if (marca && formatName === 'IPLUS PUBLI') {
-      await _drawLayer(ctx, marca, formatName, W, H);
-    }
-    const marcaSony = State.layers.find(l => l.isMarcaSony);
-    if (marcaSony && formatName === 'SONY') {
-      await _drawLayer(ctx, marcaSony, formatName, W, H);
-    }
     // MOLDURA FANART MOD N — siempre por encima de todo
     const moldura = State.layers.find(l => l.isMolduraFanart);
     if (moldura && formatName === 'FANART MOD N' && _isLayerVisible(moldura, formatName)) {
@@ -609,7 +600,7 @@ const Export = (() => {
       return;
     }
 
-    if (formatName !== 'MUX4 FONDO' && formatName !== 'MOVIL MUX FONDO' && formatName !== 'AMAZON BG') return;
+    if (formatName !== 'MUX4 FONDO' && formatName !== 'MOVIL MUX FONDO') return;
 
     if (formatName === 'MUX4 FONDO') {
       const comp = State.layers.find(l => l.isComposicion);
@@ -636,21 +627,6 @@ const Export = (() => {
       const src  = comp.srcMovilFondo || comp.src;
       await _drawImage(ctx, src, posX, posY, nw, nh);
       return;
-    }
-
-    if (formatName === 'AMAZON BG') {
-      // El AMAZON LOGO (composición isComposicionAmazon) NO se exporta en AMAZON BG
-      // (queda excluido en _isLayerVisible), pero en el MOCKUP debe verse.
-      // En el editor NO es arrastrable: el canvas la FIJA en (104, 65) a tamaño
-      // natural (ver _applyParams en canvas.js). Replicamos esa posición EXACTA.
-      // El canvas de diseño ya está en coordenadas de contenido (1920×720).
-      const comp = State.layers.find(l => l.isComposicionAmazon);
-      if (!comp || !comp.src) return;
-      const nw = comp.naturalWidth  || 640;
-      const nh = comp.naturalHeight || 480;
-      const AMAZON_LOGO_X = 104;  // debe coincidir con _applyParams (canvas.js)
-      const AMAZON_LOGO_Y = 65;
-      await _drawImage(ctx, comp.src, AMAZON_LOGO_X, AMAZON_LOGO_Y, nw, nh);
     }
   }
 
@@ -902,9 +878,6 @@ const Export = (() => {
       const fmtVisible = State.formatParams?.[formatName]?.[layer.id]?.visible;
       return fmtVisible !== undefined ? fmtVisible : true;
     }
-    if (layer.isComposicionAmazon) return false;
-    if (layer.isMarcaSony) return formatName === 'SONY';
-    if (layer.isMarcaIplus) return formatName === 'IPLUS PUBLI';
     if (layer.isMolduraFanart) {
       if (formatName !== 'FANART MOD N') return false;
       const fmtVisible = State.formatParams?.[formatName]?.[layer.id]?.visible;

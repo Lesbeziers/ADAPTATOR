@@ -142,8 +142,7 @@ const Layers = (() => {
               l && l.src && !l.isTitleLayer &&
               !['text','solid','gradient'].includes(l.type) &&
               !l.isComposicion && !l.isComposicionMovil &&
-              !l.isComposicionTextoH && !l.isComposicionTextoV &&
-              !l.isMarcaIplus && !l.isMarcaSony
+              !l.isComposicionTextoH && !l.isComposicionTextoV
             );
             if (extras.length > 0 && AutoLayout.onAdditionalImport) {
               AutoLayout.onAdditionalImport(extras);
@@ -314,7 +313,7 @@ const Layers = (() => {
             }
             // Calcular índice de inserción: después de capas auto-generadas y de isTitleLayer
             let _ci = 0;
-            while (_ci < State.layers.length && (State.layers[_ci].isComposicion || State.layers[_ci].isComposicionMovil || State.layers[_ci].isMarcaSony || State.layers[_ci].isTitleLayer)) {
+            while (_ci < State.layers.length && (State.layers[_ci].isComposicion || State.layers[_ci].isComposicionMovil || State.layers[_ci].isTitleLayer)) {
               _ci++;
             }
             if (typeof History !== 'undefined') History.push();
@@ -431,9 +430,9 @@ const Layers = (() => {
   }
 
   function _importTitleLayer(layer) {
-    // Insertar después de todas las capas auto-generadas (isComposicion, isComposicionMovil, isMarcaIplus)
+    // Insertar después de todas las capas auto-generadas
     let _ci = 0;
-    while (_ci < State.layers.length && (State.layers[_ci].isComposicion || State.layers[_ci].isComposicionMovil || State.layers[_ci].isMarcaSony)) {
+    while (_ci < State.layers.length && (State.layers[_ci].isComposicion || State.layers[_ci].isComposicionMovil)) {
       _ci++;
     }
     if (typeof History !== 'undefined') History.push();
@@ -472,8 +471,7 @@ const Layers = (() => {
       const idsToDelete = new Set(
         State.layers
           .filter(l => State.selectedLayerIds.includes(l.id) &&
-                       !l.isMarcaIplus && !l.isMarcaSony &&
-                       !l.isMolduraFanart && !l.isMascaraBlur)
+                                              !l.isMolduraFanart && !l.isMascaraBlur)
           .map(l => l.id)
       );
 
@@ -521,14 +519,11 @@ const Layers = (() => {
     // crea una capa fantasma con isComposicionTextoH que el guardado trata como real.
     delete copy.isComposicion;
     delete copy.isComposicionMovil;
-    delete copy.isComposicionAmazon;
     delete copy.isComposicionTextoH;
     delete copy.isComposicionTextoV;
     delete copy.isTitleLayer;
     delete copy.isTitleLayerH;
     delete copy.isTitleLayerV;
-    delete copy.isMarcaIplus;
-    delete copy.isMarcaSony;
     delete copy.isMolduraFanart;
     delete copy.isMascaraBlur;
     // La copia NUNCA es una máscara nueva — vuelve a ser un sólido/degradado normal.
@@ -742,7 +737,7 @@ const Layers = (() => {
     if (!mask) return;
 
     const isSystem = l =>
-      l.isMarcaIplus || l.isMarcaSony || l.isMolduraFanart || l.isMascaraBlur ||
+      l.isMolduraFanart || l.isMascaraBlur ||
       l.isComposicion || l.isComposicionMovil  ||
       l.isComposicionTextoH || l.isComposicionTextoV ||
       l.isTitleLayer;
@@ -1060,7 +1055,7 @@ const Layers = (() => {
       if (typeof History !== 'undefined') History.push();
       selectedLayers.forEach(l => {
         // Capas sistémicas obligatorias: blend mode bloqueado
-        if (l.isMarcaIplus || l.isMarcaSony || l.isMolduraFanart || l.isMascaraBlur) return;
+        if (l.isMolduraFanart || l.isMascaraBlur) return;
         const bm = newMode === 'normal' ? null : newMode;
         // Exclusiva en este formato → override por-formato; si no, global (propaga).
         if (State.activeFormat && typeof Formats !== 'undefined' && Formats.isVisualExclusive
@@ -1148,18 +1143,6 @@ const Layers = (() => {
       }
     }
 
-    // En AMAZON BG: COMPOSICIÓN AMAZON LOGO va primero
-    if (State.activeFormat === 'AMAZON BG') {
-      const compAmazon = State.layers.find(l => l.isComposicionAmazon);
-      if (compAmazon) {
-        const compAmazonItem = _buildComposicionAmazonItem(compAmazon);
-        if (compAmazonItem) list.appendChild(compAmazonItem);
-        const sep = document.createElement('div');
-        sep.className = 'layers-separator';
-        list.appendChild(sep);
-      }
-    }
-
     if (State.activeFormat && typeof Pastilla !== 'undefined' && Pastilla.hasFormat(State.activeFormat)) {
       list.appendChild(_buildPastillaItem());
       const sep = document.createElement('div');
@@ -1192,27 +1175,6 @@ const Layers = (() => {
         }
       }
 
-      // MARCA IPLUS: debajo de zona de seguridad, encima de capas normales
-      if (State.activeFormat === 'IPLUS PUBLI') {
-        const marca = State.layers.find(l => l.isMarcaIplus);
-        if (marca) {
-          list.appendChild(_buildMarcaIplusItem(marca));
-          const sep = document.createElement('div');
-          sep.className = 'layers-separator';
-          list.appendChild(sep);
-        }
-      }
-
-      // MARCA SONY: igual que MARCA IPLUS pero para SONY
-      if (State.activeFormat === 'SONY') {
-        const marcaSony = State.layers.find(l => l.isMarcaSony);
-        if (marcaSony) {
-          list.appendChild(_buildMarcaIplusItem(marcaSony, 'SONY'));
-          const sep = document.createElement('div');
-          sep.className = 'layers-separator';
-          list.appendChild(sep);
-        }
-      }
 
       // MOLDURA + MÁSCARA BLUR: capas sistémicas obligatorias de FANART MOD N
       if (State.activeFormat === 'FANART MOD N') {
@@ -1235,12 +1197,9 @@ const Layers = (() => {
       // (donde se pintan arriba como ítems aparte). En el resto de formatos, _buildItem
       // las gestiona con sus filtros por variante (el lápiz permite cambiar entre H/V/MUX4/MOVIL).
       State.layers.forEach((layer, index) => {
-        if (layer.isComposicion && (State.activeFormat === 'MUX4 FONDO' || State.activeFormat === 'MOVIL MUX FONDO' || State.activeFormat === 'AMAZON BG')) return;
+        if (layer.isComposicion && (State.activeFormat === 'MUX4 FONDO' || State.activeFormat === 'MOVIL MUX FONDO')) return;
         if (layer.isComposicion && State.activeFormat === 'FANART DEST.') return;
         if (layer.isComposicionMovil && State.activeFormat === 'MOVIL MUX FONDO') return;
-        if (layer.isComposicionAmazon && State.activeFormat === 'AMAZON BG') return;
-        if (layer.isMarcaIplus) return;
-        if (layer.isMarcaSony) return;
         if (layer.isMolduraFanart) return;
         if (layer.isMascaraBlur) return;
         const item = _buildItem(layer, index);
@@ -1256,26 +1215,6 @@ const Layers = (() => {
       }
     } else {
       // Sin sistema — solo capas normales
-      // MARCA IPLUS: encima de capas normales
-      if (State.activeFormat === 'IPLUS PUBLI') {
-        const marca = State.layers.find(l => l.isMarcaIplus);
-        if (marca) {
-          list.appendChild(_buildMarcaIplusItem(marca));
-          const sep = document.createElement('div');
-          sep.className = 'layers-separator';
-          list.appendChild(sep);
-        }
-      }
-      // MARCA SONY
-      if (State.activeFormat === 'SONY') {
-        const marcaSony = State.layers.find(l => l.isMarcaSony);
-        if (marcaSony) {
-          list.appendChild(_buildMarcaIplusItem(marcaSony, 'SONY'));
-          const sep = document.createElement('div');
-          sep.className = 'layers-separator';
-          list.appendChild(sep);
-        }
-      }
       // MOLDURA + MÁSCARA BLUR: capas sistémicas obligatorias de FANART MOD N
       if (State.activeFormat === 'FANART MOD N') {
         const moldura = State.layers.find(l => l.isMolduraFanart);
@@ -1293,12 +1232,9 @@ const Layers = (() => {
         }
       }
       State.layers.forEach((layer, index) => {
-        if (layer.isComposicion && (State.activeFormat === 'MUX4 FONDO' || State.activeFormat === 'MOVIL MUX FONDO' || State.activeFormat === 'AMAZON BG')) return;
+        if (layer.isComposicion && (State.activeFormat === 'MUX4 FONDO' || State.activeFormat === 'MOVIL MUX FONDO')) return;
         if (layer.isComposicion && State.activeFormat === 'FANART DEST.') return;
         if (layer.isComposicionMovil && State.activeFormat === 'MOVIL MUX FONDO') return;
-        if (layer.isComposicionAmazon && State.activeFormat === 'AMAZON BG') return;
-        if (layer.isMarcaIplus) return;
-        if (layer.isMarcaSony) return;
         if (layer.isMolduraFanart) return;
         if (layer.isMascaraBlur) return;
         const item = _buildItem(layer, index);
@@ -1569,7 +1505,6 @@ const Layers = (() => {
     if (layer.isComposicionMovil && State.activeFormat !== 'MOVIL MUX FONDO' &&
         !(typeof Formats !== 'undefined' && Formats.getTextVariant && Formats.getTextVariant(State.activeFormat) === 'MOVIL')) return null;
     // Composición AMAZON: solo en su mockup (AMAZON BG). No es variante elegible con el lápiz.
-    if (layer.isComposicionAmazon && State.activeFormat !== 'AMAZON BG') return null;
 
     // Capas con exclusiveFormat: solo en su formato
     if (layer.exclusiveFormat && layer.exclusiveFormat !== State.activeFormat) return null;
@@ -2326,79 +2261,8 @@ const Layers = (() => {
 
   // ── ITEM ESPECIAL: COMPOSICIÓN AMAZON LOGO en AMAZON BG ──
 
-  function _buildComposicionAmazonItem(layer) {
-    const item = document.createElement('div');
-    item.className = 'layer-item layer-item-system';
-    item.dataset.id = layer.id;
-
-    const eye = document.createElement('div');
-    eye.className = 'layer-eye';
-    const eyeImg = document.createElement('img');
-    const _getVis = () => {
-      const fv = State.formatParams?.['AMAZON BG']?.[layer.id]?.visible;
-      return fv !== undefined ? fv : true;
-    };
-    eyeImg.src = _getVis() ? 'assets/img/ojo_on.svg' : 'assets/img/ojo_off.svg';
-    eye.appendChild(eyeImg);
-    eye.addEventListener('click', e => {
-      e.stopPropagation();
-      if (typeof History !== 'undefined') History.push();
-      const newVis = !_getVis();
-      if (!State.formatParams['AMAZON BG']) State.formatParams['AMAZON BG'] = {};
-      if (!State.formatParams['AMAZON BG'][layer.id]) State.formatParams['AMAZON BG'][layer.id] = {};
-      State.formatParams['AMAZON BG'][layer.id].visible = newVis;
-      eyeImg.src = newVis ? 'assets/img/ojo_on.svg' : 'assets/img/ojo_off.svg';
-      if (typeof Canvas !== 'undefined') Canvas.render();
-    });
-
-    const thumb = document.createElement('div');
-    thumb.className = 'layer-thumb';
-    if (layer.src) {
-      const thumbImg = document.createElement('img');
-      thumbImg.src = layer.src;
-      thumbImg.alt = layer.name;
-      thumb.appendChild(thumbImg);
-    }
-
-    const name = document.createElement('span');
-    name.className = 'layer-name';
-    name.textContent = layer.name;
-
-    const lockBtn = document.createElement('div');
-    const _locked2 = () => _getLocked(layer.id);
-    const _svgLocked2   = '<svg width="12" height="14" viewBox="0 0 12 14" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="6" width="10" height="8" rx="1.5" fill="currentColor" opacity="0.9"/><path d="M3 6V4a3 3 0 0 1 6 0v2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
-    const _svgUnlocked2 = '<svg width="12" height="14" viewBox="0 0 12 14" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="6" width="10" height="8" rx="1.5" fill="currentColor" opacity="0.3"/><path d="M3 6V4a3 3 0 0 1 6 0" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.3"/></svg>';
-    const _updateLockBtn2 = () => {
-      const l = _locked2();
-      lockBtn.className = 'layer-lock-btn' + (l ? ' locked' : '');
-      lockBtn.dataset.tooltip = l ? 'Desbloquear capa' : 'Bloquear capa';
-      lockBtn.innerHTML = l ? _svgLocked2 : _svgUnlocked2;
-    };
-    _updateLockBtn2();
-    lockBtn.addEventListener('click', e => {
-      e.stopPropagation();
-      if (typeof History !== 'undefined') History.push();
-      _setLocked(layer.id, !_locked2());
-      _updateLockBtn2();
-      if (_locked2() && State.selectedLayerIds.includes(layer.id)) {
-        State.selectedLayerId  = null;
-        State.selectedLayerIds = [];
-        if (typeof Canvas !== 'undefined') Canvas.render();
-        if (typeof UI     !== 'undefined') UI.updateSliders();
-      }
-      if (typeof Layers !== 'undefined') Layers.render();
-    });
-
-    item.appendChild(eye);
-    item.appendChild(thumb);
-    item.appendChild(name);
-    item.appendChild(lockBtn);
-
-    return item;
-  }
-
   function _buildMarcaIplusItem(layer, formatId) {
-    formatId = formatId || State.activeFormat || 'IPLUS PUBLI';
+    formatId = formatId || State.activeFormat;
     const item = document.createElement('div');
     item.className = 'layer-item layer-item-system';
     item.dataset.id = layer.id;
@@ -2454,7 +2318,7 @@ const Layers = (() => {
   function _isMaskableLayer(l) {
     if (!l) return false;
     if (l.isMask) return false;
-    if (l.isMarcaIplus || l.isMarcaSony || l.isMolduraFanart || l.isMascaraBlur) return false;
+    if (l.isMolduraFanart || l.isMascaraBlur) return false;
     if (l.isComposicion || l.isComposicionMovil ) return false;
     if (l.isComposicionTextoH || l.isComposicionTextoV) return false;
     if (l.isTitleLayer) return false;
