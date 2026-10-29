@@ -2442,10 +2442,14 @@ const AutoLayout = (() => {
   // tapada, pero no entra en el PNG exportado. En el MOCKUP sí, que para eso
   // está. Mismo patrón que AMAZON BG.
   //
-  // x/y son la esquina superior izquierda de la CAJA de la composición, en
-  // coordenadas ABSOLUTAS del formato (desde la esquina, no desde el centro).
-  // Se dibuja a TAMAÑO NATURAL: la composición ya viene con la medida exacta
-  // que tiene en la plantilla, así que aquí no se escala nada.
+  // x/y/w describen el HUECO que ocupa el título en la pieza, en coordenadas
+  // ABSOLUTAS del formato (desde la esquina, no desde el centro). La
+  // composición se escala para llenar ese ancho; el alto sale solo.
+  //
+  // Se expresa como hueco de destino, y NO como "tamaño natural", porque el
+  // asset se entrega más pequeño que el hueco: la composición mide 1156x348 y
+  // el hueco 1706x514 — la MISMA forma al 67,8 %. Así, si mañana cambia el
+  // tamaño de entrega, esto sigue colocándolo donde toca sin tocar nada.
   //
   // ⚠️ POR QUÉ NO SE ESCALA A UNA ALTURA FIJA (lo intenté y estaba mal):
   // la primera versión forzaba el título a 330 px de alto de píxel, sacados de
@@ -2454,20 +2458,23 @@ const AutoLayout = (() => {
   // (73,79%) a lo que haya dentro de la capa inteligente, así que un título más
   // bajo sale más bajo. Forzar 330 habría inflado un título corto tipo "IT".
   //
-  // De dónde salen los números (reconstruido con el diseñador, 2026-10-28; la
-  // plantilla original no está documentada en ninguna parte):
+  // De dónde sale el HUECO (reconstruido con el diseñador el 2026-10-28; la
+  // plantilla de Photoshop no está documentada en ninguna parte y al preguntar
+  // por la especificación la respuesta fue "a mí me dieron la plantilla hecha"):
   //   · capa inteligente: documento 2312x696, título dentro 2300x448 pegado abajo
   //   · colocada en la plantilla al 73,79%
-  //   · → documento 1706x514  ·  título 1697x331
-  //   · el título cae con su píxel en x=180, y=507
-  //   · → la caja arranca en x = 180 − 4,4 = 175,6  y = 838 − 513,6 = 324,0
+  //   · → hueco 1706x514  ·  título 1697x331, con su píxel en x=180, y=507
+  //   · → la caja arranca en y = 838 − 513,6 = 324,0
   // Contrastado por tres vías que coinciden en 0,2 px: Properties de Photoshop,
   // medición del PNG de referencia y la derivación desde la escala.
+  //
+  // El tamaño de ENTREGA (1156x348) no salió de ahí: lo confirmaron después
+  // mirando un pack ya exportado. La deducción acertó el hueco, no la entrega.
   const TITULO_FIJO = {
-    // x=180 (y no 175,6) porque el bloque va a ras del borde izquierdo de la
+    // x=180 y no 175,6 porque el bloque va a ras del borde izquierdo de la
     // composición: los 2300 del título contra los 2312 del documento no son
     // 6 px a cada lado, son 12 px de sobra a la derecha que ese título no usa.
-    'Cabecera-Detalle-Escritorio': { x: 180, y: 324 },
+    'Cabecera-Detalle-Escritorio': { x: 180, y: 324, w: 1706 },
   };
 
   function tituloFijoConfig(formatName) {
@@ -2491,10 +2498,11 @@ const AutoLayout = (() => {
     const nw = layer.naturalWidth, nh = layer.naturalHeight;
     if (!(nw > 0) || !(nh > 0)) return null;
 
-    // Tamaño natural, sin escalar: la composición ya viene a la medida de la
-    // plantilla y su contenido va pegado abajo a la izquierda, así que el
-    // título alto o bajo cae donde debe sin tocar nada.
-    return { left: cfg.x, top: cfg.y, drawW: nw, drawH: nh };
+    // Se escala al ancho del hueco. El contenido va pegado abajo a la
+    // izquierda dentro de la composición, así que un título alto o bajo cae
+    // donde debe sin tocar nada más.
+    const k = (cfg.w || nw) / nw;
+    return { left: cfg.x, top: cfg.y, drawW: nw * k, drawH: nh * k };
   }
 
   return {

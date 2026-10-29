@@ -123,11 +123,11 @@ const State = {
     'MOVIL TXT':        { w: 1440, h: 466,  maxMB: 0.6  },
     'TEXTO HORIZONTAL': { w: 1920, h: 779,  maxMB: 0.6  },
     'TEXTO VERTICAL':   { w: 1080, h: 350,  maxMB: 0.6  },
-    // COM TITULO H — asset de título del pack COMERCIAL. El tamaño NO es
-    // arbitrario: es el de la capa inteligente de la plantilla de Photoshop
-    // (2312x696) colocada a su escala real (73,79 %). Ver TITULO_FIJO en
-    // auto-layout.js para la reconstrucción completa.
-    'COM TITULO H':     { w: 1706, h: 514,  maxMB: 0.6  },
+    // COM TITULO H — asset de título del pack COMERCIAL. Tamaño CONFIRMADO por
+    // los diseñadores (2026-10-29) mirando un pack ya exportado de una serie
+    // hecha de forma tradicional. Es el tamaño de ENTREGA, y por tanto también
+    // el de exportación. Coincide con el de Cabecera-Slider-TT.
+    'COM TITULO H':     { w: 1156, h: 348,  maxMB: 0.6  },
     'WEB PUBLI':        { w: 2000, h: 465,  maxMB: 1, displayContext: { w: 1920, h: 850, contentX: 26, contentY: 115, contentW: 1868, contentH: 434 } },
     'WOW PUBLI':        { w: 1280, h: 258,  maxMB: 0.25 },
     'TÍTULO FICHA':     { w: 2172, h: 300,  maxMB: 0.6  },

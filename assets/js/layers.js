@@ -359,7 +359,7 @@ const Layers = (() => {
     // borde, sin margen. Replica la capa inteligente de la plantilla, donde el
     // título se apoya en la base del documento. Por eso la zona es el lienzo
     // entero: el aire que sobre queda arriba y a la derecha, no repartido.
-    'COM TITULO H':     { x: 0, y: 0, w: 1, h: 1, alignLeft: true, alignBottom: true },
+    'COM TITULO H':     { x: 0, y: 0, w: 1, h: 1, alignLeft: true, alignBottom: true, byPixels: true },
   };
 
   function _applyTitleFitZones(layer) {
@@ -377,15 +377,24 @@ const Layers = (() => {
         const zoneH = H * fitZone.h;
         const zoneX = W * fitZone.x;
         const zoneY = H * fitZone.y;
-        const assetRatio = nw / nh;
+        // byPixels: medir y alinear por los PÍXELES VISIBLES, no por la caja
+        // del PNG. Sin esto, la transparencia sobrante del archivo desplaza el
+        // título y lo encoge: un PNG con aire alrededor se apoyaría por su
+        // borde invisible. Solo lo usan las zonas que lo piden, así que las
+        // cuatro de siempre no cambian.
+        const cb = (fitZone.byPixels && layer.contentBounds) || { x: 0, y: 0, w: 1, h: 1 };
+        const contW = nw * cb.w;
+        const contH = nh * cb.h;
+
+        const assetRatio = contW / contH;
         const zoneRatio  = zoneW / zoneH;
 
         // Calcular el scale de fit contenido
         let fitScale;
         if (assetRatio >= zoneRatio) {
-          fitScale = zoneW / nw;
+          fitScale = zoneW / contW;
         } else {
-          fitScale = zoneH / nh;
+          fitScale = zoneH / contH;
         }
         // No upscaling: si el asset ya cabe al 100%, usarlo tal cual
         const scale = Math.min(fitScale, 1.0);
@@ -395,13 +404,13 @@ const Layers = (() => {
         // alignLeft: el borde izquierdo del contenido se alinea con zoneX
         // centrado por defecto en los demás formatos
         const cx = fitZone.alignLeft
-          ? zoneX + drawW / 2
-          : zoneX + (zoneW - drawW) / 2 + drawW / 2;
+          ? zoneX - cb.x * drawW + drawW / 2
+          : zoneX + (zoneW - cb.w * drawW) / 2 - cb.x * drawW + drawW / 2;
         // alignBottom: el borde inferior del contenido se apoya en la base de
         // la zona; centrado por defecto en los demás formatos
         const cy = fitZone.alignBottom
-          ? zoneY + zoneH - drawH / 2
-          : zoneY + (zoneH - drawH) / 2 + drawH / 2;
+          ? zoneY + zoneH - (cb.y + cb.h) * drawH + drawH / 2
+          : zoneY + (zoneH - cb.h * drawH) / 2 - cb.y * drawH + drawH / 2;
         State.formatParams[fid][layer.id] = {
           scaleX:   Math.round(scale * 1000) / 10,
           scaleY:   Math.round(scale * 1000) / 10,
