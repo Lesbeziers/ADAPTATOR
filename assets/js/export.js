@@ -869,7 +869,12 @@ const Export = (() => {
     // ve donde esté declarada en TITULO_FIJO (auto-layout.js), y ahí va clavada.
     // En cualquier otro formato no pinta nada. Tampoco se exporta: la web
     // compone el texto por su cuenta (sí sale en el MOCKUP).
-    if (layer.isComposicionComTituloH) return false;
+    if (layer.isComposicionComTituloH) {
+      const _vc = (typeof Formats !== 'undefined' && Formats.getTextVariant) ? Formats.getTextVariant(formatName) : null;
+      if (_vc !== 'COM_H') return false;
+      const fmtVisible = State.formatParams?.[formatName]?.[layer.id]?.visible;
+      return fmtVisible !== undefined ? fmtVisible : true;
+    }
 
     // Donde hay TÍTULO FIJO, la composición H/V normal NO se pinta: el título
     // de ese formato es la composición clavada, y si no saldrían los dos.

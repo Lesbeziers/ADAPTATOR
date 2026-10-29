@@ -1305,8 +1305,12 @@ const Canvas = (() => {
       // ve donde esté declarada en TITULO_FIJO (auto-layout.js), y ahí va clavada.
       // En cualquier otro formato no pinta nada.
       } else if (layer.isComposicionComTituloH) {
-        isVisible = !!(typeof AutoLayout !== 'undefined' && AutoLayout.tituloFijoConfig
-                       && AutoLayout.tituloFijoConfig(State.activeFormat));
+        // Enrutado por variante, igual que las H/V. Donde además esté declarada
+        // en TITULO_FIJO (los Slider, que entregan el título aparte) se pinta
+        // clavada y no se exporta; eso lo resuelven _applyParams y _isLayerVisible.
+        const _vc = (typeof Formats !== 'undefined' && Formats.getTextVariant)
+          ? Formats.getTextVariant(State.activeFormat) : null;
+        isVisible = _vc === 'COM_H';
         if (isVisible) {
           const fmtVisible = State.formatParams?.[State.activeFormat]?.[layer.id]?.visible;
           isVisible = fmtVisible !== undefined ? fmtVisible : true;

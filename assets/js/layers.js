@@ -1534,9 +1534,9 @@ const Layers = (() => {
         Formats.fanartRoleVisibility(layer.id, State.activeFormat) === false) return null;
     // COMPOSICIÓN COM TITULO H: se lista donde esté declarada como título fijo.
     if (layer.isComposicionComTituloH) {
-      const _fijo = typeof AutoLayout !== 'undefined' && AutoLayout.tituloFijoConfig
-                 && AutoLayout.tituloFijoConfig(State.activeFormat);
-      if (!_fijo) return null;
+      const _vc = (typeof Formats !== 'undefined' && Formats.getTextVariant)
+        ? Formats.getTextVariant(State.activeFormat) : null;
+      if (_vc !== 'COM_H') return null;
     }
     // Donde hay TÍTULO FIJO, la composición H/V normal NO se pinta: el título
     // de ese formato es la composición clavada, y si no saldrían los dos.

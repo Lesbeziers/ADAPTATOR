@@ -1065,6 +1065,14 @@ const AutoLayout = (() => {
       scaleModeDefault: 'crop',
     },
     'Cabecera-Detalle-Escritorio': {                           // 3840x2160 ar 1.78
+      // El título va PLANCHADO en esta pieza (confirmado con el pack entregado
+      // de "El ser querido"), así que se maqueta por zona, se puede mover y se
+      // exporta. Estuvo clavado por un malentendido.
+      //
+      // La zona reproduce EXACTAMENTE la colocación que ya estaba validada:
+      // caja de 1706x514 en (180, 324) sobre 3840x2160. Apoyada abajo a la
+      // izquierda, que es como se compone este título.
+      textZone:    { x: 0.047, y: 0.150, w: 0.444, h: 0.238, align: 'bottom', alignH: 'left' },
       // El diseñador marcó una GUÍA VERTICAL en x=2650: la imagen va centrada
       // en ella. 2650/3840 = 0,690, así que la zona se hace simétrica respecto
       // a ese centro (0,380 + 0,620/2 = 0,690). Encaja con la pieza: el texto
@@ -1410,6 +1418,7 @@ const AutoLayout = (() => {
             State.layers.find(l => l.isComposicionMovil),  // composición MOVIL (vieja)
             State.layers.find(l => l.isComposicionTextoH),
             State.layers.find(l => l.isComposicionTextoV),
+            State.layers.find(l => l.isComposicionComTituloH), // título de COMERCIAL
             State.layers.find(l => l.isTitleLayerH),       // imagen título cruda H
             State.layers.find(l => l.isTitleLayerV),       // imagen título cruda V
           ].filter(Boolean);
@@ -2475,11 +2484,14 @@ const AutoLayout = (() => {
   //
   // El tamaño de ENTREGA (1156x348) no salió de ahí: lo confirmaron después
   // mirando un pack ya exportado. La deducción acertó el hueco, no la entrega.
+  // De momento VACÍA. Cabecera-Detalle-Escritorio estuvo aquí por un
+  // malentendido: el pack entregado demuestra que lleva el título PLANCHADO,
+  // así que se maqueta por zona como el resto y SÍ se exporta.
+  //
+  // Los que van aquí son los SEIS SLIDER —Cabecera Slider E/M, Cabecera Slider
+  // Mediano E/M y Slider Mediano E/M—, que son los únicos que entregan el
+  // título como asset suelto (cabecera-slider-tt.png). Faltan sus coordenadas.
   const TITULO_FIJO = {
-    // x=180 y no 175,6 porque el bloque va a ras del borde izquierdo de la
-    // composición: los 2300 del título contra los 2312 del documento no son
-    // 6 px a cada lado, son 12 px de sobra a la derecha que ese título no usa.
-    'Cabecera-Detalle-Escritorio': { x: 180, y: 324, w: 1706 },
   };
 
   function tituloFijoConfig(formatName) {

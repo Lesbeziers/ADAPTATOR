@@ -610,6 +610,19 @@ const Formats = (() => {
   ];
   // Formatos con composición horneada VERTICAL por defecto (los que quedan en vertical)
   const TEXT_VARIANT_V_DEFAULT = [];
+  // COMERCIAL usa su propio asset de título. El pack entregado lo confirma: el
+  // bloque "original M+ / TÍTULO" que llevan estas piezas es el mismo archivo
+  // que se entrega suelto para los Slider (1156x348). TEXTO HORIZONTAL no vale
+  // aquí: es otro lienzo, con otra composición y centrado.
+  // Cabecera-Slider-TT queda fuera: no es una pieza, ES el título.
+  const TEXT_VARIANT_COM_H_DEFAULT = [
+    'Mosaico-Horizontal', 'Mosaico-Vertical', 'Modulo-Escritorio', 'Modulo-Movil',
+    'Cabecera-Detalle-Escritorio', 'Cabecera-Detalle-Movil',
+    'Carrusel-Vertical', 'Carrusel-Horizontal',
+    'Cabecera-Slider-Escritorio', 'Cabecera-Slider-Movil',
+    'Cabecera-Slider-Mediano-Escritorio', 'Slider-Mediano-Escritorio',
+    'Cabecera-Slider-Mediano-Movil', 'Slider-Mediano-Movil',
+  ];
   // Formatos que NO reciben texto (sin variante): la familia FANART/BG, más
   // TODOS los anfitriones — en un lienzo de composición no se elige variante,
   // porque el lienzo ES la composición.
@@ -619,6 +632,7 @@ const Formats = (() => {
 
   function _defaultTextVariant(fid) {
     if (TEXT_VARIANT_NONE.includes(fid)) return null;
+    if (TEXT_VARIANT_COM_H_DEFAULT.includes(fid)) return 'COM_H';
     if (TEXT_VARIANT_TITLE_H_DEFAULT.includes(fid)) return 'TITLE_H';
     if (TEXT_VARIANT_TITLE_V_DEFAULT.includes(fid)) return 'TITLE_V';
     return TEXT_VARIANT_V_DEFAULT.includes(fid) ? 'V' : 'H';
@@ -631,6 +645,7 @@ const Formats = (() => {
     { value: 'V',       label: 'TEXTO VERTICAL',       flag: 'isComposicionTextoV' },
     { value: 'MUX4',    label: 'MUX4 TEXT',            flag: 'isComposicion'       },
     { value: 'MOVIL',   label: 'Smartphone TEXT',      flag: 'isComposicionMovil'  },
+    { value: 'COM_H',   label: 'COM. TÍTULO H',        flag: 'isComposicionComTituloH' },
     { value: 'TITLE_H', label: 'TÍTULO ORIGINAL HOR',  flag: 'isTitleLayerH'       },
     { value: 'TITLE_V', label: 'TÍTULO ORIGINAL VER',  flag: 'isTitleLayerV'       },
   ];
@@ -704,6 +719,8 @@ const Formats = (() => {
         p = Composicion.generate();
       else if (variant === 'MOVIL' && typeof ComposicionMovil !== 'undefined')
         p = ComposicionMovil.generate();
+      else if (variant === 'COM_H' && typeof ComposicionTexto !== 'undefined')
+        p = ComposicionTexto.generate('COM TITULO H', 'COMPOSICIÓN COM TITULO H', 'isComposicionComTituloH');
       if (p && typeof p.then === 'function') { p.then(_finish); return; }
     }
     _finish();
@@ -731,7 +748,7 @@ const Formats = (() => {
     if (fid === 'MOVIL TXT' || fid === 'TEXTO VERTICAL') return 'V';
     // Receptores no-maestros: según la variante de texto que tengan
     const v = getTextVariant(fid);
-    if (v === 'H' || v === 'MUX4' || v === 'TITLE_H') return 'H';
+    if (v === 'H' || v === 'MUX4' || v === 'TITLE_H' || v === 'COM_H') return 'H';
     if (v === 'V' || v === 'MOVIL' || v === 'TITLE_V') return 'V';
     return null;
   }
