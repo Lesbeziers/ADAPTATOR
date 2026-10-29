@@ -382,7 +382,7 @@ const Logos = (() => {
       if (TEXT_TOOL_FORMATS.includes(formatAtImport)) layer.exclusiveFormat = formatAtImport;
 
       let _ci = 0;
-    while (_ci < State.layers.length && (State.layers[_ci].isComposicion || State.layers[_ci].isComposicionMovil || State.layers[_ci].isMarcaIplus || State.layers[_ci].isTitleLayer)) {
+    while (_ci < State.layers.length && (State.layers[_ci].isComposicion || State.layers[_ci].isComposicionMovil || State.layers[_ci].isTitleLayer)) {
       _ci++;
     }
       if (typeof History !== 'undefined') History.push();
@@ -409,7 +409,7 @@ const Logos = (() => {
       // Formatos maestros de texto: el logo importado se queda exclusivo de su formato.
       if (TEXT_TOOL_FORMATS.includes(formatAtImport)) layer.exclusiveFormat = formatAtImport;
       let _ci = 0;
-    while (_ci < State.layers.length && (State.layers[_ci].isComposicion || State.layers[_ci].isComposicionMovil || State.layers[_ci].isMarcaIplus || State.layers[_ci].isTitleLayer)) {
+    while (_ci < State.layers.length && (State.layers[_ci].isComposicion || State.layers[_ci].isComposicionMovil || State.layers[_ci].isTitleLayer)) {
       _ci++;
     }
       if (typeof History !== 'undefined') History.push();

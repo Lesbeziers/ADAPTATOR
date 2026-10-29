@@ -1185,7 +1185,7 @@ const Canvas = (() => {
       }
 
       // Ocultar capas de composición que aún no tienen src generado
-      const isAutoLayer = layer.isComposicion || layer.isComposicionMovil || layer.isComposicionAmazon;
+      const isAutoLayer = layer.isComposicion || layer.isComposicionMovil ;
       if (isAutoLayer && !layer.src) {
         el.style.display = 'none';
       }
@@ -1400,7 +1400,7 @@ const Canvas = (() => {
       const isLocked = typeof Layers !== 'undefined' && Layers.getLocked(layer.id);
       const esTitFijo = (typeof AutoLayout !== 'undefined' && AutoLayout.esTituloFijo)
         ? AutoLayout.esTituloFijo(State.activeFormat, layer) : false;
-      el.style.pointerEvents = (layer.isMarcaIplus || layer.isMarcaSony || layer.isMolduraFanart || layer.isMascaraBlur || layer.isComposicionMovil || layer.isComposicionAmazon || esTitFijo || isLocked) ? 'none' : '';
+      el.style.pointerEvents = (layer.isMolduraFanart || layer.isMascaraBlur || layer.isComposicionMovil || esTitFijo || isLocked) ? 'none' : '';
 
       if (esTitFijo) {
         el.classList.remove('canvas-layer-active');
@@ -1649,9 +1649,6 @@ const Canvas = (() => {
     if (State.activeFormat === 'MOVIL TXT' && typeof ComposicionMovil !== 'undefined') {
       ComposicionMovil.generate();
     }
-    if (State.activeFormat === 'AMAZON LOGO' && typeof ComposicionAmazon !== 'undefined') {
-      ComposicionAmazon.generate();
-    }
     // Composiciones H/V: regenerar en vivo mientras se edita su formato maestro
     if (State.activeFormat === 'TEXTO HORIZONTAL' && typeof ComposicionTexto !== 'undefined') {
       ComposicionTexto.generate('TEXTO HORIZONTAL', 'COMPOSICIÓN TEXTO HORIZONTAL', 'isComposicionTextoH')
@@ -1667,9 +1664,6 @@ const Canvas = (() => {
     }
     if (State.activeFormat === 'MOVIL MUX FONDO' && typeof ComposicionMovil !== 'undefined') {
       if (!State.layers.find(l => l.isComposicionMovil)) ComposicionMovil.generate();
-    }
-    if (State.activeFormat === 'AMAZON BG' && typeof ComposicionAmazon !== 'undefined') {
-      if (!State.layers.find(l => l.isComposicionAmazon)) ComposicionAmazon.generate();
     }
     _updateOkBtn();
   }

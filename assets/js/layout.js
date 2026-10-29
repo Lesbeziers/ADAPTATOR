@@ -564,8 +564,7 @@ const Layout = (() => {
     while (insertIdx < State.layers.length && (
       State.layers[insertIdx].isComposicion ||
       State.layers[insertIdx].isComposicionMovil ||
-      State.layers[insertIdx].isComposicionAmazon ||
-      State.layers[insertIdx].isMarcaIplus ||
+            State.layers[insertIdx].isMarcaIplus ||
       State.layers[insertIdx].isMarcaSony ||
       State.layers[insertIdx].isTitleLayer
     )) { insertIdx++; }
@@ -757,8 +756,6 @@ const Layout = (() => {
             await Composicion.generate();
           } else if (format === 'MOVIL TXT' && typeof ComposicionMovil !== 'undefined') {
             await ComposicionMovil.generate();
-          } else if (format === 'AMAZON LOGO' && typeof ComposicionAmazon !== 'undefined') {
-            await ComposicionAmazon.generate();
           } else if (format === 'TEXTO HORIZONTAL' && typeof ComposicionTexto !== 'undefined') {
             await ComposicionTexto.generate('TEXTO HORIZONTAL', 'COMPOSICIÓN TEXTO HORIZONTAL', 'isComposicionTextoH');
             const c = State.layers.find(l => l.isComposicionTextoH);

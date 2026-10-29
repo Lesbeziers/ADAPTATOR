@@ -241,10 +241,6 @@ const Formats = (() => {
     }
 
     // Al salir de AMAZON LOGO, generar la composición Amazon
-    if (previous === 'AMAZON LOGO' && formatName !== 'AMAZON LOGO') {
-      if (typeof ComposicionAmazon !== 'undefined') ComposicionAmazon.generate();
-    }
-
     // Al salir de TEXTO HORIZONTAL, generar su composición y reposicionarla en los formatos H
     if (previous === 'TEXTO HORIZONTAL' && formatName !== 'TEXTO HORIZONTAL') {
       if (typeof ComposicionTexto !== 'undefined') {
@@ -896,7 +892,7 @@ const Formats = (() => {
     let insertIdx = 0;
     while (insertIdx < State.layers.length && (
       State.layers[insertIdx].isComposicion || State.layers[insertIdx].isComposicionMovil ||
-      State.layers[insertIdx].isComposicionAmazon || State.layers[insertIdx].isComposicionTextoH ||
+      State.layers[insertIdx].isComposicionTextoH ||
       State.layers[insertIdx].isComposicionTextoV || State.layers[insertIdx].isMarcaIplus ||
       State.layers[insertIdx].isMarcaSony || State.layers[insertIdx].isTitleLayer
     )) insertIdx++;

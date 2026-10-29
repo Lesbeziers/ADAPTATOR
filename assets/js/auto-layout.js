@@ -1125,7 +1125,7 @@ const AutoLayout = (() => {
     // Solo capas de imagen (no texto, sólido, degradado, sistema)
     const imageLayers = layers.filter(l =>
       !['text', 'solid', 'gradient'].includes(l.type) &&
-      !l.isComposicion && !l.isComposicionMovil && !l.isComposicionAmazon &&
+      !l.isComposicion && !l.isComposicionMovil &&
       !l.isComposicionTextoH && !l.isComposicionTextoV &&
       !l.isMarcaIplus && !l.isMarcaSony &&
       l.src
@@ -1839,7 +1839,7 @@ const AutoLayout = (() => {
       if (l.id === subjectLayer.id) return;
       if (l.exclusiveFormat === formatName) return;
       if (l.exclusiveFormat && l.exclusiveFormat !== formatName) return;
-      if (l.isComposicion || l.isComposicionMovil || l.isComposicionAmazon ||
+      if (l.isComposicion || l.isComposicionMovil  ||
           l.isTitleLayer || roles[l.id] === 'background') {
         _setParams(formatName, l.id, { visible: false });
       }
@@ -2039,7 +2039,6 @@ const AutoLayout = (() => {
 
         if (typeof Composicion       !== 'undefined') await Composicion.generate();
         if (typeof ComposicionMovil  !== 'undefined') await ComposicionMovil.generate();
-        if (typeof ComposicionAmazon !== 'undefined') await ComposicionAmazon.generate();
         // Generar TAMBIÉN las composiciones de texto H/V para que aparezcan en los
         // formatos receptores (199 PUBLI, etc.) sin tener que visitar el maestro.
         if (typeof ComposicionTexto !== 'undefined') {
@@ -2138,7 +2137,6 @@ const AutoLayout = (() => {
       if (promotedTitle) {
         if (typeof Composicion       !== 'undefined') await Composicion.generate();
         if (typeof ComposicionMovil  !== 'undefined') await ComposicionMovil.generate();
-        if (typeof ComposicionAmazon !== 'undefined') await ComposicionAmazon.generate();
         if (typeof ComposicionTexto  !== 'undefined') {
           await ComposicionTexto.generate('TEXTO HORIZONTAL', 'COMPOSICIÓN TEXTO HORIZONTAL', 'isComposicionTextoH');
           await ComposicionTexto.generate('TEXTO VERTICAL',   'COMPOSICIÓN TEXTO VERTICAL',   'isComposicionTextoV');
@@ -2156,9 +2154,9 @@ const AutoLayout = (() => {
       //   el ajuste manual que el usuario tenía en cada formato.
       const allImageLayers = State.layers.filter(l =>
         !['text','solid','gradient'].includes(l.type) &&
-        !l.isComposicion && !l.isComposicionMovil && !l.isComposicionAmazon &&
+        !l.isComposicion && !l.isComposicionMovil &&
         !l.isComposicionTextoH && !l.isComposicionTextoV &&
-        !l.isMarcaIplus && !l.isMarcaSony && l.src
+        l.src
       );
       const layersToApply = promotedTitle ? allImageLayers : newLayers;
       const runLayoutLoop = () => {
@@ -2206,7 +2204,7 @@ const AutoLayout = (() => {
   // Dentro de cada grupo se mantiene el orden actual (= orden de importación).
   function _reorderByRole() {
     const isSystemLayer = l =>
-      l.isComposicion || l.isComposicionMovil || l.isComposicionAmazon ||
+      l.isComposicion || l.isComposicionMovil  ||
       l.isComposicionTextoH || l.isComposicionTextoV ||
       l.isMarcaIplus || l.isMarcaSony || l.isMolduraFanart || l.isMascaraBlur;
 
@@ -2244,9 +2242,9 @@ const AutoLayout = (() => {
     // Incluir isComposicion para poder posicionarla con el rol title
     const layers = State.layers.filter(l =>
       !['text', 'solid', 'gradient'].includes(l.type) &&
-      !l.isComposicionMovil && !l.isComposicionAmazon &&
+      !l.isComposicionMovil &&
       !l.isComposicionTextoH && !l.isComposicionTextoV &&
-      !l.isMarcaIplus && !l.isMarcaSony && l.src
+      l.src
     );
     if (typeof History !== 'undefined') History.push();
     applyToFormat(formatName, roles, layers);
@@ -2359,7 +2357,7 @@ const AutoLayout = (() => {
         item.text = { ...layer.textParams };
       }
       // Flags útiles
-      ['isTitleLayer','isComposicion','isComposicionMovil','isComposicionAmazon',
+      ['isTitleLayer','isComposicion','isComposicionMovil',
        'isMarcaSony','isMarcaIplus','exclusiveFormat','_layoutGenerated']
         .forEach(k => { if (layer[k]) item[k] = layer[k]; });
       out.layers.push(item);

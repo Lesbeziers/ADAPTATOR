@@ -130,9 +130,9 @@ const Layers = (() => {
             // Primera importación: el modal de roles cubre TODAS las imágenes
             const imageLayers = State.layers.filter(l =>
               !['text','solid','gradient'].includes(l.type) &&
-              !l.isComposicion && !l.isComposicionMovil && !l.isComposicionAmazon &&
+              !l.isComposicion && !l.isComposicionMovil &&
               !l.isComposicionTextoH && !l.isComposicionTextoV &&
-              !l.isMarcaIplus && !l.isMarcaSony && l.src
+              l.src
             );
             if (imageLayers.length > 0) AutoLayout.onFirstImport(imageLayers);
           } else {
@@ -141,7 +141,7 @@ const Layers = (() => {
             const extras = newLayers.filter(l =>
               l && l.src && !l.isTitleLayer &&
               !['text','solid','gradient'].includes(l.type) &&
-              !l.isComposicion && !l.isComposicionMovil && !l.isComposicionAmazon &&
+              !l.isComposicion && !l.isComposicionMovil &&
               !l.isComposicionTextoH && !l.isComposicionTextoV &&
               !l.isMarcaIplus && !l.isMarcaSony
             );
@@ -314,7 +314,7 @@ const Layers = (() => {
             }
             // Calcular índice de inserción: después de capas auto-generadas y de isTitleLayer
             let _ci = 0;
-            while (_ci < State.layers.length && (State.layers[_ci].isComposicion || State.layers[_ci].isComposicionMovil || State.layers[_ci].isComposicionAmazon || State.layers[_ci].isMarcaIplus || State.layers[_ci].isMarcaSony || State.layers[_ci].isTitleLayer)) {
+            while (_ci < State.layers.length && (State.layers[_ci].isComposicion || State.layers[_ci].isComposicionMovil || State.layers[_ci].isMarcaSony || State.layers[_ci].isTitleLayer)) {
               _ci++;
             }
             if (typeof History !== 'undefined') History.push();
@@ -433,7 +433,7 @@ const Layers = (() => {
   function _importTitleLayer(layer) {
     // Insertar después de todas las capas auto-generadas (isComposicion, isComposicionMovil, isMarcaIplus)
     let _ci = 0;
-    while (_ci < State.layers.length && (State.layers[_ci].isComposicion || State.layers[_ci].isComposicionMovil || State.layers[_ci].isComposicionAmazon || State.layers[_ci].isMarcaIplus || State.layers[_ci].isMarcaSony)) {
+    while (_ci < State.layers.length && (State.layers[_ci].isComposicion || State.layers[_ci].isComposicionMovil || State.layers[_ci].isMarcaSony)) {
       _ci++;
     }
     if (typeof History !== 'undefined') History.push();
@@ -743,7 +743,7 @@ const Layers = (() => {
 
     const isSystem = l =>
       l.isMarcaIplus || l.isMarcaSony || l.isMolduraFanart || l.isMascaraBlur ||
-      l.isComposicion || l.isComposicionMovil || l.isComposicionAmazon ||
+      l.isComposicion || l.isComposicionMovil  ||
       l.isComposicionTextoH || l.isComposicionTextoV ||
       l.isTitleLayer;
 
@@ -2455,7 +2455,7 @@ const Layers = (() => {
     if (!l) return false;
     if (l.isMask) return false;
     if (l.isMarcaIplus || l.isMarcaSony || l.isMolduraFanart || l.isMascaraBlur) return false;
-    if (l.isComposicion || l.isComposicionMovil || l.isComposicionAmazon) return false;
+    if (l.isComposicion || l.isComposicionMovil ) return false;
     if (l.isComposicionTextoH || l.isComposicionTextoV) return false;
     if (l.isTitleLayer) return false;
     if (l._layoutGenerated) return false;

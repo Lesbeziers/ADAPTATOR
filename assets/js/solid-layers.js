@@ -46,7 +46,7 @@ const SolidLayers = (() => {
     };
 
     let _ci = 0;
-    while (_ci < State.layers.length && (State.layers[_ci].isComposicion || State.layers[_ci].isComposicionMovil || State.layers[_ci].isMarcaIplus || State.layers[_ci].isTitleLayer)) {
+    while (_ci < State.layers.length && (State.layers[_ci].isComposicion || State.layers[_ci].isComposicionMovil || State.layers[_ci].isTitleLayer)) {
       _ci++;
     }
     if (typeof History !== 'undefined') History.push();

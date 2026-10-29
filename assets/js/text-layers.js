@@ -291,7 +291,7 @@ const TextLayers = (() => {
     let _ci = 0;
     while (_ci < State.layers.length && (
       State.layers[_ci].isComposicion || State.layers[_ci].isComposicionMovil ||
-      State.layers[_ci].isComposicionAmazon || State.layers[_ci].isMarcaIplus ||
+      State.layers[_ci].isMarcaIplus ||
       State.layers[_ci].isMarcaSony || State.layers[_ci].isTitleLayer
     )) { _ci++; }
 
