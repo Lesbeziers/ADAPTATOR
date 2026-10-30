@@ -187,13 +187,13 @@ const AutoLayout = (() => {
       variants: {
         A: {
           label: 'Centro / Título abajo',
-          textZone:  { x: 0.188, y: 0.582, w: 0.677, h: 0.357 },
-          focusZone: { x: 0.229, y: 0.000, w: 0.595, h: 0.999 },
+          textZone:  { x: 0.1615, y: 0.582, w: 0.677, h: 0.357 },
+          focusZone: { x: 0.2025, y: 0.000, w: 0.595, h: 0.999 },
         },
         B: {
           label: 'Centro / Título arriba',
-          textZone:  { x: 0.188, y: 0.060, w: 0.677, h: 0.357 },
-          focusZone: { x: 0.229, y: 0.000, w: 0.595, h: 0.999 },
+          textZone:  { x: 0.1615, y: 0.060, w: 0.677, h: 0.357 },
+          focusZone: { x: 0.2025, y: 0.000, w: 0.595, h: 0.999 },
         },
         C: {
           label: 'Imagen derecha / Texto izquierda',
@@ -207,8 +207,14 @@ const AutoLayout = (() => {
         },
       },
       // textZone y focusZone por defecto (variante A)
-      textZone:    { x: 0.188, y: 0.582, w: 0.677, h: 0.357 },
-      focusZone:   { x: 0.229, y: 0.000, w: 0.595, h: 0.999 },
+      //
+      // Las variantes A y B dicen "Centro" pero estaban desviadas +2,65 % a la
+      // derecha: las dos zonas tenían su centro en 0,5265, o sea 34 px sobre
+      // una pieza de 1280. No era deliberado — el checker AD_PAUSE_Checker.png
+      // tiene su zona libre de x=24 a x=1256, centro 640,0 EXACTO — así que
+      // venía de una medición a ojo. Corregido a centro 0,5 clavado.
+      textZone:    { x: 0.1615, y: 0.582, w: 0.677, h: 0.357 },
+      focusZone:   { x: 0.2025, y: 0.000, w: 0.595, h: 0.999 },
       anchorPoint: { x: 0.50,  y: 0.22  },
       crop: { fill: 3.00, anchorFraction: 0.25 },
       fit:  { fill: 1.00, anchorFraction: 0.30 },
