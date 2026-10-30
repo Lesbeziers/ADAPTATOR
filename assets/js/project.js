@@ -171,9 +171,7 @@ const Project = (() => {
     const _usedFilenames = new Set();
     const _contentToFile = new Map(); // content (dataURL) → srcFilename, para deduplicar
     const layers = State.layers
-      .filter(l => !l.isComposicion && !l.isComposicionMovil 
-                && !l.isComposicionTextoH && !l.isComposicionTextoV
-                && !l.isComposicionComTituloH
+      .filter(l => !esComposicionAuto(l)
                 && !l.isMolduraFanart && !l.isMascaraBlur)
       .map(layer => {
         const l = { ...layer, params: { ...layer.params } };
@@ -641,8 +639,7 @@ const Project = (() => {
     // Cargar capas en orden exacto guardado, sin composicion ni capas auto-generadas.
     // Las composiciones oficiales se regenerarán limpias al final de _applyState.
     State.layers = (data.layers ?? []).filter(l =>
-      !l.isComposicion && !l.isComposicionMovil 
-      && !l.isComposicionTextoH && !l.isComposicionTextoV
+      !esComposicionAuto(l)
       && !l.isMolduraFanart && !l.isMascaraBlur);
     // Limpiar src corruptos guardados como string "undefined"
     State.layers.forEach(l => { if (l.src === 'undefined') l.src = null; });

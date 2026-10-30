@@ -1196,8 +1196,7 @@ const AutoLayout = (() => {
     // Solo capas de imagen (no texto, sólido, degradado, sistema)
     const imageLayers = layers.filter(l =>
       !['text', 'solid', 'gradient'].includes(l.type) &&
-      !l.isComposicion && !l.isComposicionMovil &&
-      !l.isComposicionTextoH && !l.isComposicionTextoV &&
+      !esComposicionAuto(l) &&
       l.src
     );
 
@@ -2261,8 +2260,7 @@ const AutoLayout = (() => {
       //   el ajuste manual que el usuario tenía en cada formato.
       const allImageLayers = State.layers.filter(l =>
         !['text','solid','gradient'].includes(l.type) &&
-        !l.isComposicion && !l.isComposicionMovil &&
-        !l.isComposicionTextoH && !l.isComposicionTextoV &&
+        !esComposicionAuto(l) &&
         l.src
       );
       const layersToApply = promotedTitle ? allImageLayers : newLayers;
@@ -2311,8 +2309,7 @@ const AutoLayout = (() => {
   // Dentro de cada grupo se mantiene el orden actual (= orden de importación).
   function _reorderByRole() {
     const isSystemLayer = l =>
-      l.isComposicion || l.isComposicionMovil  ||
-      l.isComposicionTextoH || l.isComposicionTextoV ||
+      esComposicionAuto(l) ||
       l.isMolduraFanart || l.isMascaraBlur;
 
     const sys      = [];
@@ -2349,8 +2346,7 @@ const AutoLayout = (() => {
     // Incluir isComposicion para poder posicionarla con el rol title
     const layers = State.layers.filter(l =>
       !['text', 'solid', 'gradient'].includes(l.type) &&
-      !l.isComposicionMovil &&
-      !l.isComposicionTextoH && !l.isComposicionTextoV &&
+      !esComposicionAuto(l) &&
       l.src
     );
     if (typeof History !== 'undefined') History.push();

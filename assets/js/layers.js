@@ -130,8 +130,7 @@ const Layers = (() => {
             // Primera importación: el modal de roles cubre TODAS las imágenes
             const imageLayers = State.layers.filter(l =>
               !['text','solid','gradient'].includes(l.type) &&
-              !l.isComposicion && !l.isComposicionMovil &&
-              !l.isComposicionTextoH && !l.isComposicionTextoV &&
+              !esComposicionAuto(l) &&
               l.src
             );
             if (imageLayers.length > 0) AutoLayout.onFirstImport(imageLayers);
@@ -147,9 +146,7 @@ const Layers = (() => {
             const extras = newLayers.filter(l =>
               l && l.src &&
               !['text','solid','gradient'].includes(l.type) &&
-              !l.isComposicion && !l.isComposicionMovil &&
-              !l.isComposicionTextoH && !l.isComposicionTextoV &&
-              !l.isComposicionComTituloH
+              !esComposicionAuto(l)
             );
             if (extras.length > 0 && AutoLayout.onAdditionalImport) {
               AutoLayout.onAdditionalImport(extras);
@@ -770,8 +767,7 @@ const Layers = (() => {
 
     const isSystem = l =>
       l.isMolduraFanart || l.isMascaraBlur ||
-      l.isComposicion || l.isComposicionMovil  ||
-      l.isComposicionTextoH || l.isComposicionTextoV ||
+      esComposicionAuto(l) ||
       l.isTitleLayer;
 
     // Filtros:
@@ -2351,8 +2347,7 @@ const Layers = (() => {
     if (!l) return false;
     if (l.isMask) return false;
     if (l.isMolduraFanart || l.isMascaraBlur) return false;
-    if (l.isComposicion || l.isComposicionMovil ) return false;
-    if (l.isComposicionTextoH || l.isComposicionTextoV) return false;
+    if (esComposicionAuto(l)) return false;
     if (l.isTitleLayer) return false;
     if (l._layoutGenerated) return false;
     return true;

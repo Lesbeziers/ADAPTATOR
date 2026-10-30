@@ -55,6 +55,27 @@ const TEXT_BLOCK_FORMATS = [
 ];
 
 
+// ── COMPOSICIONES AUTO-GENERADAS ────────────────────────────
+// Las composiciones no son capas del usuario: nacen de un formato maestro y se
+// regeneran solas. Por eso NO se ofrecen en el modal de roles, NO se guardan
+// como assets y NO cuentan como imágenes importadas.
+//
+// Esta lista existe porque enumerar las banderas a mano en cada sitio ya ha
+// fallado TRES veces al añadir una composición nueva: se coló en la carpeta
+// imagenes/ del proyecto guardado, se listó en el panel de capas, y acabó
+// ofreciéndose en el modal de roles como si fuera un archivo recién importado.
+// Nueve sitios repetían la misma enumeración y bastaba olvidar uno.
+const COMPOSICION_FLAGS = [
+  'isComposicion',          // MUX4 TXT
+  'isComposicionMovil',     // MOVIL TXT
+  'isComposicionTextoH',    // TEXTO HORIZONTAL
+  'isComposicionTextoV',    // TEXTO VERTICAL
+  'isComposicionComTituloH',// COM TITULO H
+];
+function esComposicionAuto(l) {
+  return !!l && COMPOSICION_FLAGS.some(f => l[f]);
+}
+
 const State = {
 
   view: 'editor',
