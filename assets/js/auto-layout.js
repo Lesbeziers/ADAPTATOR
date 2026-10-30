@@ -1125,7 +1125,8 @@ const AutoLayout = (() => {
       // coinciden al píxel, medidos por separado.
       //
       // El título NO se maqueta aquí: este formato lo entrega como asset suelto
-      // y va clavado por TITULO_FIJO (pendiente de sus coordenadas).
+      // y va clavado por TITULO_FIJO, que ya tiene sus coordenadas. No se
+      // exporta en la pieza; solo se pinta en el JPG de MOCKUP.
       focusZone:   { x: 0.4273, y: 0.0755, w: 0.3964, h: 0.4694 },
       anchorPoint: { x: 0.50,  y: 0.22  },
       crop: { fill: 1.50, anchorFraction: 0.25 },
@@ -2577,8 +2578,22 @@ const AutoLayout = (() => {
   //
   // Los que van aquí son los SEIS SLIDER —Cabecera Slider E/M, Cabecera Slider
   // Mediano E/M y Slider Mediano E/M—, que son los únicos que entregan el
-  // título como asset suelto (cabecera-slider-tt.png). Faltan sus coordenadas.
+  // título como asset suelto (cabecera-slider-tt.png).
+  //
+  // Las coordenadas van en píxeles del formato y desde su esquina SUPERIOR
+  // IZQUIERDA, que es lo que espera tituloFijoRect. El panel de coordenadas de
+  // la herramienta da otra cosa: escala en % y x/y desde el CENTRO. La
+  // conversión queda escrita en cada entrada para que se pueda rehacer.
   const TITULO_FIJO = {
+    // Colocado por el diseñador sobre el mockup y medido en la herramienta:
+    // escala 110%, x −1150, y −200 desde el centro de una pieza de 3840×2160.
+    //   w =  1156 × 1,10            = 1271,6
+    //   x =  1920 − 1150 − 1271,6/2 =  134,2
+    //   y =  1080 −  200 −  382,8/2 =  688,6
+    // Redondeado a entero: el desvío es de 0,4 px y esta composición no se
+    // exporta en la pieza, así que no hay entrega que arrastre el error.
+    'Cabecera-Slider-Escritorio': { x: 134, y: 689, w: 1272 },
+    // Faltan los otros cinco Slider: cada uno trae su propia medida.
   };
 
   function tituloFijoConfig(formatName) {
