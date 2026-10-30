@@ -1078,7 +1078,34 @@ const AutoLayout = (() => {
       scaleModeDefault: 'crop',
     },
     'Carrusel-Horizontal': {                                   // 800x450   ar 1.78
-      focusZone:   { x: 0.000, y: 0.000, w: 1.000, h: 1.000 },
+      // MISMAS REGLAS QUE MODULO-ESCRITORIO, y no por parecido: los dos tienen
+      // EXACTAMENTE la misma proporción (2800/1575 y 800/450 son 1,7778).
+      // Carrusel Horizontal es Módulo Escritorio al 28,6 %, así que las zonas,
+      // que van en proporción, se copian TAL CUAL sin recalcular nada.
+      //
+      // La ESCALA FIJA sí cambia, y es la trampa de siempre: ese porcentaje es
+      // del lienzo del TÍTULO (1156 px), que no encoge aunque la pieza sí. El
+      // 116 % de Módulo Escritorio son 1341 px — sobre una pieza de 800 se
+      // saldría al 168 % del ancho. La equivalencia exacta sería 33,1 %
+      // (116 x 800/2800), pero el diseñador la sube a 40 % POR LEGIBILIDAD: en
+      // una pieza tan pequeña el título necesita más peso relativo. Con 40 %
+      // ocupa el 57,8 % del ancho frente al 47,9 % del formato grande.
+      //
+      // Regla que ya va por su tercera vez: las ZONAS viajan entre formatos,
+      // los PORCENTAJES no.
+      variants: {
+        A: { label: 'Texto izquierda / Imagen derecha',
+             textZone:  { x: 0.054, y: 0.180, w: 0.400, h: 0.640, scale: 40, alignH: 'left' },
+             focusZone: { x: 0.493, y: 0.000, w: 0.500, h: 1.000 } },
+        B: { label: 'Texto derecha / Imagen izquierda',
+             textZone:  { x: 0.546, y: 0.180, w: 0.400, h: 0.640, scale: 40, alignH: 'right' },
+             focusZone: { x: 0.007, y: 0.000, w: 0.500, h: 1.000 } },
+        C: { label: 'Imagen centrada / Texto centrado abajo',
+             textZone:  { x: 0.300, y: 0.665, w: 0.400, h: 0.240, scale: 40, align: 'bottom' },
+             focusZone: { x: 0.000, y: 0.000, w: 1.000, h: 1.000 } },
+      },
+      textZone:    { x: 0.054, y: 0.180, w: 0.400, h: 0.640, scale: 40, alignH: 'left' },
+      focusZone:   { x: 0.493, y: 0.000, w: 0.500, h: 1.000 },
       anchorPoint: { x: 0.50,  y: 0.22  },
       crop: { fill: 1.50, anchorFraction: 0.25 },
       fit:  { fill: 1.00, anchorFraction: 0.30 },
