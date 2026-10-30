@@ -1112,22 +1112,33 @@ const AutoLayout = (() => {
       scaleModeDefault: 'crop',
     },
     'Cabecera-Slider-Escritorio': {                            // 3840x2160 ar 1.78
-      // La imagen va en la ZONA BLANCA del safe: el hueco que dejan la banda
-      // superior (cabecera de la web), la inferior (textos, imagen secundaria
-      // y CTA) y las dos laterales. No está centrado — queda 482 px a la
-      // derecha del centro de la pieza, que es la asimetría que pide el diseño.
+      // La pieza es FULL-BLEED: la imagen llena el formato entero y la web
+      // monta encima su cabecera, sus textos y el CTA. Por eso focusZone va a
+      // toda la pieza, igual que en los otros cinco Slider.
+      //
+      // ⚠️ AQUÍ ME EQUIVOQUÉ (2026-10-29 → corregido el 30). Había puesto como
+      // focusZone la VENTANA DE SEGURIDAD medida del safe del diseñador:
       //
       //   x 1641 → 3162  (ancho 1522)     y 163 → 1176  (alto 1014)
+      //   normalizado: { x: 0.4273, y: 0.0755, w: 0.3964, h: 0.4694 }
       //
-      // Medido del archivo que pasó el diseñador
-      // (cabecera-slider-escritorio_Safes.jpg) y CONTRASTADO contra el checker
-      // que ya estaba en la herramienta, SF_Cabecera_Slider_Escritorio.png:
-      // coinciden al píxel, medidos por separado.
+      // La medida es correcta y coincide al píxel con SF_Cabecera_Slider_
+      // Escritorio.png, pero el CONCEPTO era otro. Son dos cosas distintas:
+      //   · focusZone      = el rectángulo de la PIEZA que la imagen debe llenar
+      //   · ventana segura = dónde debe CAER lo importante para que la interfaz
+      //                      de la web no lo tape
+      // Usar la segunda como la primera hace que el motor ENCOJA la imagen para
+      // meterla dentro del hueco (se veía al 68,2 %, 715×1014 en una pieza de
+      // 3840×2160) en vez de aplicarle su recorte. Síntoma que lo delata: el
+      // alto dibujado coincidía exactamente con el alto de la ventana.
+      // Pista de diagnóstico: TODOS los demás formatos llevan h: 1.000; los que
+      // restringen algo (Modulo-Escritorio, Cabecera-Detalle-Escritorio) lo
+      // hacen solo en ancho, porque ahí la imagen sí ocupa media pieza.
       //
       // El título NO se maqueta aquí: este formato lo entrega como asset suelto
       // y va clavado por TITULO_FIJO, que ya tiene sus coordenadas. No se
       // exporta en la pieza; solo se pinta en el JPG de MOCKUP.
-      focusZone:   { x: 0.4273, y: 0.0755, w: 0.3964, h: 0.4694 },
+      focusZone:   { x: 0.000, y: 0.000, w: 1.000, h: 1.000 },
       anchorPoint: { x: 0.50,  y: 0.22  },
       crop: { fill: 1.50, anchorFraction: 0.25 },
       fit:  { fill: 1.00, anchorFraction: 0.30 },
