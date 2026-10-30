@@ -2092,6 +2092,43 @@ const AutoLayout = (() => {
 
   // ── API PÚBLICA ───────────────────────────────────────────
 
+  // Un asset CON ROL es del proyecto entero, no del formato donde se soltó.
+  //
+  // Al importar estando en un formato anfitrión de texto (COM TITULO H, TEXTO
+  // HORIZONTAL…) la capa se marca `exclusiveFormat` de ese formato — ver
+  // layers.js. Eso es correcto para lo que añades DENTRO del maestro (una
+  // textura para la composición: rol NINGUNO), pero no para un fondo o un
+  // título: quedarían clavados en el taller e invisibles en los 50 formatos,
+  // y además se guarda en el proyecto, así que el fallo sobrevive al reabrir.
+  // El usuario siempre puede volver a fijarla a mano (menú contextual de la capa).
+  function _liberarExclusividadPorRol(layers, roles) {
+    layers.forEach(l => { if (roles[l.id]) l.exclusiveFormat = null; });
+  }
+
+  // El rol ELEGIDO manda sobre la adivinanza por nombre de archivo.
+  //
+  // Al importar, layers.js marca isTitleLayer con /titulo|title|texto|text/i.
+  // Eso convierte en título cualquier "fondo_textura_ciudad.jpg" — basta que el
+  // nombre lleve "text" dentro — y los títulos se ocultan en los 50 formatos
+  // reales (ver _isLayerVisible: solo se ven en los formatos de texto). El
+  // resultado es un fondo que se importa, recibe su rol, se maqueta… y no se ve
+  // en ninguna parte.
+  // La modal solo sabía PROMOCIONAR a título, nunca degradar, así que el falso
+  // positivo era irreversible desde la interfaz. Si el usuario (o el asistente
+  // de PSD, que ofrece los dos roles de título) dice que esa imagen es un fondo,
+  // deja de ser un título. Devuelve true si hubo que degradar alguna, para
+  // regenerar las composiciones que se hubieran construido con ella.
+  function _degradarFalsosTitulos(layers, roles) {
+    let degradado = false;
+    layers.forEach(l => {
+      const r = roles[l.id];
+      if (r === 'title_h' || r === 'title_v' || !l.isTitleLayer) return;
+      l.isTitleLayer = l.isTitleLayerH = l.isTitleLayerV = false;
+      degradado = true;
+    });
+    return degradado;
+  }
+
   // Llamado al importar imágenes por primera vez.
   // `preRoles` (opcional) salta el modal de roles — ver showRoleModal.
   function onFirstImport(layers, preRoles) {
@@ -2100,6 +2137,8 @@ const AutoLayout = (() => {
       // Guardar roles en State
       if (!State.layerRoles) State.layerRoles = {};
       Object.assign(State.layerRoles, roles);
+      _liberarExclusividadPorRol(layers, roles);
+      const _degradado = _degradarFalsosTitulos(layers, roles);
 
       // Solo la PRIMERA imagen con rol FANART cuenta; las demás pasan a imagen normal (sin rol)
       const _fanarts = layers.filter(l => roles[l.id] === 'fanart');
@@ -2138,10 +2177,12 @@ const AutoLayout = (() => {
       // useTitleLayer) buscan `l.isComposicion` para aplicarle textZone. Si la
       // composición todavía no existe, _applyTitle no encuentra nada y la capa
       // queda en el centro hasta que se reposiciona manualmente.
-      if (promotedTitle) {
+      // `_degradado`: una capa dejó de ser título, así que las composiciones que
+      // se generaron con ella al importarla ya no valen y hay que rehacerlas.
+      if (promotedTitle || _degradado) {
         // Limpiar overrides del lápiz: al asignar título por primera vez no queremos
         // que se mantengan elecciones manuales viejas (de sesiones previas o pruebas).
-        State.formatTextVariant = {};
+        if (promotedTitle) State.formatTextVariant = {};
 
         if (typeof Composicion       !== 'undefined') await Composicion.generate();
         if (typeof ComposicionMovil  !== 'undefined') await ComposicionMovil.generate();
@@ -2209,6 +2250,8 @@ const AutoLayout = (() => {
     showRoleModal(newLayers, async roles => {
       if (!State.layerRoles) State.layerRoles = {};
       Object.assign(State.layerRoles, roles);
+      _liberarExclusividadPorRol(newLayers, roles);
+      const _degradado = _degradarFalsosTitulos(newLayers, roles);
 
       // Solo la 1ª FANART cuenta; si ya hay un fanart previo, ninguna nueva sobrevive como tal
       const prevFanart = State.layers.find(l =>
@@ -2239,8 +2282,8 @@ const AutoLayout = (() => {
 
       if (typeof History !== 'undefined') History.push();
 
-      // Si hay nuevo título, regenerar composiciones (las que existen ya en el proyecto)
-      if (promotedTitle) {
+      // Si hay nuevo título —o una capa dejó de serlo— regenerar composiciones
+      if (promotedTitle || _degradado) {
         if (typeof Composicion       !== 'undefined') await Composicion.generate();
         if (typeof ComposicionMovil  !== 'undefined') await ComposicionMovil.generate();
         if (typeof ComposicionTexto  !== 'undefined') {
