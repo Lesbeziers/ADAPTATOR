@@ -1045,6 +1045,21 @@ const AutoLayout = (() => {
       scaleModeDefault: 'crop',
     },
     'Carrusel-Vertical': {                                     // 1200x1800 ar 0.67
+      // AFINADO con el diseñador. Mismo comportamiento que Mosaico-Vertical:
+      // una sola opción, imagen centrada y título en ENCAJE con TECHO.
+      //
+      // Sin checker: las referencias las marcó sobre la pieza y se han
+      // contrastado midiendo su archivo (Maquetacion-carrusel-vertical.jpg).
+      // Las tres coinciden al píxel con lo que dijo:
+      //   · sólidos verdes laterales de 94 px  → hueco útil x 95 → 1105
+      //   · sólido rojo inferior de 300 px     → el título se apoya en y=1500
+      //   · guía horizontal en y=1120          → techo de altura
+      //
+      // La DOBLE CONDICIÓN es la gracia: el título crece hasta tocar los verdes,
+      // salvo que antes choque con el techo. Sin ese tope, un título corto y
+      // alto tipo "IT" se comería media pieza. Igual que en Mosaico-Vertical,
+      // el techo no es un número inventado: lo marcó el diseñador con una guía.
+      textZone:    { x: 0.079, y: 0.622, w: 0.843, h: 0.211, align: 'bottom' },
       focusZone:   { x: 0.000, y: 0.000, w: 1.000, h: 1.000 },
       anchorPoint: { x: 0.50,  y: 0.22  },
       crop: { fill: 1.20, anchorFraction: 0.25 },
