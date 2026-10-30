@@ -1236,15 +1236,37 @@ const AutoLayout = (() => {
     modal.appendChild(subtitle);
 
     // Filas de capas
-    const roleOptions = [
+    const TODOS_LOS_ROLES = [
       { value: 'imagen_big', label: 'IMAGEN BIG' },
       { value: 'background', label: 'FONDO' },
-      { value: 'subject',    label: 'IMAGEN' },
+      { value: 'subject',    label: 'IMAGEN PRINCIPAL' },
       { value: 'title_h',    label: 'TÍTULO HORIZONTAL' },
       { value: 'title_v',    label: 'TÍTULO VERTICAL' },
       { value: 'fanart',     label: 'FANART' },
       { value: null,         label: 'NINGUNO' },
     ];
+
+    // ROLES ÚNICOS. Un rol describe lo que el asset ES, y de cada cosa solo hay
+    // una: un fondo, una imagen principal, un título horizontal. Si ya está
+    // ocupado por una capa VIVA, no se vuelve a ofrecer — para cambiar el asset
+    // está "Reemplazar imagen" del botón derecho, que además conserva la
+    // colocación en los 50 formatos. Mezclar las dos cosas en el modal invitaba
+    // a crear dos fondos y a perder el encaje.
+    //
+    // NINGUNO nunca se filtra: es el rol de las imágenes secundarias (texturas,
+    // elementos sueltos) y se puede repetir tantas veces como haga falta.
+    //
+    // Se mira sobre las capas VIVAS y no sobre State.layerRoles, por el mismo
+    // motivo que isBigMode: al borrar una capa su rol queda libre, y la tabla
+    // puede conservar entradas de capas que ya no existen.
+    const _enEsteModal = new Set(imageLayers.map(l => l.id));
+    const _ocupados = new Set(
+      (State.layers || [])
+        .filter(l => !_enEsteModal.has(l.id))
+        .map(l => State.layerRoles?.[l.id])
+        .filter(Boolean)
+    );
+    const roleOptions = TODOS_LOS_ROLES.filter(o => o.value === null || !_ocupados.has(o.value));
 
     const selects = {};
     imageLayers.forEach(layer => {

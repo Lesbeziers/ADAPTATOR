@@ -136,13 +136,20 @@ const Layers = (() => {
             );
             if (imageLayers.length > 0) AutoLayout.onFirstImport(imageLayers);
           } else {
-            // Importación posterior: modal de roles SOLO con las imágenes nuevas
-            // (filtradas: nada de títulos detectados por nombre — esos no entran al modal).
+            // Importación posterior: modal de roles con las imágenes nuevas.
+            //
+            // Los títulos detectados por NOMBRE también entran. Antes se
+            // excluían, y eso los dejaba sin rol title_h/title_v —ese solo lo
+            // asigna el modal—, así que se acumulaban en silencio: importabas
+            // tres títulos y acababas con tres capas. Ahora pasan por el modal
+            // igual que todo lo demás, con su rol ya SUGERIDO por el nombre
+            // (detectRole) pero cambiable, que es lo que pidió el diseñador.
             const extras = newLayers.filter(l =>
-              l && l.src && !l.isTitleLayer &&
+              l && l.src &&
               !['text','solid','gradient'].includes(l.type) &&
               !l.isComposicion && !l.isComposicionMovil &&
-              !l.isComposicionTextoH && !l.isComposicionTextoV
+              !l.isComposicionTextoH && !l.isComposicionTextoV &&
+              !l.isComposicionComTituloH
             );
             if (extras.length > 0 && AutoLayout.onAdditionalImport) {
               AutoLayout.onAdditionalImport(extras);
