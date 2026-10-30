@@ -449,7 +449,32 @@ const Layers = (() => {
     if (typeof Canvas !== 'undefined') Canvas.render();
     if (typeof UI !== 'undefined') UI.updateSliders();
 
-    if (typeof Composicion !== 'undefined') Composicion.generate();
+    // Regenerar TODAS las composiciones de título, no solo la de MUX4.
+    //
+    // Antes solo se llamaba a Composicion.generate() (MUX4), así que al
+    // importar un título los formatos cuya variante fuese H, V, MOVIL o COM_H
+    // NO se enteraban: la imagen entraba como capa pero quedaba invisible —en
+    // esos formatos lo que se pinta es la COMPOSICIÓN, no el título crudo— y
+    // tampoco salía en el panel. Desde fuera parecía que la importación no
+    // hacía nada. Se notó con COMERCIAL porque sus catorce formatos usan
+    // COM_H, pero el fallo afectaba igual a TEXTO HORIZONTAL y compañía.
+    if (typeof Composicion       !== 'undefined') Composicion.generate();
+    if (typeof ComposicionMovil  !== 'undefined') ComposicionMovil.generate();
+    if (typeof ComposicionTexto  !== 'undefined') {
+      const _tras = (comp, variante) => {
+        if (comp && typeof AutoLayout !== 'undefined' && AutoLayout.repositionTextComp) {
+          AutoLayout.repositionTextComp(comp, variante);
+        }
+        if (typeof Canvas  !== 'undefined') Canvas.render();
+        if (typeof Layers  !== 'undefined') _render();
+      };
+      ComposicionTexto.generate('TEXTO HORIZONTAL', 'COMPOSICIÓN TEXTO HORIZONTAL', 'isComposicionTextoH')
+        .then(() => _tras(State.layers.find(l => l.isComposicionTextoH), 'H'));
+      ComposicionTexto.generate('TEXTO VERTICAL', 'COMPOSICIÓN TEXTO VERTICAL', 'isComposicionTextoV')
+        .then(() => _tras(State.layers.find(l => l.isComposicionTextoV), 'V'));
+      ComposicionTexto.generate('COM TITULO H', 'COMPOSICIÓN COM TITULO H', 'isComposicionComTituloH')
+        .then(() => _tras(State.layers.find(l => l.isComposicionComTituloH), 'COM_H'));
+    }
   }
 
   // ── ELIMINAR ──────────────────────────────────────────────
