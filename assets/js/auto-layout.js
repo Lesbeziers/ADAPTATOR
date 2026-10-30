@@ -1112,7 +1112,21 @@ const AutoLayout = (() => {
       scaleModeDefault: 'crop',
     },
     'Cabecera-Slider-Escritorio': {                            // 3840x2160 ar 1.78
-      focusZone:   { x: 0.000, y: 0.000, w: 1.000, h: 1.000 },
+      // La imagen va en la ZONA BLANCA del safe: el hueco que dejan la banda
+      // superior (cabecera de la web), la inferior (textos, imagen secundaria
+      // y CTA) y las dos laterales. No está centrado — queda 482 px a la
+      // derecha del centro de la pieza, que es la asimetría que pide el diseño.
+      //
+      //   x 1641 → 3162  (ancho 1522)     y 163 → 1176  (alto 1014)
+      //
+      // Medido del archivo que pasó el diseñador
+      // (cabecera-slider-escritorio_Safes.jpg) y CONTRASTADO contra el checker
+      // que ya estaba en la herramienta, SF_Cabecera_Slider_Escritorio.png:
+      // coinciden al píxel, medidos por separado.
+      //
+      // El título NO se maqueta aquí: este formato lo entrega como asset suelto
+      // y va clavado por TITULO_FIJO (pendiente de sus coordenadas).
+      focusZone:   { x: 0.4273, y: 0.0755, w: 0.3964, h: 0.4694 },
       anchorPoint: { x: 0.50,  y: 0.22  },
       crop: { fill: 1.50, anchorFraction: 0.25 },
       fit:  { fill: 1.00, anchorFraction: 0.30 },
