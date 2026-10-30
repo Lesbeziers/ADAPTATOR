@@ -171,6 +171,11 @@ const AutoLayout = (() => {
     applyBigTitle(formatName);
   }
 
+  // Aire mínimo sobre el sujeto, en proporción del alto de la pieza. Ver
+  // _applySubjectFocal para el porqué. 5 % acordado con el diseñador como
+  // punto de partida, a subir o bajar según se vea en material real.
+  const MARGEN_SUPERIOR_MIN = 0.05;
+
   // ── CONFIGURACIÓN DE ZONAS POR FORMATO ───────────────────
   // textZone:    zona donde se coloca el TÍTULO (proporcional 0-1)
   // focusZone:   zona donde se ancla el SUJETO (proporcional 0-1)
@@ -1549,7 +1554,22 @@ const AutoLayout = (() => {
 
     // Colocar la imagen para que el centro del rect focal caiga en el centro de la zona.
     const cx = zoneCx - frCxNorm * drawW + drawW / 2;
-    const cy = zoneCy - frCyNorm * drawH + drawH / 2;
+    let   cy = zoneCy - frCyNorm * drawH + drawH / 2;
+
+    // MARGEN SUPERIOR MÍNIMO. Cuando el recorte focal es más alto que la pieza
+    // en proporción, la altura es la que manda y el recorte ENCAJA EXACTO: su
+    // borde superior cae en y=0 y el sujeto queda pegado al borde. Con un
+    // recorte de persona eso deja la cabeza tocando el filo.
+    //
+    // Se corrige BAJANDO la imagen, no reescalándola: reescalar tiraría por la
+    // borda la precisión del encuadre que el diseñador eligió a mano.
+    //
+    // Y es un MÍNIMO GARANTIZADO, no un desplazamiento fijo: donde ya sobra
+    // aire arriba no se toca nada. Aplicarlo siempre habría movido sin motivo
+    // los formatos que ya estaban bien.
+    const margenMin = H * MARGEN_SUPERIOR_MIN;
+    const bordeArriba = cy - drawH / 2;
+    if (bordeArriba < margenMin) cy += margenMin - bordeArriba;
 
     _setParams(formatName, layer.id, {
       x: Math.round(cx - W / 2),
