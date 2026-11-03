@@ -1294,7 +1294,28 @@ const AutoLayout = (() => {
       scaleModeDefault: 'crop',
     },
     'Slider-Mediano-Movil': {                                  // 1536x1536 ar 1.00
-      focusZone:   { x: 0.000, y: 0.000, w: 1.000, h: 1.000 },
+      // Su safe lo dice con todas las letras: "IMAGEN CENTRADA · ZONA
+      // RECOMENDADA PARA EL ELEMENTO MÁS IMPORTANTE". El bloque está centrado
+      // en (767,5, 767,5), el centro exacto de la pieza.
+      //
+      // Centrada y al 100 %. Con el recorte CUADRADO del diseñador
+      // {x:0, y:0, w:1, h:0.7760} (centro vertical 0,3880) sobre 1049×1487:
+      //
+      //   lado de zona = 1049 x 1,00 = 1049    (manda el ancho: 1049/1049 = 1,00
+      //     frente a 1049/1153,8 = 0,909)
+      //   w = h = 1049 / 1536        = 0,6829
+      //   zonaX = 768                          → x = (768-524,5)/1536 = 0,1585
+      //   zonaY = 768 - 1487 x (0,5 - 0,3880)
+      //         = 768 - 166,5 = 601,5          → y = (601,5-524,5)/1536 = 0,0501
+      //
+      // margenSuperiorMin: 0 — AQUÍ LA REGLA GLOBAL ESTORBA. Al 100 % la imagen
+      // mide 1487 de alto en una pieza de 1536: el borde superior cae en y=24,5
+      // y el mínimo del 5 % (76,8) la empujaría 52,3 px hacia abajo, dejándola
+      // descentrada justo en el formato que pide estar centrado. La regla existe
+      // para que a un sujeto no se le pegue la cabeza al filo; cuando el diseño
+      // pide centrado explícito, manda el diseño.
+      focusZone:   { x: 0.1585, y: 0.0501, w: 0.6829, h: 0.6829 },
+      margenSuperiorMin: 0,
       anchorPoint: { x: 0.50,  y: 0.22  },
       crop: { fill: 1.30, anchorFraction: 0.25 },
       fit:  { fill: 1.00, anchorFraction: 0.30 },
@@ -1768,7 +1789,13 @@ const AutoLayout = (() => {
     // Y es un MÍNIMO GARANTIZADO, no un desplazamiento fijo: donde ya sobra
     // aire arriba no se toca nada. Aplicarlo siempre habría movido sin motivo
     // los formatos que ya estaban bien.
-    const margenMin = H * MARGEN_SUPERIOR_MIN;
+    //
+    // Un formato puede rebajarlo o anularlo con `margenSuperiorMin` (fracción
+    // del alto; 0 = sin mínimo). Hace falta donde el diseño pide la imagen
+    // CENTRADA de verdad y el alto dibujado casi llena la pieza: ahí la regla
+    // y la petición se contradicen, y manda la petición explícita del formato.
+    const _cfgMargen = FORMAT_CONFIG[formatName]?.margenSuperiorMin;
+    const margenMin = H * (_cfgMargen !== undefined ? _cfgMargen : MARGEN_SUPERIOR_MIN);
     const bordeArriba = cy - drawH / 2;
     if (bordeArriba < margenMin) cy += margenMin - bordeArriba;
 

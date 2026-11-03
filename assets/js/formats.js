@@ -623,7 +623,6 @@ const Formats = (() => {
     'Cabecera-Detalle-Escritorio', 'Cabecera-Detalle-Movil',
     'Carrusel-Vertical', 'Carrusel-Horizontal',
     'Cabecera-Slider-Escritorio', 'Cabecera-Slider-Movil',
-    'Slider-Mediano-Movil',
   ];
   // Formatos que NO reciben texto (sin variante): la familia FANART/BG, más
   // TODOS los anfitriones — en un lienzo de composición no se elige variante,
@@ -637,7 +636,7 @@ const Formats = (() => {
   const TEXT_VARIANT_NONE = ['FANART', 'FANART MÓVIL', 'FANART DEST.', 'FANART MOD N', 'MOD N', 'PERFIL',
                              'MUX4 FONDO', 'MOVIL MUX FONDO',
                              'Cabecera-Slider-Mediano-Escritorio', 'Slider-Mediano-Escritorio',
-                             'Cabecera-Slider-Mediano-Movil',
+                             'Cabecera-Slider-Mediano-Movil', 'Slider-Mediano-Movil',
                              ...TEXT_HOST_FORMATS];
 
   function _defaultTextVariant(fid) {
