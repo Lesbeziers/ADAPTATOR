@@ -1166,7 +1166,36 @@ const AutoLayout = (() => {
       scaleModeDefault: 'crop',
     },
     'Cabecera-Slider-Movil': {                                 // 2160x3840 ar 0.56
-      focusZone:   { x: 0.000, y: 0.000, w: 1.000, h: 1.000 },
+      // La imagen NO va a sangre aquí. El diseñador la quiere al 200 % y algo
+      // alta: lo que queda sin tapar por abajo lo cubre el desarrollo HTML del
+      // móvil (textos y CTA), así que no es un hueco, es sitio reservado.
+      //
+      // Zona despejada de SU colocación, no estimada. Dio escala 200 %, X=0 e
+      // Y=-214 sobre el retrato de referencia (1049x1487):
+      //
+      //   dibujado = 1049x2 por 1487x2        = 2098 x 2974
+      //   w = 2098 / 2160 = 0,9713      h = 2974 / 3840 = 0,7745
+      //   centro (1080, 1706) → x = 31/2160 = 0,0144   y = 219/3840 = 0,0570
+      //
+      // Contraste de que el marco focal es la imagen entera: el 258,2 % que
+      // daba el motor a sangre es exactamente 3840/1487.
+      //
+      // ⚠️ Al 200 % exacto la imagen mide 2098 de ancho en una pieza de 2160:
+      // quedan 31 px de fondo a cada lado. Es consecuencia de que 200 sea un
+      // número redondo, no una decisión de diseño. Para que llegue a los bordes
+      // bastaría w: 1.000 → 2160/1049 = 205,9 %. Pendiente de confirmar.
+      //
+      // DOS VARIANTES, misma zona movida en X (como Cabecera-Detalle-Movil):
+      // centrada en la pieza, o centrada en la guía vertical del diseñador.
+      //   guía x=1556 (+476 del centro) → x = (1556-1049)/2160 = 0,2347
+      // La A es la que manda; cambiar el defecto es intercambiar las letras.
+      variants: {
+        A: { label: 'Imagen centrada',
+             focusZone: { x: 0.0144, y: 0.0570, w: 0.9713, h: 0.7745 } },
+        B: { label: 'Imagen a la derecha',
+             focusZone: { x: 0.2347, y: 0.0570, w: 0.9713, h: 0.7745 } },
+      },
+      focusZone:   { x: 0.0144, y: 0.0570, w: 0.9713, h: 0.7745 },   // = variante A
       anchorPoint: { x: 0.50,  y: 0.22  },
       crop: { fill: 1.20, anchorFraction: 0.25 },
       fit:  { fill: 1.00, anchorFraction: 0.30 },
@@ -2625,7 +2654,18 @@ const AutoLayout = (() => {
     // Redondeado a entero: el desvío es de 0,4 px y esta composición no se
     // exporta en la pieza, así que no hay entrega que arrastre el error.
     'Cabecera-Slider-Escritorio': { x: 134, y: 689, w: 1272 },
-    // Faltan los otros cinco Slider: cada uno trae su propia medida.
+    // Cabecera Slider Móvil (2160×3840). Escala 100 %, x -392, y -655 desde el
+    // centro, leído del panel:
+    //   w = 1156 (al 100 % no se escala)
+    //   x = 1080 - 392 - 1156/2 =  110
+    //   y = 1920 - 655 -  348/2 = 1091
+    // La caja y los píxeles del título coinciden en el borde IZQUIERDO y en el
+    // INFERIOR (la composición ancla su contenido abajo-izquierda), así que
+    // estos números siguen valiendo con un título más largo o más corto.
+    // El mockup no tiene nada a esa altura: no hay nada con lo que alinear, la
+    // colocación es decisión del diseñador.
+    'Cabecera-Slider-Movil': { x: 110, y: 1091, w: 1156 },
+    // Faltan los otros cuatro Slider: cada uno trae su propia medida.
   };
 
   function tituloFijoConfig(formatName) {
