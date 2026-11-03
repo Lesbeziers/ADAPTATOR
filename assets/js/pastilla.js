@@ -4,7 +4,7 @@
 
 const Pastilla = (() => {
 
-  const FORMATS = ['199 PUBLI', 'IPLUS PUBLI', 'MOD DEST 2', 'MUX4 TXT', 'WEB PUBLI', 'WOW PUBLI', 'MOVIL MUX FONDO'];
+  const FORMATS = ['MOD DEST 2', 'MUX4 TXT', 'WEB PUBLI', 'WOW PUBLI', 'MOVIL MUX FONDO'];
   const FIXED_FORMATS = ['MOVIL MUX FONDO'];
 
   const SRC = {

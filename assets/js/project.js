@@ -158,9 +158,9 @@ const Project = (() => {
     const composiciones = {
       isComposicion:        _saveComp('isComposicion'),
       isComposicionMovil:   _saveComp('isComposicionMovil'),
-      isComposicionAmazon:  _saveComp('isComposicionAmazon'),
       isComposicionTextoH:  _saveComp('isComposicionTextoH'),
       isComposicionTextoV:  _saveComp('isComposicionTextoV'),
+      isComposicionComTituloH: _saveComp('isComposicionComTituloH'),
     };
 
     // Preservar orden exacto, excluir TODAS las capas auto-generadas:
@@ -171,9 +171,8 @@ const Project = (() => {
     const _usedFilenames = new Set();
     const _contentToFile = new Map(); // content (dataURL) → srcFilename, para deduplicar
     const layers = State.layers
-      .filter(l => !l.isComposicion && !l.isComposicionMovil && !l.isComposicionAmazon
-                && !l.isComposicionTextoH && !l.isComposicionTextoV
-                && !l.isMarcaIplus && !l.isMarcaSony && !l.isMolduraFanart && !l.isMascaraBlur)
+      .filter(l => !esComposicionAuto(l)
+                && !l.isMolduraFanart && !l.isMascaraBlur)
       .map(layer => {
         const l = { ...layer, params: { ...layer.params } };
         if (!l.src) return l;
@@ -182,6 +181,17 @@ const Project = (() => {
         if (l.isLogo) {
           l.srcType = 'path';
           l.src     = l.logoPath;
+          return l;
+        }
+
+        // Assets de la PROPIA herramienta (el logo Colección M+ que la
+        // maquetación de MOD N mete como capa): se referencian por ruta, no se
+        // copian a imagenes/. Antes acababan en la carpeta del usuario como un
+        // asset suyo —"coleccionM.png"— cuando no lo son y además ya viven
+        // dentro de Adaptator. Mismo trato que los logos.
+        if (l.systemPath) {
+          l.srcType = 'path';
+          l.src     = l.systemPath;
           return l;
         }
 
@@ -616,9 +626,9 @@ const Project = (() => {
     const _OFFICIAL_COMP_NAMES = {
       isComposicion:       'COMPOSICIÓN TÍTULO',
       isComposicionMovil:  'COMPOSICIÓN MOVIL TEXTO',
-      isComposicionAmazon: 'COMPOSICIÓN AMAZON LOGO',
       isComposicionTextoH: 'COMPOSICIÓN TEXTO HORIZONTAL',
       isComposicionTextoV: 'COMPOSICIÓN TEXTO VERTICAL',
+      isComposicionComTituloH: 'COMPOSICIÓN COM TITULO H',
     };
     (data.layers || []).forEach(l => {
       Object.entries(_OFFICIAL_COMP_NAMES).forEach(([flag, officialName]) => {
@@ -629,9 +639,8 @@ const Project = (() => {
     // Cargar capas en orden exacto guardado, sin composicion ni capas auto-generadas.
     // Las composiciones oficiales se regenerarán limpias al final de _applyState.
     State.layers = (data.layers ?? []).filter(l =>
-      !l.isComposicion && !l.isComposicionMovil && !l.isComposicionAmazon
-      && !l.isComposicionTextoH && !l.isComposicionTextoV
-      && !l.isMarcaIplus && !l.isMarcaSony && !l.isMolduraFanart && !l.isMascaraBlur);
+      !esComposicionAuto(l)
+      && !l.isMolduraFanart && !l.isMascaraBlur);
     // Limpiar src corruptos guardados como string "undefined"
     State.layers.forEach(l => { if (l.src === 'undefined') l.src = null; });
 
@@ -710,9 +719,9 @@ const Project = (() => {
     const _COMPS_META = [
       { flag: 'isComposicion',       name: 'COMPOSICIÓN TÍTULO' },
       { flag: 'isComposicionMovil',  name: 'COMPOSICIÓN MOVIL TEXTO' },
-      { flag: 'isComposicionAmazon', name: 'COMPOSICIÓN AMAZON LOGO' },
       { flag: 'isComposicionTextoH', name: 'COMPOSICIÓN TEXTO HORIZONTAL' },
       { flag: 'isComposicionTextoV', name: 'COMPOSICIÓN TEXTO VERTICAL' },
+      { flag: 'isComposicionComTituloH', name: 'COMPOSICIÓN COM TITULO H' },
     ];
     const _preInsertComp = (flag, name, id, params) => {
       if (!id) return;
@@ -753,10 +762,10 @@ const Project = (() => {
       const tasks = [];
       if (typeof Composicion       !== 'undefined') tasks.push(Composicion.generate());
       if (typeof ComposicionMovil  !== 'undefined') tasks.push(ComposicionMovil.generate());
-      if (typeof ComposicionAmazon !== 'undefined') tasks.push(ComposicionAmazon.generate());
       if (typeof ComposicionTexto  !== 'undefined') {
         tasks.push(ComposicionTexto.generate('TEXTO HORIZONTAL', 'COMPOSICIÓN TEXTO HORIZONTAL', 'isComposicionTextoH'));
         tasks.push(ComposicionTexto.generate('TEXTO VERTICAL',   'COMPOSICIÓN TEXTO VERTICAL',   'isComposicionTextoV'));
+        tasks.push(ComposicionTexto.generate('COM TITULO H',    'COMPOSICIÓN COM TITULO H',    'isComposicionComTituloH'));
       }
       Promise.all(tasks).then(() => {
         if (typeof Canvas !== 'undefined') Canvas.render();

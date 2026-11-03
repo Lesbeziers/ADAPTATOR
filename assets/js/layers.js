@@ -130,20 +130,23 @@ const Layers = (() => {
             // Primera importación: el modal de roles cubre TODAS las imágenes
             const imageLayers = State.layers.filter(l =>
               !['text','solid','gradient'].includes(l.type) &&
-              !l.isComposicion && !l.isComposicionMovil && !l.isComposicionAmazon &&
-              !l.isComposicionTextoH && !l.isComposicionTextoV &&
-              !l.isMarcaIplus && !l.isMarcaSony && l.src
+              !esComposicionAuto(l) &&
+              l.src
             );
             if (imageLayers.length > 0) AutoLayout.onFirstImport(imageLayers);
           } else {
-            // Importación posterior: modal de roles SOLO con las imágenes nuevas
-            // (filtradas: nada de títulos detectados por nombre — esos no entran al modal).
+            // Importación posterior: modal de roles con las imágenes nuevas.
+            //
+            // Los títulos detectados por NOMBRE también entran. Antes se
+            // excluían, y eso los dejaba sin rol title_h/title_v —ese solo lo
+            // asigna el modal—, así que se acumulaban en silencio: importabas
+            // tres títulos y acababas con tres capas. Ahora pasan por el modal
+            // igual que todo lo demás, con su rol ya SUGERIDO por el nombre
+            // (detectRole) pero cambiable, que es lo que pidió el diseñador.
             const extras = newLayers.filter(l =>
-              l && l.src && !l.isTitleLayer &&
+              l && l.src &&
               !['text','solid','gradient'].includes(l.type) &&
-              !l.isComposicion && !l.isComposicionMovil && !l.isComposicionAmazon &&
-              !l.isComposicionTextoH && !l.isComposicionTextoV &&
-              !l.isMarcaIplus && !l.isMarcaSony
+              !esComposicionAuto(l)
             );
             if (extras.length > 0 && AutoLayout.onAdditionalImport) {
               AutoLayout.onAdditionalImport(extras);
@@ -203,19 +206,50 @@ const Layers = (() => {
     img.src = src;
   }
 
-  // Genera una versión bajada de la imagen (max 1920x1080) para usar durante la
-  // edición. El original se guarda aparte (layer.srcOriginal) y solo se vuelve
-  // a tocar al exportar. Devuelve null si la imagen ya cabe en el target.
+  // Genera una versión bajada de la imagen para usar durante la EDICIÓN. El
+  // original se guarda aparte (layer.srcOriginal) y solo se vuelve a tocar al
+  // exportar, así que esto no afecta ni a la calidad final ni al peso de los
+  // proyectos guardados (el proxy se regenera al abrir, ver project.js).
+  // Devuelve null si la imagen ya es lo bastante pequeña.
   // Conserva PNG para mantener transparencia; el resto va a JPEG 0.9.
-  const PROXY_MAX_W = 1920;
-  const PROXY_MAX_H = 1080;
+  //
+  // ── POR QUÉ EL LÍMITE ES POR LADO Y NO POR CAJA ──────────────────────────
+  // Antes el tope era una caja de 1920×1080, aplicada por el lado más
+  // restrictivo. Eso castigaba a las imágenes CUADRADAS y VERTICALES: un
+  // máster de 4500×4500 quedaba en 1080×1080 porque mandaba la altura.
+  //
+  // ── DE DÓNDE SALE EL 5000 ────────────────────────────────────────────────
+  // Medido en la app, no estimado. Primero se puso 3200, calculado a partir de
+  // lo que ocupa el LIENZO en pantalla (hasta ~2764 px físicos en retina). Ese
+  // criterio estaba MAL: daba por hecho que la imagen nunca es más grande que
+  // su marco, y casi siempre lo es — un fondo que cubre o un sujeto ampliado
+  // desbordan el formato por definición, se dibujan enteros y luego se
+  // recortan, así que lo que manda no es el tamaño del lienzo sino el de la
+  // imagen ya escalada.
+  //
+  // Caso real que lo destapó: fondo de 6340×2160 al 50% en 199 PUBLI. Ocupa
+  // 4564 px físicos en pantalla, y el proxy de 3200 se estiraba ×1.43: se veía
+  // "crispy" pese a estar reducido al 50%, porque ese 50% es del ORIGINAL, no
+  // del proxy.
+  //
+  // 5000 cubre ese caso con margen y deja limpio el trabajo normal (escalas del
+  // 30-70%). Ojo: NINGÚN tope fijo aguanta cualquier ampliación — ese mismo
+  // fondo al 100% pediría 9128 px, más que el propio original. A partir de ahí
+  // el límite es el asset, no el proxy.
+  //
+  // Coste: ~34 MB de memoria por capa grande en vez de 14. No se usa el
+  // original directamente (máxima calidad) porque un PSD con 20 capas grandes
+  // se comería la memoria.
+  const PROXY_MAX_SIDE = 5000;
   function _makeProxy(img, mimeType) {
     const nw = img.naturalWidth;
     const nh = img.naturalHeight;
     if (!nw || !nh) return null;
-    if (nw <= PROXY_MAX_W && nh <= PROXY_MAX_H) return null;
 
-    const scale = Math.min(PROXY_MAX_W / nw, PROXY_MAX_H / nh);
+    const longest = Math.max(nw, nh);
+    if (longest <= PROXY_MAX_SIDE) return null;
+
+    const scale = PROXY_MAX_SIDE / longest;
     const pw = Math.max(1, Math.round(nw * scale));
     const ph = Math.max(1, Math.round(nh * scale));
 
@@ -277,14 +311,13 @@ const Layers = (() => {
             // canvas.js): la capa se marca exclusiva de ese formato. Si no, quedaría
             // oculta justo ahí y visible en todos los demás. Esta lista DEBE coincidir
             // con la de esa regla (MUX4/MOVIL TXT, AMAZON LOGO, TEXTO H/V, TÍTULO FICHA).
-            const _TEXT_MASTER_FORMATS = ['MUX4 TXT', 'MOVIL TXT', 'AMAZON LOGO',
-                                          'TEXTO HORIZONTAL', 'TEXTO VERTICAL', 'TÍTULO FICHA'];
+            const _TEXT_MASTER_FORMATS = TEXT_HOST_FORMATS;
             if (_TEXT_MASTER_FORMATS.includes(formatAtImport)) {
               layer.exclusiveFormat = formatAtImport;
             }
             // Calcular índice de inserción: después de capas auto-generadas y de isTitleLayer
             let _ci = 0;
-            while (_ci < State.layers.length && (State.layers[_ci].isComposicion || State.layers[_ci].isComposicionMovil || State.layers[_ci].isComposicionAmazon || State.layers[_ci].isMarcaIplus || State.layers[_ci].isMarcaSony || State.layers[_ci].isTitleLayer)) {
+            while (_ci < State.layers.length && (State.layers[_ci].isComposicion || State.layers[_ci].isComposicionMovil || State.layers[_ci].isTitleLayer)) {
               _ci++;
             }
             if (typeof History !== 'undefined') History.push();
@@ -325,6 +358,11 @@ const Layers = (() => {
     'TÍTULO FICHA':     { x: 0.003, y: 0.020, w: 0.993, h: 0.950, alignLeft: true },
     'TEXTO HORIZONTAL': { x: 0.051, y: 0.132, w: 0.897, h: 0.739 }, // misma zona que MUX4 TXT escalada
     'TEXTO VERTICAL':   { x: 0.014, y: 0.043, w: 0.971, h: 0.912 }, // misma zona que MOVIL TXT escalada
+    // COM TITULO H — el bloque va pegado ABAJO y a la IZQUIERDA, a ras del
+    // borde, sin margen. Replica la capa inteligente de la plantilla, donde el
+    // título se apoya en la base del documento. Por eso la zona es el lienzo
+    // entero: el aire que sobre queda arriba y a la derecha, no repartido.
+    'COM TITULO H':     { x: 0, y: 0, w: 1, h: 1, alignLeft: true, alignBottom: true, byPixels: true },
   };
 
   function _applyTitleFitZones(layer) {
@@ -342,15 +380,24 @@ const Layers = (() => {
         const zoneH = H * fitZone.h;
         const zoneX = W * fitZone.x;
         const zoneY = H * fitZone.y;
-        const assetRatio = nw / nh;
+        // byPixels: medir y alinear por los PÍXELES VISIBLES, no por la caja
+        // del PNG. Sin esto, la transparencia sobrante del archivo desplaza el
+        // título y lo encoge: un PNG con aire alrededor se apoyaría por su
+        // borde invisible. Solo lo usan las zonas que lo piden, así que las
+        // cuatro de siempre no cambian.
+        const cb = (fitZone.byPixels && layer.contentBounds) || { x: 0, y: 0, w: 1, h: 1 };
+        const contW = nw * cb.w;
+        const contH = nh * cb.h;
+
+        const assetRatio = contW / contH;
         const zoneRatio  = zoneW / zoneH;
 
         // Calcular el scale de fit contenido
         let fitScale;
         if (assetRatio >= zoneRatio) {
-          fitScale = zoneW / nw;
+          fitScale = zoneW / contW;
         } else {
-          fitScale = zoneH / nh;
+          fitScale = zoneH / contH;
         }
         // No upscaling: si el asset ya cabe al 100%, usarlo tal cual
         const scale = Math.min(fitScale, 1.0);
@@ -360,9 +407,13 @@ const Layers = (() => {
         // alignLeft: el borde izquierdo del contenido se alinea con zoneX
         // centrado por defecto en los demás formatos
         const cx = fitZone.alignLeft
-          ? zoneX + drawW / 2
-          : zoneX + (zoneW - drawW) / 2 + drawW / 2;
-        const cy = zoneY + (zoneH - drawH) / 2 + drawH / 2;
+          ? zoneX - cb.x * drawW + drawW / 2
+          : zoneX + (zoneW - cb.w * drawW) / 2 - cb.x * drawW + drawW / 2;
+        // alignBottom: el borde inferior del contenido se apoya en la base de
+        // la zona; centrado por defecto en los demás formatos
+        const cy = fitZone.alignBottom
+          ? zoneY + zoneH - (cb.y + cb.h) * drawH + drawH / 2
+          : zoneY + (zoneH - cb.h * drawH) / 2 - cb.y * drawH + drawH / 2;
         State.formatParams[fid][layer.id] = {
           scaleX:   Math.round(scale * 1000) / 10,
           scaleY:   Math.round(scale * 1000) / 10,
@@ -383,9 +434,9 @@ const Layers = (() => {
   }
 
   function _importTitleLayer(layer) {
-    // Insertar después de todas las capas auto-generadas (isComposicion, isComposicionMovil, isMarcaIplus)
+    // Insertar después de todas las capas auto-generadas
     let _ci = 0;
-    while (_ci < State.layers.length && (State.layers[_ci].isComposicion || State.layers[_ci].isComposicionMovil || State.layers[_ci].isComposicionAmazon || State.layers[_ci].isMarcaIplus || State.layers[_ci].isMarcaSony)) {
+    while (_ci < State.layers.length && (State.layers[_ci].isComposicion || State.layers[_ci].isComposicionMovil)) {
       _ci++;
     }
     if (typeof History !== 'undefined') History.push();
@@ -402,7 +453,32 @@ const Layers = (() => {
     if (typeof Canvas !== 'undefined') Canvas.render();
     if (typeof UI !== 'undefined') UI.updateSliders();
 
-    if (typeof Composicion !== 'undefined') Composicion.generate();
+    // Regenerar TODAS las composiciones de título, no solo la de MUX4.
+    //
+    // Antes solo se llamaba a Composicion.generate() (MUX4), así que al
+    // importar un título los formatos cuya variante fuese H, V, MOVIL o COM_H
+    // NO se enteraban: la imagen entraba como capa pero quedaba invisible —en
+    // esos formatos lo que se pinta es la COMPOSICIÓN, no el título crudo— y
+    // tampoco salía en el panel. Desde fuera parecía que la importación no
+    // hacía nada. Se notó con COMERCIAL porque sus catorce formatos usan
+    // COM_H, pero el fallo afectaba igual a TEXTO HORIZONTAL y compañía.
+    if (typeof Composicion       !== 'undefined') Composicion.generate();
+    if (typeof ComposicionMovil  !== 'undefined') ComposicionMovil.generate();
+    if (typeof ComposicionTexto  !== 'undefined') {
+      const _tras = (comp, variante) => {
+        if (comp && typeof AutoLayout !== 'undefined' && AutoLayout.repositionTextComp) {
+          AutoLayout.repositionTextComp(comp, variante);
+        }
+        if (typeof Canvas  !== 'undefined') Canvas.render();
+        if (typeof Layers  !== 'undefined') _render();
+      };
+      ComposicionTexto.generate('TEXTO HORIZONTAL', 'COMPOSICIÓN TEXTO HORIZONTAL', 'isComposicionTextoH')
+        .then(() => _tras(State.layers.find(l => l.isComposicionTextoH), 'H'));
+      ComposicionTexto.generate('TEXTO VERTICAL', 'COMPOSICIÓN TEXTO VERTICAL', 'isComposicionTextoV')
+        .then(() => _tras(State.layers.find(l => l.isComposicionTextoV), 'V'));
+      ComposicionTexto.generate('COM TITULO H', 'COMPOSICIÓN COM TITULO H', 'isComposicionComTituloH')
+        .then(() => _tras(State.layers.find(l => l.isComposicionComTituloH), 'COM_H'));
+    }
   }
 
   // ── ELIMINAR ──────────────────────────────────────────────
@@ -424,8 +500,7 @@ const Layers = (() => {
       const idsToDelete = new Set(
         State.layers
           .filter(l => State.selectedLayerIds.includes(l.id) &&
-                       !l.isMarcaIplus && !l.isMarcaSony &&
-                       !l.isMolduraFanart && !l.isMascaraBlur)
+                                              !l.isMolduraFanart && !l.isMascaraBlur)
           .map(l => l.id)
       );
 
@@ -448,6 +523,9 @@ const Layers = (() => {
       _render();
       if (typeof Canvas !== 'undefined') Canvas.render();
       if (typeof UI !== 'undefined') UI.updateSliders();
+      // Si lo borrado era la capa IMAGEN BIG, el modo BIG se apaga y los
+      // formatos ocultos (SIL, PERFIL, MOD N) deben reaparecer en la rejilla.
+      if (typeof Formats !== 'undefined' && Formats.refreshGrid) Formats.refreshGrid();
     });
   }
 
@@ -470,14 +548,11 @@ const Layers = (() => {
     // crea una capa fantasma con isComposicionTextoH que el guardado trata como real.
     delete copy.isComposicion;
     delete copy.isComposicionMovil;
-    delete copy.isComposicionAmazon;
     delete copy.isComposicionTextoH;
     delete copy.isComposicionTextoV;
     delete copy.isTitleLayer;
     delete copy.isTitleLayerH;
     delete copy.isTitleLayerV;
-    delete copy.isMarcaIplus;
-    delete copy.isMarcaSony;
     delete copy.isMolduraFanart;
     delete copy.isMascaraBlur;
     // La copia NUNCA es una máscara nueva — vuelve a ser un sólido/degradado normal.
@@ -691,9 +766,8 @@ const Layers = (() => {
     if (!mask) return;
 
     const isSystem = l =>
-      l.isMarcaIplus || l.isMarcaSony || l.isMolduraFanart || l.isMascaraBlur ||
-      l.isComposicion || l.isComposicionMovil || l.isComposicionAmazon ||
-      l.isComposicionTextoH || l.isComposicionTextoV ||
+      l.isMolduraFanart || l.isMascaraBlur ||
+      esComposicionAuto(l) ||
       l.isTitleLayer;
 
     // Filtros:
@@ -1009,7 +1083,7 @@ const Layers = (() => {
       if (typeof History !== 'undefined') History.push();
       selectedLayers.forEach(l => {
         // Capas sistémicas obligatorias: blend mode bloqueado
-        if (l.isMarcaIplus || l.isMarcaSony || l.isMolduraFanart || l.isMascaraBlur) return;
+        if (l.isMolduraFanart || l.isMascaraBlur) return;
         const bm = newMode === 'normal' ? null : newMode;
         // Exclusiva en este formato → override por-formato; si no, global (propaga).
         if (State.activeFormat && typeof Formats !== 'undefined' && Formats.isVisualExclusive
@@ -1034,7 +1108,7 @@ const Layers = (() => {
     list.innerHTML = '';
 
     // Indicador de maquetación activa (en los formatos de texto)
-    if ((State.activeFormat === 'MUX4 TXT' || State.activeFormat === 'MOVIL TXT' || State.activeFormat === 'TEXTO HORIZONTAL' || State.activeFormat === 'TEXTO VERTICAL') &&
+    if (TEXT_BLOCK_FORMATS.includes(State.activeFormat) &&
         typeof Layout !== 'undefined') {
       const tipo    = Layout.getType();
       const version = Layout.getVersion();
@@ -1097,18 +1171,6 @@ const Layers = (() => {
       }
     }
 
-    // En AMAZON BG: COMPOSICIÓN AMAZON LOGO va primero
-    if (State.activeFormat === 'AMAZON BG') {
-      const compAmazon = State.layers.find(l => l.isComposicionAmazon);
-      if (compAmazon) {
-        const compAmazonItem = _buildComposicionAmazonItem(compAmazon);
-        if (compAmazonItem) list.appendChild(compAmazonItem);
-        const sep = document.createElement('div');
-        sep.className = 'layers-separator';
-        list.appendChild(sep);
-      }
-    }
-
     if (State.activeFormat && typeof Pastilla !== 'undefined' && Pastilla.hasFormat(State.activeFormat)) {
       list.appendChild(_buildPastillaItem());
       const sep = document.createElement('div');
@@ -1117,7 +1179,7 @@ const Layers = (() => {
     }
 
     // Pastilla Freemium — solo si la versión activa es Freemium
-    if ((State.activeFormat === 'MUX4 TXT' || State.activeFormat === 'MOVIL TXT' || State.activeFormat === 'TEXTO HORIZONTAL' || State.activeFormat === 'TEXTO VERTICAL') &&
+    if (TEXT_BLOCK_FORMATS.includes(State.activeFormat) &&
         typeof Layout !== 'undefined' && Layout.isFreemium() &&
         typeof Pastilla !== 'undefined') {
       list.appendChild(_buildPastillaFreemiumItem());
@@ -1141,27 +1203,6 @@ const Layers = (() => {
         }
       }
 
-      // MARCA IPLUS: debajo de zona de seguridad, encima de capas normales
-      if (State.activeFormat === 'IPLUS PUBLI') {
-        const marca = State.layers.find(l => l.isMarcaIplus);
-        if (marca) {
-          list.appendChild(_buildMarcaIplusItem(marca));
-          const sep = document.createElement('div');
-          sep.className = 'layers-separator';
-          list.appendChild(sep);
-        }
-      }
-
-      // MARCA SONY: igual que MARCA IPLUS pero para SONY
-      if (State.activeFormat === 'SONY') {
-        const marcaSony = State.layers.find(l => l.isMarcaSony);
-        if (marcaSony) {
-          list.appendChild(_buildMarcaIplusItem(marcaSony, 'SONY'));
-          const sep = document.createElement('div');
-          sep.className = 'layers-separator';
-          list.appendChild(sep);
-        }
-      }
 
       // MOLDURA + MÁSCARA BLUR: capas sistémicas obligatorias de FANART MOD N
       if (State.activeFormat === 'FANART MOD N') {
@@ -1184,12 +1225,9 @@ const Layers = (() => {
       // (donde se pintan arriba como ítems aparte). En el resto de formatos, _buildItem
       // las gestiona con sus filtros por variante (el lápiz permite cambiar entre H/V/MUX4/MOVIL).
       State.layers.forEach((layer, index) => {
-        if (layer.isComposicion && (State.activeFormat === 'MUX4 FONDO' || State.activeFormat === 'MOVIL MUX FONDO' || State.activeFormat === 'AMAZON BG')) return;
+        if (layer.isComposicion && (State.activeFormat === 'MUX4 FONDO' || State.activeFormat === 'MOVIL MUX FONDO')) return;
         if (layer.isComposicion && State.activeFormat === 'FANART DEST.') return;
         if (layer.isComposicionMovil && State.activeFormat === 'MOVIL MUX FONDO') return;
-        if (layer.isComposicionAmazon && State.activeFormat === 'AMAZON BG') return;
-        if (layer.isMarcaIplus) return;
-        if (layer.isMarcaSony) return;
         if (layer.isMolduraFanart) return;
         if (layer.isMascaraBlur) return;
         const item = _buildItem(layer, index);
@@ -1205,26 +1243,6 @@ const Layers = (() => {
       }
     } else {
       // Sin sistema — solo capas normales
-      // MARCA IPLUS: encima de capas normales
-      if (State.activeFormat === 'IPLUS PUBLI') {
-        const marca = State.layers.find(l => l.isMarcaIplus);
-        if (marca) {
-          list.appendChild(_buildMarcaIplusItem(marca));
-          const sep = document.createElement('div');
-          sep.className = 'layers-separator';
-          list.appendChild(sep);
-        }
-      }
-      // MARCA SONY
-      if (State.activeFormat === 'SONY') {
-        const marcaSony = State.layers.find(l => l.isMarcaSony);
-        if (marcaSony) {
-          list.appendChild(_buildMarcaIplusItem(marcaSony, 'SONY'));
-          const sep = document.createElement('div');
-          sep.className = 'layers-separator';
-          list.appendChild(sep);
-        }
-      }
       // MOLDURA + MÁSCARA BLUR: capas sistémicas obligatorias de FANART MOD N
       if (State.activeFormat === 'FANART MOD N') {
         const moldura = State.layers.find(l => l.isMolduraFanart);
@@ -1242,12 +1260,9 @@ const Layers = (() => {
         }
       }
       State.layers.forEach((layer, index) => {
-        if (layer.isComposicion && (State.activeFormat === 'MUX4 FONDO' || State.activeFormat === 'MOVIL MUX FONDO' || State.activeFormat === 'AMAZON BG')) return;
+        if (layer.isComposicion && (State.activeFormat === 'MUX4 FONDO' || State.activeFormat === 'MOVIL MUX FONDO')) return;
         if (layer.isComposicion && State.activeFormat === 'FANART DEST.') return;
         if (layer.isComposicionMovil && State.activeFormat === 'MOVIL MUX FONDO') return;
-        if (layer.isComposicionAmazon && State.activeFormat === 'AMAZON BG') return;
-        if (layer.isMarcaIplus) return;
-        if (layer.isMarcaSony) return;
         if (layer.isMolduraFanart) return;
         if (layer.isMascaraBlur) return;
         const item = _buildItem(layer, index);
@@ -1481,6 +1496,18 @@ const Layers = (() => {
     // Rol FANART: el fanart solo en formatos FANART; subject/fondo ocultos en FANART si hay fanart
     if (typeof Formats !== 'undefined' && Formats.fanartRoleVisibility &&
         Formats.fanartRoleVisibility(layer.id, State.activeFormat) === false) return null;
+    // COMPOSICIÓN COM TITULO H: se lista donde esté declarada como título fijo.
+    if (layer.isComposicionComTituloH) {
+      const _vc = (typeof Formats !== 'undefined' && Formats.getTextVariant)
+        ? Formats.getTextVariant(State.activeFormat) : null;
+      if (_vc !== 'COM_H') return null;
+    }
+    // Donde hay TÍTULO FIJO, la composición H/V normal NO se pinta: el título
+    // de ese formato es la composición clavada, y si no saldrían los dos.
+    if (typeof AutoLayout !== 'undefined' && AutoLayout.tituloFijoConfig
+        && AutoLayout.tituloFijoConfig(State.activeFormat)
+        && (layer.isComposicionTextoH || layer.isComposicionTextoV)) return null;
+
     // Composiciones H/V: solo se listan en los formatos cuya variante coincide
     if (layer.isComposicionTextoH || layer.isComposicionTextoV) {
       const _v = (typeof Formats !== 'undefined' && Formats.getTextVariant) ? Formats.getTextVariant(State.activeFormat) : null;
@@ -1490,7 +1517,7 @@ const Layers = (() => {
     // Título "vivo": en maestros de texto + TÍTULO FICHA, o en formatos con variante TITLE_H/V.
     if (layer.isTitleLayer) {
       const _v = (typeof Formats !== 'undefined' && Formats.getTextVariant) ? Formats.getTextVariant(State.activeFormat) : null;
-      const inHost = ['MUX4 TXT','MOVIL TXT','TEXTO HORIZONTAL','TEXTO VERTICAL','AMAZON LOGO','TÍTULO FICHA'].includes(State.activeFormat)
+      const inHost = TEXT_HOST_FORMATS.includes(State.activeFormat)
                   || _v === 'TITLE_H' || _v === 'TITLE_V';
       if (!inHost) return null;
       if (typeof Formats !== 'undefined' && Formats.isActiveTitleForFormat &&
@@ -1506,14 +1533,13 @@ const Layers = (() => {
     if (layer.isComposicionMovil && State.activeFormat !== 'MOVIL MUX FONDO' &&
         !(typeof Formats !== 'undefined' && Formats.getTextVariant && Formats.getTextVariant(State.activeFormat) === 'MOVIL')) return null;
     // Composición AMAZON: solo en su mockup (AMAZON BG). No es variante elegible con el lápiz.
-    if (layer.isComposicionAmazon && State.activeFormat !== 'AMAZON BG') return null;
 
     // Capas con exclusiveFormat: solo en su formato
     if (layer.exclusiveFormat && layer.exclusiveFormat !== State.activeFormat) return null;
 
     // Capas normales importadas: ocultas en MUX4 TXT, MOVIL TXT y TÍTULO FICHA
     if (!layer.isTitleLayer && !layer.isComposicion && !layer.exclusiveFormat && !layer._layoutGenerated) {
-      if (State.activeFormat === 'MUX4 TXT' || State.activeFormat === 'MOVIL TXT' || State.activeFormat === 'TÍTULO FICHA' || State.activeFormat === 'AMAZON LOGO' || State.activeFormat === 'TEXTO HORIZONTAL' || State.activeFormat === 'TEXTO VERTICAL') return null;
+      if (TEXT_HOST_FORMATS.includes(State.activeFormat)) return null;
     }
 
     const item = document.createElement('div');
@@ -2263,79 +2289,8 @@ const Layers = (() => {
 
   // ── ITEM ESPECIAL: COMPOSICIÓN AMAZON LOGO en AMAZON BG ──
 
-  function _buildComposicionAmazonItem(layer) {
-    const item = document.createElement('div');
-    item.className = 'layer-item layer-item-system';
-    item.dataset.id = layer.id;
-
-    const eye = document.createElement('div');
-    eye.className = 'layer-eye';
-    const eyeImg = document.createElement('img');
-    const _getVis = () => {
-      const fv = State.formatParams?.['AMAZON BG']?.[layer.id]?.visible;
-      return fv !== undefined ? fv : true;
-    };
-    eyeImg.src = _getVis() ? 'assets/img/ojo_on.svg' : 'assets/img/ojo_off.svg';
-    eye.appendChild(eyeImg);
-    eye.addEventListener('click', e => {
-      e.stopPropagation();
-      if (typeof History !== 'undefined') History.push();
-      const newVis = !_getVis();
-      if (!State.formatParams['AMAZON BG']) State.formatParams['AMAZON BG'] = {};
-      if (!State.formatParams['AMAZON BG'][layer.id]) State.formatParams['AMAZON BG'][layer.id] = {};
-      State.formatParams['AMAZON BG'][layer.id].visible = newVis;
-      eyeImg.src = newVis ? 'assets/img/ojo_on.svg' : 'assets/img/ojo_off.svg';
-      if (typeof Canvas !== 'undefined') Canvas.render();
-    });
-
-    const thumb = document.createElement('div');
-    thumb.className = 'layer-thumb';
-    if (layer.src) {
-      const thumbImg = document.createElement('img');
-      thumbImg.src = layer.src;
-      thumbImg.alt = layer.name;
-      thumb.appendChild(thumbImg);
-    }
-
-    const name = document.createElement('span');
-    name.className = 'layer-name';
-    name.textContent = layer.name;
-
-    const lockBtn = document.createElement('div');
-    const _locked2 = () => _getLocked(layer.id);
-    const _svgLocked2   = '<svg width="12" height="14" viewBox="0 0 12 14" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="6" width="10" height="8" rx="1.5" fill="currentColor" opacity="0.9"/><path d="M3 6V4a3 3 0 0 1 6 0v2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
-    const _svgUnlocked2 = '<svg width="12" height="14" viewBox="0 0 12 14" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="6" width="10" height="8" rx="1.5" fill="currentColor" opacity="0.3"/><path d="M3 6V4a3 3 0 0 1 6 0" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.3"/></svg>';
-    const _updateLockBtn2 = () => {
-      const l = _locked2();
-      lockBtn.className = 'layer-lock-btn' + (l ? ' locked' : '');
-      lockBtn.dataset.tooltip = l ? 'Desbloquear capa' : 'Bloquear capa';
-      lockBtn.innerHTML = l ? _svgLocked2 : _svgUnlocked2;
-    };
-    _updateLockBtn2();
-    lockBtn.addEventListener('click', e => {
-      e.stopPropagation();
-      if (typeof History !== 'undefined') History.push();
-      _setLocked(layer.id, !_locked2());
-      _updateLockBtn2();
-      if (_locked2() && State.selectedLayerIds.includes(layer.id)) {
-        State.selectedLayerId  = null;
-        State.selectedLayerIds = [];
-        if (typeof Canvas !== 'undefined') Canvas.render();
-        if (typeof UI     !== 'undefined') UI.updateSliders();
-      }
-      if (typeof Layers !== 'undefined') Layers.render();
-    });
-
-    item.appendChild(eye);
-    item.appendChild(thumb);
-    item.appendChild(name);
-    item.appendChild(lockBtn);
-
-    return item;
-  }
-
   function _buildMarcaIplusItem(layer, formatId) {
-    formatId = formatId || State.activeFormat || 'IPLUS PUBLI';
+    formatId = formatId || State.activeFormat;
     const item = document.createElement('div');
     item.className = 'layer-item layer-item-system';
     item.dataset.id = layer.id;
@@ -2391,9 +2346,8 @@ const Layers = (() => {
   function _isMaskableLayer(l) {
     if (!l) return false;
     if (l.isMask) return false;
-    if (l.isMarcaIplus || l.isMarcaSony || l.isMolduraFanart || l.isMascaraBlur) return false;
-    if (l.isComposicion || l.isComposicionMovil || l.isComposicionAmazon) return false;
-    if (l.isComposicionTextoH || l.isComposicionTextoV) return false;
+    if (l.isMolduraFanart || l.isMascaraBlur) return false;
+    if (esComposicionAuto(l)) return false;
     if (l.isTitleLayer) return false;
     if (l._layoutGenerated) return false;
     return true;

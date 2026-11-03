@@ -3,7 +3,7 @@
 // ============================================================
 
 const TextLayers = (() => {
-  const SPECIAL_FORMATS = ['MUX4 TXT', 'MOVIL TXT', 'AMAZON LOGO', 'TEXTO HORIZONTAL', 'TEXTO VERTICAL'];
+  const SPECIAL_FORMATS = TEXT_TOOL_FORMATS;
 
   let _activeLayerId  = null;
   let _draggingPanel  = false;
@@ -291,8 +291,7 @@ const TextLayers = (() => {
     let _ci = 0;
     while (_ci < State.layers.length && (
       State.layers[_ci].isComposicion || State.layers[_ci].isComposicionMovil ||
-      State.layers[_ci].isComposicionAmazon || State.layers[_ci].isMarcaIplus ||
-      State.layers[_ci].isMarcaSony || State.layers[_ci].isTitleLayer
+      State.layers[_ci].isTitleLayer
     )) { _ci++; }
 
     if (typeof History !== 'undefined') History.push();

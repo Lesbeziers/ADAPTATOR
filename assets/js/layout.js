@@ -368,7 +368,7 @@ const Layout = (() => {
   };
 
   // Formatos que activan la maquetación automática
-  const LAYOUT_FORMATS = ['MUX4 TXT', 'MOVIL TXT', 'TEXTO HORIZONTAL', 'TEXTO VERTICAL'];
+  const LAYOUT_FORMATS = TEXT_BLOCK_FORMATS;
 
   // ── INIT ──────────────────────────────────────────────────
 
@@ -378,18 +378,28 @@ const Layout = (() => {
 
   // ── API PÚBLICA ───────────────────────────────────────────
 
-  // Llamado desde formats.js al activar MUX4 TXT o MOVIL TXT
-  function onFormatActivated(formatName) {
-    if (!LAYOUT_FORMATS.includes(formatName)) return;
-    if (!_cfg(formatName).type) {
-      openModal();
-    }
-  }
-
+  // La ventana de maquetación NO se abre sola al entrar en un formato de texto.
+  // Antes saltaba la primera vez que activabas uno sin maquetación elegida, y
+  // con cinco maestros eso descoloca: aparece encima antes de que te hayas
+  // situado, y como no decía de qué formato era, era fácil creer que estabas
+  // tocando uno y estar tocando otro. Ahora el formato se muestra tal cual está
+  // y la ventana la abre el usuario desde el indicador del panel de capas
+  // ("Sin maquetación · Elegir"), que ya existía.
   function openModal() {
     const modal = document.getElementById('layout-modal');
     if (!modal) return;
     _renderModal();
+
+    // Decir SIEMPRE qué formato se está maquetando: es la otra mitad del
+    // problema de arriba, y vale también cuando la abres tú a mano.
+    const t = modal.querySelector('.layout-modal-title');
+    if (t) {
+      const fid = State.activeFormat;
+      const lbl = (typeof Formats !== 'undefined' && Formats.displayLabel)
+        ? Formats.displayLabel(fid) : fid;
+      t.textContent = fid ? 'Maquetación automática · ' + lbl : 'Maquetación automática';
+    }
+
     modal.classList.add('visible');
   }
 
@@ -554,9 +564,6 @@ const Layout = (() => {
     while (insertIdx < State.layers.length && (
       State.layers[insertIdx].isComposicion ||
       State.layers[insertIdx].isComposicionMovil ||
-      State.layers[insertIdx].isComposicionAmazon ||
-      State.layers[insertIdx].isMarcaIplus ||
-      State.layers[insertIdx].isMarcaSony ||
       State.layers[insertIdx].isTitleLayer
     )) { insertIdx++; }
 
@@ -690,8 +697,13 @@ const Layout = (() => {
                 const minY = Math.min(...yValues);
                 const maxY = Math.max(...yValues);
                 const TEXT_H = 40;
-                yTop    = minY - TEXT_H / 2 + MARGIN;
-                yBottom = maxY + TEXT_H / 2 - MARGIN;
+                // El hueco va ENTRE los textos, no abarcándolos: se parte del
+                // borde INTERIOR de cada uno. Antes se sumaba medio texto hacia
+                // fuera, así que el título podía pisarlos. No se notaba porque
+                // en MUX4/TEXTO H manda el ancho y el título sale pequeño; en un
+                // lienzo muy apaisado el ancho deja de mandar y el fallo aflora.
+                yTop    = minY + TEXT_H / 2 + MARGIN;
+                yBottom = maxY - TEXT_H / 2 - MARGIN;
               }
 
               const availableH = Math.abs(yBottom - yTop);
@@ -742,12 +754,12 @@ const Layout = (() => {
             await Composicion.generate();
           } else if (format === 'MOVIL TXT' && typeof ComposicionMovil !== 'undefined') {
             await ComposicionMovil.generate();
-          } else if (format === 'AMAZON LOGO' && typeof ComposicionAmazon !== 'undefined') {
-            await ComposicionAmazon.generate();
           } else if (format === 'TEXTO HORIZONTAL' && typeof ComposicionTexto !== 'undefined') {
             await ComposicionTexto.generate('TEXTO HORIZONTAL', 'COMPOSICIÓN TEXTO HORIZONTAL', 'isComposicionTextoH');
             const c = State.layers.find(l => l.isComposicionTextoH);
             if (c && typeof AutoLayout !== 'undefined' && AutoLayout.repositionTextComp) AutoLayout.repositionTextComp(c, 'H');
+          } else if (format === 'COM TITULO H' && typeof ComposicionTexto !== 'undefined') {
+            await ComposicionTexto.generate('COM TITULO H', 'COMPOSICIÓN COM TITULO H', 'isComposicionComTituloH');
           } else if (format === 'TEXTO VERTICAL' && typeof ComposicionTexto !== 'undefined') {
             await ComposicionTexto.generate('TEXTO VERTICAL', 'COMPOSICIÓN TEXTO VERTICAL', 'isComposicionTextoV');
             const c = State.layers.find(l => l.isComposicionTextoV);
@@ -1033,7 +1045,7 @@ const Layout = (() => {
   }
 
   return {
-    init, onFormatActivated, openModal, closeModal,
+    init, openModal, closeModal,
     getType, getVersion, isFreemium, isUpsell, isUpsellPrecio, getPreset,
     applyPreset, serialize, restore,
     LAYOUT_FORMATS,

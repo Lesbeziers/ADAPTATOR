@@ -166,8 +166,6 @@ var VerTodas = (() => {
     const layers = [...State.layers].reverse();
 
     for (const layer of layers) {
-      if (layer.isMarcaIplus) continue; // se dibuja al final, encima de todo
-      if (layer.isMarcaSony) continue;
       if (layer.isMolduraFanart) continue;
       const isVisible = _isLayerVisible(layer, formatName);
       if (!isVisible) continue;
@@ -197,7 +195,7 @@ var VerTodas = (() => {
     // Pastilla Freemium (solo en MUX4 TXT y MOVIL TXT cuando versión es Freemium)
     if (typeof Layout !== 'undefined' && Layout.isFreemium(formatName) &&
         typeof Pastilla !== 'undefined' &&
-        (formatName === 'MUX4 TXT' || formatName === 'MOVIL TXT' || formatName === 'TEXTO HORIZONTAL' || formatName === 'TEXTO VERTICAL')) {
+        TEXT_BLOCK_FORMATS.includes(formatName)) {
       const src = Pastilla.getFreemiumSrc();
       const _presetPF = typeof Layout !== 'undefined' && Layout.getPreset && Layout.getPreset(formatName);
       const posY = (_presetPF && _presetPF['PASTILLA_FREEMIUM']?.y) ?? 95;
@@ -218,15 +216,6 @@ var VerTodas = (() => {
       });
     }
 
-    // MARCA IPLUS: siempre al final, por encima de todo
-    const marca = State.layers.find(l => l.isMarcaIplus);
-    if (marca && formatName === 'IPLUS PUBLI') {
-      await _drawLayer(ctx, marca, formatName, W, H);
-    }
-    const marcaSony = State.layers.find(l => l.isMarcaSony);
-    if (marcaSony && formatName === 'SONY') {
-      await _drawLayer(ctx, marcaSony, formatName, W, H);
-    }
     // MOLDURA FANART MOD N — siempre por encima de todo
     const moldura = State.layers.find(l => l.isMolduraFanart);
     if (moldura && formatName === 'FANART MOD N' && _isLayerVisible(moldura, formatName)) {
@@ -245,7 +234,7 @@ var VerTodas = (() => {
         Formats.fanartRoleVisibility(layer.id, formatName) === false) return false;
     if (layer.isTitleLayer) {
       const _v = (typeof Formats !== 'undefined' && Formats.getTextVariant) ? Formats.getTextVariant(formatName) : null;
-      const inTextFormat = (formatName === 'MUX4 TXT' || formatName === 'MOVIL TXT' || formatName === 'TEXTO HORIZONTAL' || formatName === 'TEXTO VERTICAL' || formatName === 'AMAZON LOGO' || formatName === 'TÍTULO FICHA')
+      const inTextFormat = TEXT_HOST_FORMATS.includes(formatName)
                        || _v === 'TITLE_H' || _v === 'TITLE_V';
       if (!inTextFormat) return false;
       if (typeof Formats !== 'undefined' && Formats.isActiveTitleForFormat &&
@@ -253,6 +242,28 @@ var VerTodas = (() => {
       const fmtVisible = State.formatParams?.[formatName]?.[layer.id]?.visible;
       return fmtVisible !== false;
     }
+    // Título de REFERENCIA FIJO: no se incluye, igual que en el export. VER
+    // TODAS enseña lo que va a salir, y esto no sale (lo compone la web).
+    if (typeof AutoLayout !== 'undefined' && AutoLayout.esTituloFijo
+        && AutoLayout.esTituloFijo(formatName, layer)) return false;
+
+    // COMPOSICIÓN COM TITULO H: no se enruta por variante como las H/V. Solo se
+    // ve donde esté declarada en TITULO_FIJO (auto-layout.js), y ahí va clavada.
+    // En cualquier otro formato no pinta nada. Tampoco se exporta: la web
+    // compone el texto por su cuenta (sí sale en el MOCKUP).
+    if (layer.isComposicionComTituloH) {
+      const _vc = (typeof Formats !== 'undefined' && Formats.getTextVariant) ? Formats.getTextVariant(formatName) : null;
+      if (_vc !== 'COM_H') return false;
+      const fmtVisible = State.formatParams?.[formatName]?.[layer.id]?.visible;
+      return fmtVisible !== undefined ? fmtVisible : true;
+    }
+
+    // Donde hay TÍTULO FIJO, la composición H/V normal NO se pinta: el título
+    // de ese formato es la composición clavada, y si no saldrían los dos.
+    if (typeof AutoLayout !== 'undefined' && AutoLayout.tituloFijoConfig
+        && AutoLayout.tituloFijoConfig(formatName)
+        && (layer.isComposicionTextoH || layer.isComposicionTextoV)) return false;
+
     // Composiciones H/V: según la variante del formato
     if (layer.isComposicionTextoH || layer.isComposicionTextoV) {
       const _v = (typeof Formats !== 'undefined' && Formats.getTextVariant) ? Formats.getTextVariant(formatName) : null;
@@ -278,9 +289,6 @@ var VerTodas = (() => {
       const fmtVisible = State.formatParams?.[formatName]?.[layer.id]?.visible;
       return fmtVisible !== undefined ? fmtVisible : true;
     }
-    if (layer.isComposicionAmazon) return false;
-    if (layer.isMarcaSony) return formatName === 'SONY';
-    if (layer.isMarcaIplus) return formatName === 'IPLUS PUBLI';
     if (layer.isMolduraFanart) {
       if (formatName !== 'FANART MOD N') return false;
       const fmtVisible = State.formatParams?.[formatName]?.[layer.id]?.visible;
@@ -294,7 +302,7 @@ var VerTodas = (() => {
     if (layer.exclusiveFormat) {
       return layer.exclusiveFormat === formatName;
     }
-    if ((formatName === 'MUX4 TXT' || formatName === 'MOVIL TXT' || formatName === 'TÍTULO FICHA' || formatName === 'AMAZON LOGO' || formatName === 'TEXTO HORIZONTAL' || formatName === 'TEXTO VERTICAL') && !layer._layoutGenerated) {
+    if (TEXT_HOST_FORMATS.includes(formatName) && !layer._layoutGenerated) {
       return false;
     }
     const fmtVisible = State.formatParams?.[formatName]?.[layer.id]?.visible;

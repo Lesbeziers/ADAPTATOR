@@ -52,6 +52,7 @@ const ImportPSD = (() => {
   // añaden con el módulo Logos, no como rol de maquetación.
   const ROLE_OPTIONS = [
     { value: '',           label: 'NINGUNO' },
+    { value: 'imagen_big', label: 'IMAGEN BIG' },
     { value: 'background', label: 'FONDO' },
     { value: 'subject',    label: 'IMAGEN' },
     { value: 'title_h',    label: 'TÍTULO HORIZONTAL' },
@@ -99,9 +100,9 @@ const ImportPSD = (() => {
   // Formatos "maestros de texto": solo muestran capas exclusivas suyas. Si se
   // importa estando en uno de ellos, la capa se marca exclusiva o quedaría
   // oculta justo ahí y visible en todos los demás.
-  // DEBE coincidir con _TEXT_MASTER_FORMATS de layers.js (_importLayer).
-  const TEXT_MASTER_FORMATS = ['MUX4 TXT', 'MOVIL TXT', 'AMAZON LOGO',
-                               'TEXTO HORIZONTAL', 'TEXTO VERTICAL', 'TÍTULO FICHA'];
+  // Antes se escribía a mano aquí y en layers.js, con un comentario avisando de
+  // que las dos copias DEBÍAN coincidir. Ahora la lista es una sola (state.js).
+  const TEXT_MASTER_FORMATS = TEXT_HOST_FORMATS;
 
   let _libPromise = null;
   let _overlay    = null;
@@ -752,8 +753,7 @@ const ImportPSD = (() => {
     let ci = 0;
     while (ci < State.layers.length && (
       State.layers[ci].isComposicion || State.layers[ci].isComposicionMovil ||
-      State.layers[ci].isComposicionAmazon || State.layers[ci].isMarcaIplus ||
-      State.layers[ci].isMarcaSony || State.layers[ci].isTitleLayer)) {
+      State.layers[ci].isTitleLayer)) {
       ci++;
     }
 

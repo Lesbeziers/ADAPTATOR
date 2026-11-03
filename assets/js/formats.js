@@ -14,7 +14,7 @@ const Formats = (() => {
   ];
   // Formatos MAESTROS donde se edita el texto (no son receptores): ahí no se
   // marca el candado manual.
-  const _TITLE_MASTER_FORMATS = ['TEXTO HORIZONTAL', 'TEXTO VERTICAL', 'MUX4 TXT', 'MOVIL TXT'];
+  const _TITLE_MASTER_FORMATS = TEXT_MASTER_FORMATS;
 
   function init() {
     _buildDropdown();
@@ -86,6 +86,7 @@ const Formats = (() => {
   const DISPLAY_LABELS = {
     'MOVIL TXT': 'Smartphone TEXT',
     'MUX4 TXT':  'MUX4 TEXT',
+    'COM TITULO H': 'COM. TÍTULO H',
 
     // ── COMERCIAL ────────────────────────────────────────────
     // Abreviadas para que quepan en el botón; el nombre completo sale en el
@@ -101,7 +102,6 @@ const Formats = (() => {
     'Carrusel-Horizontal':                'CARRUSEL HOR.',
     'Cabecera-Slider-Escritorio':         'CAB. SLID. ESCRIT.',
     'Cabecera-Slider-Movil':              'CAB. SLID. MOVIL.',
-    'Cabecera-Slider-TT':                 'CAB. SLIDER TT',
     'Cabecera-Slider-Mediano-Escritorio': 'CAB. SLID. MED. ESCRIT.',
     'Slider-Mediano-Escritorio':          'SLID. MED. ESCRIT.',
     'Cabecera-Slider-Mediano-Movil':      'CAB. SLID. MED. MOVIL',
@@ -119,6 +119,42 @@ const Formats = (() => {
   // ("CAB. SLID. MED. ESCRIT.") necesita 117 px.
   const WIDE_MODALITIES = ['comercial'];
 
+  // ── MODO IMAGEN BIG ───────────────────────────────────────
+  // Hay formatos que NO se pueden producir a partir de una creatividad plana,
+  // así que desaparecen de la rejilla mientras haya una capa IMAGEN BIG:
+  //
+  //  · Los SIL: su gracia es que el sujeto se salga del marco, y aquí no hay
+  //    sujeto que recortar. Se detectan por GEOMETRÍA, no por nombre, con la
+  //    misma regla que ya usan export.js, canvas.js y ver-todas.js: maskRect
+  //    sin maskCircle. Por eso PERFIL no cae por esta vía (lleva maskCircle, y
+  //    de hecho un recorte circular sí saldría de una imagen plana); se excluye
+  //    aparte, por el motivo de abajo.
+  //
+  //  · PERFIL y MOD N: maquetación ad-hoc que exige un sujeto recortado
+  //    (`layers.find(l => roles[l.id]==='subject'); if (!subject) return;`), y
+  //    cuya gracia —autocentrar la cara, o duplicar el sujeto y desenfocarlo de
+  //    fondo— no tiene sentido sobre una creatividad ya resuelta.
+  //
+  // No hace falta filtrar además la exportación: solo se marca OK el formato
+  // ACTIVO, y solo puede activarse un formato presente en esta rejilla.
+  const BIG_HIDDEN_FORMATS = ['PERFIL', 'MOD N'];
+
+  function _isSilFormat(fid) {
+    const s = State.formatSizes?.[fid];
+    return !!(s && s.maskRect && !s.maskCircle);
+  }
+
+  // Se mira sobre las CAPAS vivas y no sobre State.layerRoles: así, al borrar
+  // la capa BIG, los formatos reaparecen solos (layerRoles puede conservar
+  // entradas de capas ya eliminadas).
+  function isBigMode() {
+    return (State.layers || []).some(l => State.layerRoles?.[l.id] === 'imagen_big');
+  }
+
+  function _hiddenInBigMode(fid) {
+    return _isSilFormat(fid) || BIG_HIDDEN_FORMATS.includes(fid);
+  }
+
   function _renderFormatGrid() {
     const grid = document.getElementById('formats-grid');
     if (!grid) return;
@@ -129,10 +165,22 @@ const Formats = (() => {
     const modality = State.modalities.find(m => m.id === State.activeModality);
     if (!modality) return;
 
-    // Los 4 maestros de texto se muestran anchos (2 por fila → rejilla 2×2 en "Textos")
-    const WIDE_FORMATS = ['TEXTO HORIZONTAL', 'TEXTO VERTICAL', 'MUX4 TXT', 'MOVIL TXT'];
+    // Los maestros de texto se muestran anchos (2 por fila)
+    const WIDE_FORMATS = TEXT_MASTER_FORMATS;
 
-    modality.formats.forEach(formatName => {
+    const bigMode  = isBigMode();
+    const visibles = modality.formats.filter(f => !(bigMode && _hiddenInBigMode(f)));
+
+    // Si el formato activo acaba de desaparecer (estabas en un SIL y se importa
+    // una IMAGEN BIG), saltamos al primero que quede. Se difiere porque
+    // setActiveFormat() vuelve a pintar esta rejilla y entraríamos en recursión.
+    if (State.activeFormat && visibles.length &&
+        !visibles.includes(State.activeFormat) &&
+        modality.formats.includes(State.activeFormat)) {
+      setTimeout(() => setActiveFormat(visibles[0]), 0);
+    }
+
+    visibles.forEach(formatName => {
       const btn = document.createElement('button');
       btn.className = 'btn-format';
       if (WIDE_MODALITIES.includes(modality.id) || WIDE_FORMATS.includes(formatName)) {
@@ -179,7 +227,6 @@ const Formats = (() => {
 
     if (typeof GradientLayers !== 'undefined') GradientLayers.stopPickMode();
     if (typeof SystemLayers   !== 'undefined') SystemLayers.invalidate();
-    if (typeof Layout         !== 'undefined') Layout.onFormatActivated(formatName);
 
     _renderFormatGrid();
 
@@ -194,16 +241,29 @@ const Formats = (() => {
     }
 
     // Al salir de AMAZON LOGO, generar la composición Amazon
-    if (previous === 'AMAZON LOGO' && formatName !== 'AMAZON LOGO') {
-      if (typeof ComposicionAmazon !== 'undefined') ComposicionAmazon.generate();
-    }
-
     // Al salir de TEXTO HORIZONTAL, generar su composición y reposicionarla en los formatos H
     if (previous === 'TEXTO HORIZONTAL' && formatName !== 'TEXTO HORIZONTAL') {
       if (typeof ComposicionTexto !== 'undefined') {
         ComposicionTexto.generate('TEXTO HORIZONTAL', 'COMPOSICIÓN TEXTO HORIZONTAL', 'isComposicionTextoH').then(() => {
           const comp = State.layers.find(l => l.isComposicionTextoH);
           if (comp && typeof AutoLayout !== 'undefined') AutoLayout.repositionTextComp(comp, 'H');
+          if (typeof Canvas !== 'undefined') Canvas.render();
+        });
+      }
+    }
+
+    // Al salir de COM TITULO H, generar su composición Y RE-ENCAJARLA en los
+    // formatos que la usan. Lo segundo es imprescindible: si el diseñador
+    // encoge el título o lo mueve dentro del maestro, el lienzo sigue midiendo
+    // 1156x348 y la CAJA en el formato receptor no cambia — pero el píxel sí se
+    // ha movido dentro de ella, así que el título aparecería desplazado.
+    // (Antes no se reposicionaba porque este título iba CLAVADO en su único
+    //  formato; desde que se maqueta por zona, hay que re-encajar como las H/V.)
+    if (previous === 'COM TITULO H' && formatName !== 'COM TITULO H') {
+      if (typeof ComposicionTexto !== 'undefined') {
+        ComposicionTexto.generate('COM TITULO H', 'COMPOSICIÓN COM TITULO H', 'isComposicionComTituloH').then(() => {
+          const comp = State.layers.find(l => l.isComposicionComTituloH);
+          if (comp && typeof AutoLayout !== 'undefined') AutoLayout.repositionTextComp(comp, 'COM_H');
           if (typeof Canvas !== 'undefined') Canvas.render();
         });
       }
@@ -548,17 +608,40 @@ const Formats = (() => {
     'DEST. DOBLE 1', 'DEST. DOBLE 1 SIL', 'DEST. DOBLE 2', 'DEST. DOBLE 2 SIL', 'MOD N SIL',
   ];
   const TEXT_VARIANT_TITLE_V_DEFAULT = [
-    'CARÁTULA V', 'CARTEL COM. V', 'SONY', 'DEST. DOBLE 4', 'DEST. DOBLE 4 SIL',
+    'CARÁTULA V', 'CARTEL COM. V', 'DEST. DOBLE 4', 'DEST. DOBLE 4 SIL',
   ];
   // Formatos con composición horneada VERTICAL por defecto (los que quedan en vertical)
   const TEXT_VARIANT_V_DEFAULT = [];
-  // Formatos que NO reciben texto (sin variante)
+  // COMERCIAL usa su propio asset de título. El pack entregado lo confirma: el
+  // bloque "original M+ / TÍTULO" que llevan estas piezas es el mismo archivo
+  // que se entrega suelto para los Slider (1156x348). TEXTO HORIZONTAL no vale
+  // aquí: es otro lienzo, con otra composición y centrado.
+  // (Cabecera-Slider-TT se retiró: no era una pieza, era este mismo título
+  //  duplicado en la rejilla de COMERCIAL.)
+  const TEXT_VARIANT_COM_H_DEFAULT = [
+    'Mosaico-Horizontal', 'Mosaico-Vertical', 'Modulo-Escritorio', 'Modulo-Movil',
+    'Cabecera-Detalle-Escritorio', 'Cabecera-Detalle-Movil',
+    'Carrusel-Vertical', 'Carrusel-Horizontal',
+    'Cabecera-Slider-Escritorio', 'Cabecera-Slider-Movil',
+  ];
+  // Formatos que NO reciben texto (sin variante): la familia FANART/BG, más
+  // TODOS los anfitriones — en un lienzo de composición no se elige variante,
+  // porque el lienzo ES la composición.
+  //
+  // Y los dos Mediano Escritorio, que son de otra naturaleza: sí son piezas,
+  // pero el diseñador decidió que NO llevan título de ninguna clase.
+  // Sin variante, la composición no se pinta en el lienzo (canvas.js pide
+  // _vc === 'COM_H') ni se exporta (_isLayerVisible, misma condición). No es
+  // "apagar el ojo de la capa": es que ahí no existe.
   const TEXT_VARIANT_NONE = ['FANART', 'FANART MÓVIL', 'FANART DEST.', 'FANART MOD N', 'MOD N', 'PERFIL',
-                             'MUX4 FONDO', 'MOVIL MUX FONDO', 'AMAZON BG', 'TÍTULO FICHA',
-                             'MUX4 TXT', 'MOVIL TXT', 'AMAZON LOGO', 'TEXTO HORIZONTAL', 'TEXTO VERTICAL'];
+                             'MUX4 FONDO', 'MOVIL MUX FONDO',
+                             'Cabecera-Slider-Mediano-Escritorio', 'Slider-Mediano-Escritorio',
+                             'Cabecera-Slider-Mediano-Movil', 'Slider-Mediano-Movil',
+                             ...TEXT_HOST_FORMATS];
 
   function _defaultTextVariant(fid) {
     if (TEXT_VARIANT_NONE.includes(fid)) return null;
+    if (TEXT_VARIANT_COM_H_DEFAULT.includes(fid)) return 'COM_H';
     if (TEXT_VARIANT_TITLE_H_DEFAULT.includes(fid)) return 'TITLE_H';
     if (TEXT_VARIANT_TITLE_V_DEFAULT.includes(fid)) return 'TITLE_V';
     return TEXT_VARIANT_V_DEFAULT.includes(fid) ? 'V' : 'H';
@@ -571,6 +654,7 @@ const Formats = (() => {
     { value: 'V',       label: 'TEXTO VERTICAL',       flag: 'isComposicionTextoV' },
     { value: 'MUX4',    label: 'MUX4 TEXT',            flag: 'isComposicion'       },
     { value: 'MOVIL',   label: 'Smartphone TEXT',      flag: 'isComposicionMovil'  },
+    { value: 'COM_H',   label: 'COM. TÍTULO H',        flag: 'isComposicionComTituloH' },
     { value: 'TITLE_H', label: 'TÍTULO ORIGINAL HOR',  flag: 'isTitleLayerH'       },
     { value: 'TITLE_V', label: 'TÍTULO ORIGINAL VER',  flag: 'isTitleLayerV'       },
   ];
@@ -619,6 +703,14 @@ const Formats = (() => {
       if (comp && typeof AutoLayout !== 'undefined' && AutoLayout.repositionTextComp) {
         AutoLayout.repositionTextComp(comp, variant);
       }
+      // En modo IMAGEN BIG el título tiene colocación medida POR VARIANTE, así
+      // que al cambiarla hay que re-estamparla. Va después de
+      // repositionTextComp a propósito: esa acaba de re-encajar el título y
+      // pisaría los valores buenos. Si esa variante no está medida, no hace
+      // nada y queda el encaje automático.
+      if (isBigMode() && typeof AutoLayout !== 'undefined' && AutoLayout.applyBigTitle) {
+        AutoLayout.applyBigTitle(fid);
+      }
       if (typeof Canvas !== 'undefined') Canvas.render();
       if (typeof Layers !== 'undefined') Layers.render();
     };
@@ -636,6 +728,8 @@ const Formats = (() => {
         p = Composicion.generate();
       else if (variant === 'MOVIL' && typeof ComposicionMovil !== 'undefined')
         p = ComposicionMovil.generate();
+      else if (variant === 'COM_H' && typeof ComposicionTexto !== 'undefined')
+        p = ComposicionTexto.generate('COM TITULO H', 'COMPOSICIÓN COM TITULO H', 'isComposicionComTituloH');
       if (p && typeof p.then === 'function') { p.then(_finish); return; }
     }
     _finish();
@@ -659,11 +753,11 @@ const Formats = (() => {
   // Devuelve la capa de título (isTitleLayerH/V) que debe mostrarse en este formato.
   // Con fallback: si solo hay uno, se usa para los dos.
   function _formatNeedsTitleOrient(fid) {
-    if (fid === 'MUX4 TXT' || fid === 'TEXTO HORIZONTAL' || fid === 'AMAZON LOGO' || fid === 'TÍTULO FICHA') return 'H';
+    if (fid === 'MUX4 TXT' || fid === 'TEXTO HORIZONTAL' || fid === 'COM TITULO H' || fid === 'TÍTULO FICHA') return 'H';
     if (fid === 'MOVIL TXT' || fid === 'TEXTO VERTICAL') return 'V';
     // Receptores no-maestros: según la variante de texto que tengan
     const v = getTextVariant(fid);
-    if (v === 'H' || v === 'MUX4' || v === 'TITLE_H') return 'H';
+    if (v === 'H' || v === 'MUX4' || v === 'TITLE_H' || v === 'COM_H') return 'H';
     if (v === 'V' || v === 'MOVIL' || v === 'TITLE_V') return 'V';
     return null;
   }
@@ -804,9 +898,8 @@ const Formats = (() => {
     let insertIdx = 0;
     while (insertIdx < State.layers.length && (
       State.layers[insertIdx].isComposicion || State.layers[insertIdx].isComposicionMovil ||
-      State.layers[insertIdx].isComposicionAmazon || State.layers[insertIdx].isComposicionTextoH ||
-      State.layers[insertIdx].isComposicionTextoV || State.layers[insertIdx].isMarcaIplus ||
-      State.layers[insertIdx].isMarcaSony || State.layers[insertIdx].isTitleLayer
+      State.layers[insertIdx].isComposicionTextoH ||
+      State.layers[insertIdx].isComposicionTextoV || State.layers[insertIdx].isTitleLayer
     )) insertIdx++;
 
     // 4. Clonar capas exclusivas del origen → destino (escaladas), conservando el orden
@@ -841,6 +934,7 @@ const Formats = (() => {
   }
 
   return { init, setActiveFormat, toggleOk, getLayerParams, setLayerParam, resolveVisual, isVisualExclusive, setVisualExclusive, linkLayers, unlinkLayer, refreshGrid: _renderFormatGrid, getTextVariant, setTextVariant, getTextVariantOptions, displayLabel, getTextPair, propagateTextAttributes, isFanartFormat, fanartRoleVisibility, syncMaskAcrossFormats, recomputeMaskForFormat,
+    isBigMode,
     getActiveTitleForFormat, isActiveTitleForFormat,
     getGuides, hasGuides, areGuidesVisible, areGuidesLocked, isSnapEnabled,
     addGuide, moveGuide, deleteGuide, toggleGuidesVisible, toggleGuidesLocked, toggleSnap };

@@ -73,42 +73,7 @@ const Canvas = (() => {
 
     _injectNoiseFilter();
     _bindArrowKeys();
-    _initMarcaIplus();
-    _initMarcaSony();
     render();
-  }
-
-  function _initMarcaIplus() {
-    if (State.layers.find(l => l.isMarcaIplus)) return;
-    const src = 'assets/img/checkers/IPLUS_PUBLI_MANCHA_Check.png';
-    const img = new Image();
-    img.onload = () => {
-      if (State.layers.find(l => l.isMarcaIplus)) return;
-      const tmp = document.createElement('canvas');
-      tmp.width  = img.naturalWidth;
-      tmp.height = img.naturalHeight;
-      tmp.getContext('2d').drawImage(img, 0, 0);
-      const dataUrl = tmp.toDataURL('image/png');
-      const layer = {
-        id:           'layer_marca_iplus',
-        name:         'MARCA IPLUS',
-        isMarcaIplus: true,
-        visible:      true,
-        src:          dataUrl,
-        naturalWidth:  img.naturalWidth,
-        naturalHeight: img.naturalHeight,
-        params: { opacity: 100, blur: 0, noise: 0, brightness: 0, contrast: 0, saturation: 0, tintAmount: 0, tintColor: '#000000' },
-      };
-      State.layers.unshift(layer);
-      Object.keys(State.formatSizes || {}).forEach(fid => {
-        if (!State.formatParams[fid]) State.formatParams[fid] = {};
-        State.formatParams[fid][layer.id] = { scaleX: 100, scaleY: 100, rotation: 0, x: 0, y: 0 };
-      });
-      if (typeof Layers !== 'undefined') Layers.render();
-      render();
-    };
-    img.onerror = () => console.error(`[Canvas] No se pudo cargar la marca IPLUS (${src}). El formato IPLUS PUBLI no mostrará la marca.`);
-    img.src = src;
   }
 
   function _initMascaraBlur() {
@@ -176,39 +141,6 @@ const Canvas = (() => {
       render();
     };
     img.onerror = () => console.error(`[Canvas] No se pudo cargar la moldura FANART (${src}). FANART MOD N quedará sin marco.`);
-    img.src = src;
-  }
-
-  function _initMarcaSony() {
-    if (State.layers.find(l => l.isMarcaSony)) return;
-    const src = 'assets/img/checkers/MARCA_SONY.png';
-    const img = new Image();
-    img.onload = () => {
-      if (State.layers.find(l => l.isMarcaSony)) return;
-      const tmp = document.createElement('canvas');
-      tmp.width  = img.naturalWidth;
-      tmp.height = img.naturalHeight;
-      tmp.getContext('2d').drawImage(img, 0, 0);
-      const dataUrl = tmp.toDataURL('image/png');
-      const layer = {
-        id:          'layer_marca_sony',
-        name:        'MARCA SONY',
-        isMarcaSony: true,
-        visible:     true,
-        src:         dataUrl,
-        naturalWidth:  img.naturalWidth,
-        naturalHeight: img.naturalHeight,
-        params: { opacity: 100, blur: 0, noise: 0, brightness: 0, contrast: 0, saturation: 0, tintAmount: 0, tintColor: '#000000' },
-      };
-      State.layers.unshift(layer);
-      Object.keys(State.formatSizes || {}).forEach(fid => {
-        if (!State.formatParams[fid]) State.formatParams[fid] = {};
-        State.formatParams[fid][layer.id] = { scaleX: 100, scaleY: 100, rotation: 0, x: 0, y: 0 };
-      });
-      if (typeof Layers !== 'undefined') Layers.render();
-      render();
-    };
-    img.onerror = () => console.error(`[Canvas] No se pudo cargar la marca SONY (${src}). El formato SONY no mostrará la marca.`);
     img.src = src;
   }
 
@@ -1071,7 +1003,7 @@ const Canvas = (() => {
       // Sin esto, se mutaba textParams.size globalmente de capas como TÍTULO de MOD N.
       if (layer.exclusiveFormat && layer.exclusiveFormat !== srcFormat) return;
       // Excluir también capas sistémicas que no aplican a CARÁTULA/CARTEL COM.
-      if (layer.isMolduraFanart || layer.isMascaraBlur || layer.isMarcaIplus || layer.isMarcaSony) return;
+      if (layer.isMolduraFanart || layer.isMascaraBlur) return;
 
       const src = State.formatParams?.[srcFormat]?.[layer.id] ?? {
         x: 0, y: 0, scaleX: 100, scaleY: 100, rotation: 0, visible: true
@@ -1185,7 +1117,7 @@ const Canvas = (() => {
       }
 
       // Ocultar capas de composición que aún no tienen src generado
-      const isAutoLayer = layer.isComposicion || layer.isComposicionMovil || layer.isComposicionAmazon;
+      const isAutoLayer = layer.isComposicion || layer.isComposicionMovil ;
       if (isAutoLayer && !layer.src) {
         el.style.display = 'none';
       }
@@ -1271,10 +1203,6 @@ const Canvas = (() => {
         el.style.zIndex = 9500;
       } else if (layer.isComposicionMovil && State.activeFormat === 'MOVIL MUX FONDO') {
         el.style.zIndex = 9500;
-      } else if (layer.isComposicionAmazon && State.activeFormat === 'AMAZON BG') {
-        el.style.zIndex = 9500;
-      } else if (layer.isMarcaIplus && State.activeFormat === 'IPLUS PUBLI') {
-        el.style.zIndex = 7999;
       } else {
         el.style.zIndex = State.layers.length - index;
       }
@@ -1291,7 +1219,7 @@ const Canvas = (() => {
         // - cualquier formato cuya variante sea TITLE_H/TITLE_V (imagen original cruda)
         // Si hay 2 títulos (H y V), cada formato muestra solo el activo (con fallback).
         const _v = (typeof Formats !== 'undefined' && Formats.getTextVariant) ? Formats.getTextVariant(State.activeFormat) : null;
-        const inHost = ['MUX4 TXT','MOVIL TXT','TEXTO HORIZONTAL','TEXTO VERTICAL','AMAZON LOGO','TÍTULO FICHA'].includes(State.activeFormat)
+        const inHost = TEXT_HOST_FORMATS.includes(State.activeFormat)
                     || _v === 'TITLE_H' || _v === 'TITLE_V';
         const isActive = typeof Formats !== 'undefined' && Formats.isActiveTitleForFormat
           ? Formats.isActiveTitleForFormat(layer, State.activeFormat) : true;
@@ -1301,10 +1229,29 @@ const Canvas = (() => {
         } else {
           isVisible = false;
         }
+      // COMPOSICIÓN COM TITULO H: no se enruta por variante como las H/V. Solo se
+      // ve donde esté declarada en TITULO_FIJO (auto-layout.js), y ahí va clavada.
+      // En cualquier otro formato no pinta nada.
+      } else if (layer.isComposicionComTituloH) {
+        // Enrutado por variante, igual que las H/V. Donde además esté declarada
+        // en TITULO_FIJO (los Slider, que entregan el título aparte) se pinta
+        // clavada y no se exporta; eso lo resuelven _applyParams y _isLayerVisible.
+        const _vc = (typeof Formats !== 'undefined' && Formats.getTextVariant)
+          ? Formats.getTextVariant(State.activeFormat) : null;
+        isVisible = _vc === 'COM_H';
+        if (isVisible) {
+          const fmtVisible = State.formatParams?.[State.activeFormat]?.[layer.id]?.visible;
+          isVisible = fmtVisible !== undefined ? fmtVisible : true;
+        }
       } else if (layer.isComposicionTextoH || layer.isComposicionTextoV) {
-        // Enrutado por variante: cada formato muestra su composición H o V
+        // Enrutado por variante: cada formato muestra su composición H o V.
+        // Salvo donde haya TÍTULO FIJO: ahí el título es la composición clavada
+        // y la H/V no se pinta, o saldrían los dos.
         const _v = (typeof Formats !== 'undefined' && Formats.getTextVariant) ? Formats.getTextVariant(State.activeFormat) : null;
-        isVisible = (layer.isComposicionTextoH && _v === 'H') || (layer.isComposicionTextoV && _v === 'V');
+        const _hayFijo = !!(typeof AutoLayout !== 'undefined' && AutoLayout.tituloFijoConfig
+                            && AutoLayout.tituloFijoConfig(State.activeFormat));
+        isVisible = !_hayFijo &&
+          ((layer.isComposicionTextoH && _v === 'H') || (layer.isComposicionTextoV && _v === 'V'));
         if (isVisible) {
           const fmtVisible = State.formatParams?.[State.activeFormat]?.[layer.id]?.visible;
           isVisible = fmtVisible !== undefined ? fmtVisible : true;
@@ -1325,12 +1272,6 @@ const Canvas = (() => {
           const fmtVisible = State.formatParams?.[State.activeFormat]?.[layer.id]?.visible;
           isVisible = fmtVisible !== undefined ? fmtVisible : true;
         }
-      } else if (layer.isComposicionAmazon) {
-        isVisible = State.activeFormat === 'AMAZON BG';
-        if (isVisible) {
-          const fmtVisible = State.formatParams?.[State.activeFormat]?.[layer.id]?.visible;
-          isVisible = fmtVisible !== undefined ? fmtVisible : true;
-        }
       } else if (layer.isMolduraFanart) {
         isVisible = State.activeFormat === 'FANART MOD N';
         if (isVisible) {
@@ -1339,18 +1280,6 @@ const Canvas = (() => {
         }
       } else if (layer.isMascaraBlur) {
         isVisible = State.activeFormat === 'FANART MOD N';
-        if (isVisible) {
-          const fmtVisible = State.formatParams?.[State.activeFormat]?.[layer.id]?.visible;
-          isVisible = fmtVisible !== undefined ? fmtVisible : true;
-        }
-      } else if (layer.isMarcaSony) {
-        isVisible = State.activeFormat === 'SONY';
-        if (isVisible) {
-          const fmtVisible = State.formatParams?.[State.activeFormat]?.[layer.id]?.visible;
-          isVisible = fmtVisible !== undefined ? fmtVisible : true;
-        }
-      } else if (layer.isMarcaIplus) {
-        isVisible = State.activeFormat === 'IPLUS PUBLI';
         if (isVisible) {
           const fmtVisible = State.formatParams?.[State.activeFormat]?.[layer.id]?.visible;
           isVisible = fmtVisible !== undefined ? fmtVisible : true;
@@ -1369,7 +1298,7 @@ const Canvas = (() => {
             const fmtVisible = State.formatParams?.[State.activeFormat]?.[layer.id]?.visible;
             isVisible = fmtVisible !== undefined ? fmtVisible : layer.visible;
           }
-        } else if (!layer._layoutGenerated && (State.activeFormat === 'MUX4 TXT' || State.activeFormat === 'MOVIL TXT' || State.activeFormat === 'TÍTULO FICHA' || State.activeFormat === 'AMAZON LOGO' || State.activeFormat === 'TEXTO HORIZONTAL' || State.activeFormat === 'TEXTO VERTICAL')) {
+        } else if (!layer._layoutGenerated && TEXT_HOST_FORMATS.includes(State.activeFormat)) {
           isVisible = false;
         } else {
           const fmtVisible = State.activeFormat && State.formatParams?.[State.activeFormat]?.[layer.id]?.visible;
@@ -1379,17 +1308,15 @@ const Canvas = (() => {
 
       el.style.display = isVisible ? 'block' : 'none';
       const isLocked = typeof Layers !== 'undefined' && Layers.getLocked(layer.id);
-      el.style.pointerEvents = (layer.isMarcaIplus || layer.isMarcaSony || layer.isMolduraFanart || layer.isMascaraBlur || layer.isComposicionMovil || layer.isComposicionAmazon || isLocked) ? 'none' : '';
+      const esTitFijo = (typeof AutoLayout !== 'undefined' && AutoLayout.esTituloFijo)
+        ? AutoLayout.esTituloFijo(State.activeFormat, layer) : false;
+      el.style.pointerEvents = (layer.isMolduraFanart || layer.isMascaraBlur || layer.isComposicionMovil || esTitFijo || isLocked) ? 'none' : '';
 
-      if (layer.isComposicion && State.activeFormat === 'MUX4 FONDO') {
+      if (esTitFijo) {
+        el.classList.remove('canvas-layer-active');
+      } else if (layer.isComposicion && State.activeFormat === 'MUX4 FONDO') {
         el.classList.remove('canvas-layer-active');
       } else if (layer.isComposicionMovil && State.activeFormat === 'MOVIL MUX FONDO') {
-        el.classList.remove('canvas-layer-active');
-      } else if (layer.isComposicionAmazon && State.activeFormat === 'AMAZON BG') {
-        el.classList.remove('canvas-layer-active');
-      } else if (layer.isMarcaSony && State.activeFormat === 'SONY') {
-        el.classList.remove('canvas-layer-active');
-      } else if (layer.isMarcaIplus && State.activeFormat === 'IPLUS PUBLI') {
         el.classList.remove('canvas-layer-active');
       } else if (layer.isMolduraFanart && State.activeFormat === 'FANART MOD N') {
         el.classList.remove('canvas-layer-active');
@@ -1610,9 +1537,9 @@ const Canvas = (() => {
     if (State.selectedLayerId && State.activeFormat &&
         !(selLayer?.isComposicion && State.activeFormat === 'MUX4 FONDO') &&
         !(selLayer?.isComposicionMovil && State.activeFormat === 'MOVIL MUX FONDO') &&
-        !(selLayer?.isComposicionAmazon && State.activeFormat === 'AMAZON BG') &&
-        !(selLayer?.isMarcaIplus && State.activeFormat === 'IPLUS PUBLI') &&
-        !(selLayer?.isMarcaSony && State.activeFormat === 'SONY')) {
+        !(typeof AutoLayout !== 'undefined' && AutoLayout.esTituloFijo
+          && AutoLayout.esTituloFijo(State.activeFormat, selLayer)) &&
+        true) {
       _updateHandles();
     } else {
       _hideHandles();
@@ -1624,13 +1551,14 @@ const Canvas = (() => {
     if (State.activeFormat === 'MOVIL TXT' && typeof ComposicionMovil !== 'undefined') {
       ComposicionMovil.generate();
     }
-    if (State.activeFormat === 'AMAZON LOGO' && typeof ComposicionAmazon !== 'undefined') {
-      ComposicionAmazon.generate();
-    }
     // Composiciones H/V: regenerar en vivo mientras se edita su formato maestro
     if (State.activeFormat === 'TEXTO HORIZONTAL' && typeof ComposicionTexto !== 'undefined') {
       ComposicionTexto.generate('TEXTO HORIZONTAL', 'COMPOSICIÓN TEXTO HORIZONTAL', 'isComposicionTextoH')
         .then(() => { const c = State.layers.find(l => l.isComposicionTextoH); if (c && typeof AutoLayout !== 'undefined') AutoLayout.repositionTextComp(c, 'H'); });
+    }
+    if (State.activeFormat === 'COM TITULO H' && typeof ComposicionTexto !== 'undefined') {
+      ComposicionTexto.generate('COM TITULO H', 'COMPOSICIÓN COM TITULO H', 'isComposicionComTituloH')
+        .then(() => { const c = State.layers.find(l => l.isComposicionComTituloH); if (c && typeof AutoLayout !== 'undefined') AutoLayout.repositionTextComp(c, 'COM_H'); });
     }
     if (State.activeFormat === 'TEXTO VERTICAL' && typeof ComposicionTexto !== 'undefined') {
       ComposicionTexto.generate('TEXTO VERTICAL', 'COMPOSICIÓN TEXTO VERTICAL', 'isComposicionTextoV')
@@ -1638,9 +1566,6 @@ const Canvas = (() => {
     }
     if (State.activeFormat === 'MOVIL MUX FONDO' && typeof ComposicionMovil !== 'undefined') {
       if (!State.layers.find(l => l.isComposicionMovil)) ComposicionMovil.generate();
-    }
-    if (State.activeFormat === 'AMAZON BG' && typeof ComposicionAmazon !== 'undefined') {
-      if (!State.layers.find(l => l.isComposicionAmazon)) ComposicionAmazon.generate();
     }
     _updateOkBtn();
   }
@@ -1683,18 +1608,20 @@ const Canvas = (() => {
       return;
     }
 
-    // ── AMAZON BG: COMPOSICIÓN AMAZON LOGO en posición fija ───
-    if (layer.isComposicionAmazon && State.activeFormat === 'AMAZON BG') {
-      const nw   = layer.naturalWidth  || 640;
-      const nh   = layer.naturalHeight || 480;
-      const posX = 104;
-      const posY = 65;
-      const left = _contentCenterX + (posX - State.formatSizes['AMAZON BG'].w / 2 + nw / 2) * _scale * _contentScaleX;
-      const top  = _contentCenterY + (posY - State.formatSizes['AMAZON BG'].h / 2 + nh / 2) * _scale * _contentScaleY;
-      el.style.width     = Math.round(nw * _scale * _contentScaleX) + 'px';
-      el.style.height    = Math.round(nh * _scale * _contentScaleY) + 'px';
-      el.style.left      = left + 'px';
-      el.style.top       = top  + 'px';
+    // ── TÍTULO DE REFERENCIA FIJO (Cabecera Detalle Escritorio…) ───
+    // Mismo trato que AMAZON BG: la composición se clava en su sitio y no se
+    // toca. La geometría la calcula AutoLayout para que el MOCKUP la repita
+    // exactamente igual (ver _drawCompositionOverlay en export.js).
+    const _tfRect = (typeof AutoLayout !== 'undefined' && AutoLayout.tituloFijoRect)
+      ? AutoLayout.tituloFijoRect(State.activeFormat, layer) : null;
+    if (_tfRect) {
+      const _tfFs = State.formatSizes[State.activeFormat];
+      const _tfL  = _contentCenterX + (_tfRect.left - _tfFs.w / 2 + _tfRect.drawW / 2) * _scale * _contentScaleX;
+      const _tfT  = _contentCenterY + (_tfRect.top  - _tfFs.h / 2 + _tfRect.drawH / 2) * _scale * _contentScaleY;
+      el.style.width     = Math.round(_tfRect.drawW * _scale * _contentScaleX) + 'px';
+      el.style.height    = Math.round(_tfRect.drawH * _scale * _contentScaleY) + 'px';
+      el.style.left      = _tfL + 'px';
+      el.style.top       = _tfT + 'px';
       el.style.transform = 'translate(-50%, -50%)';
       el.style.opacity   = '1';
       el.style.filter    = '';
@@ -2202,9 +2129,6 @@ const Canvas = (() => {
 
       if (layer?.isComposicion && State.activeFormat === 'MUX4 FONDO') return;
       if (layer?.isComposicionMovil && State.activeFormat === 'MOVIL MUX FONDO') return;
-      if (layer?.isComposicionAmazon && State.activeFormat === 'AMAZON BG') return;
-      if (layer?.isMarcaIplus && State.activeFormat === 'IPLUS PUBLI') return;
-      if (layer?.isMarcaSony && State.activeFormat === 'SONY') return;
       if (layer?.isMolduraFanart && State.activeFormat === 'FANART MOD N') return;
       if (layer?.isMascaraBlur && State.activeFormat === 'FANART MOD N') return;
 
@@ -2327,9 +2251,6 @@ const Canvas = (() => {
       const selLayer = State.layers.find(l => l.id === State.selectedLayerId);
       if (selLayer?.isComposicion && State.activeFormat === 'MUX4 FONDO') return;
       if (selLayer?.isComposicionMovil && State.activeFormat === 'MOVIL MUX FONDO') return;
-      if (selLayer?.isComposicionAmazon && State.activeFormat === 'AMAZON BG') return;
-      if (selLayer?.isMarcaIplus && State.activeFormat === 'IPLUS PUBLI') return;
-      if (selLayer?.isMarcaSony && State.activeFormat === 'SONY') return;
       if (selLayer?.isMolduraFanart && State.activeFormat === 'FANART MOD N') return;
       if (selLayer?.isMascaraBlur && State.activeFormat === 'FANART MOD N') return;
 
@@ -2447,7 +2368,7 @@ const Canvas = (() => {
 
     // Solo visible en formatos de texto cuando la versión es Freemium
     const isFreemium = typeof Layout !== 'undefined' && Layout.isFreemium(fid);
-    const isTextFormat = fid === 'MUX4 TXT' || fid === 'MOVIL TXT' || fid === 'TEXTO HORIZONTAL' || fid === 'TEXTO VERTICAL';
+    const isTextFormat = TEXT_BLOCK_FORMATS.includes(fid);
 
     if (!isFreemium || !isTextFormat || typeof Pastilla === 'undefined') {
       if (el) el.remove();
@@ -2630,8 +2551,6 @@ const Canvas = (() => {
   }
 
   function reinitAutoLayers() {
-    _initMarcaIplus();
-    _initMarcaSony();
   }
 
   return { init, render, getScale, reinitAutoLayers, align, setKeyLayer, getKeyLayerId, calcGradientStops: _calcGradientStops, setFraming, isFraming };

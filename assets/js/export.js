@@ -7,11 +7,9 @@ const Export = (() => {
   // ── CONFIGURACIÓN DE FORMATOS ─────────────────────────────
 
   const FORMAT_CONFIG = {
-    '199 PUBLI':          { suffix: '199_PUBLI',                    type: 'jpg', maxMB: 4     },
     'AD PAUSE':           { suffix: 'AD_PAUSE',                     type: 'jpg', maxMB: 0.1   },
     'APPLE TV':           { suffix: 'APPLETV',                      type: 'jpg', maxMB: 1     },
     'FANART DEST.':       { suffix: 'FANART_DESTACADO',             type: 'jpg', maxMB: 1.5   },
-    'IPLUS PUBLI':        { suffix: 'IPLUS_PUBLI',                  type: 'jpg', maxMB: 0.15  },
     'MOD DEST 1':         { suffix: 'MOD_DESTACADO1',               type: 'jpg', maxMB: 1     },
     'MOD DEST 1 SIL':     { suffix: 'MOD_DESTACADO1_SIL',           type: 'png', maxMB: 1     },
     'MOD DEST 2':         { suffix: 'MOD_DESTACADOS2',              type: 'jpg', maxMB: 1     },
@@ -23,6 +21,8 @@ const Export = (() => {
     'MOVIL MUX FONDO':    { suffix: 'SMARTPHONE_MUX_FONDO_PUBLI',   type: 'jpg', maxMB: 1.5   },
     'MOVIL TXT':          { suffix: 'SMARTPHONE_MUX_TXT_PUBLI',     type: 'png', maxMB: 0.6   },
     'TEXTO HORIZONTAL':   { suffix: 'TEXTO_HORIZONTAL',             type: 'png', maxMB: 0.6   },
+    // El título de COMERCIAL se compone aquí y se entrega como 'cabecera-slider-tt'.
+    'COM TITULO H':       { suffix: 'cabecera-slider-tt', type: 'png', maxMB: 0.6, web: true },
     'TEXTO VERTICAL':     { suffix: 'TEXTO_VERTICAL',               type: 'png', maxMB: 0.6   },
     'WEB PUBLI':          { suffix: 'WEB_PUBLI',                    type: 'jpg', maxMB: 1     },
     'WOW PUBLI':          { suffix: 'WOW_PUBLI',                    type: 'jpg', maxMB: 0.25  },
@@ -42,30 +42,26 @@ const Export = (() => {
     'MOD N':              { suffix: 'MODULO_N',                     type: 'jpg', maxMB: 0.6   },
     'FANART MOD N':       { suffix: 'FANART_COLECCION',             type: 'jpg', maxMB: 10    },
     'MOD N SIL':          { suffix: 'MOD_N_SIL',                    type: 'png', maxMB: 0.6   },
-    'AMAZON BG':          { suffix: 'AMAZON_BG',                    type: 'jpg', maxMB: 0.45  },
-    'AMAZON LOGO':        { suffix: 'AMAZON_LOGO',                  type: 'png', maxMB: 0.45  },
     'PERFIL':             { suffix: 'PERFIL',                       type: 'png', maxMB: 10    },
-    'SONY':               { suffix: 'SONY',                         type: 'png', maxMB: 10    },
     'XIAOMI BANNER':      { suffix: 'XIAOMI_BANNER_MES',            type: 'jpg', maxMB: 10    },
 
     // ── COMERCIAL (pack web responsive) ───────────────────────
     // maxMB: 100 = sin límite real por ahora, mismo criterio que CARÁTULA y
     // CARTEL COM. Si producción fija pesos, se cambian aquí y en state.js.
-    'Mosaico-Horizontal':                 { suffix: 'MOSAICO_HORIZONTAL',                 type: 'jpg', maxMB: 100 },
-    'Mosaico-Vertical':                   { suffix: 'MOSAICO_VERTICAL',                   type: 'jpg', maxMB: 100 },
-    'Modulo-Escritorio':                  { suffix: 'MODULO_ESCRITORIO',                  type: 'jpg', maxMB: 100 },
-    'Modulo-Movil':                       { suffix: 'MODULO_MOVIL',                       type: 'jpg', maxMB: 100 },
-    'Cabecera-Detalle-Escritorio':        { suffix: 'CABECERA_DETALLE_ESCRITORIO',        type: 'jpg', maxMB: 100 },
-    'Cabecera-Detalle-Movil':             { suffix: 'CABECERA_DETALLE_MOVIL',             type: 'jpg', maxMB: 100 },
-    'Carrusel-Vertical':                  { suffix: 'CARRUSEL_VERTICAL',                  type: 'jpg', maxMB: 100 },
-    'Carrusel-Horizontal':                { suffix: 'CARRUSEL_HORIZONTAL',                type: 'jpg', maxMB: 100 },
-    'Cabecera-Slider-Escritorio':         { suffix: 'CABECERA_SLIDER_ESCRITORIO',         type: 'jpg', maxMB: 100 },
-    'Cabecera-Slider-Movil':              { suffix: 'CABECERA_SLIDER_MOVIL',              type: 'jpg', maxMB: 100 },
-    'Cabecera-Slider-TT':                 { suffix: 'CABECERA_SLIDER_TT',                 type: 'jpg', maxMB: 100 },
-    'Cabecera-Slider-Mediano-Escritorio': { suffix: 'CABECERA_SLIDER_MEDIANO_ESCRITORIO', type: 'jpg', maxMB: 100 },
-    'Slider-Mediano-Escritorio':          { suffix: 'SLIDER_MEDIANO_ESCRITORIO',          type: 'jpg', maxMB: 100 },
-    'Cabecera-Slider-Mediano-Movil':      { suffix: 'CABECERA_SLIDER_MEDIANO_MOVIL',      type: 'jpg', maxMB: 100 },
-    'Slider-Mediano-Movil':               { suffix: 'SLIDER_MEDIANO_MOVIL',               type: 'jpg', maxMB: 100 },
+    'Mosaico-Horizontal':                 { suffix: 'mosaico-horizontal',                 type: 'jpg', maxMB: 100 , web: true },
+    'Mosaico-Vertical':                   { suffix: 'mosaico-vertical',                   type: 'jpg', maxMB: 100 , web: true },
+    'Modulo-Escritorio':                  { suffix: 'modulo-escritorio',                  type: 'jpg', maxMB: 100 , web: true },
+    'Modulo-Movil':                       { suffix: 'modulo-movil',                       type: 'jpg', maxMB: 100 , web: true },
+    'Cabecera-Detalle-Escritorio':        { suffix: 'cabecera-detalle-escritorio',        type: 'jpg', maxMB: 100 , web: true },
+    'Cabecera-Detalle-Movil':             { suffix: 'cabecera-detalle-movil',             type: 'jpg', maxMB: 100 , web: true },
+    'Carrusel-Vertical':                  { suffix: 'carrusel-vertical',                  type: 'jpg', maxMB: 100 , web: true },
+    'Carrusel-Horizontal':                { suffix: 'carrusel-horizontal',                type: 'jpg', maxMB: 100 , web: true },
+    'Cabecera-Slider-Escritorio':         { suffix: 'cabecera-slider-escritorio',         type: 'jpg', maxMB: 100 , web: true },
+    'Cabecera-Slider-Movil':              { suffix: 'cabecera-slider-movil',              type: 'jpg', maxMB: 100 , web: true },
+    'Cabecera-Slider-Mediano-Escritorio': { suffix: 'cabecera-slider-mediano-escritorio', type: 'jpg', maxMB: 100 , web: true },
+    'Slider-Mediano-Escritorio':          { suffix: 'slider-mediano-escritorio',          type: 'jpg', maxMB: 100 , web: true },
+    'Cabecera-Slider-Mediano-Movil':      { suffix: 'cabecera-slider-mediano-movil',      type: 'jpg', maxMB: 100 , web: true },
+    'Slider-Mediano-Movil':               { suffix: 'slider-mediano-movil',               type: 'jpg', maxMB: 100 , web: true },
   };
 
   // Formatos con capa de sistema 'mockup' real (no zona de seguridad).
@@ -76,7 +72,6 @@ const Export = (() => {
     'MOVIL MUX FONDO',
     'WEB PUBLI',
     'FANART MÓVIL',
-    'AMAZON BG',
     'AD PAUSE',
     'FANART',
     // COMERCIAL: los 4 que traen MK_ además de su SF_
@@ -314,7 +309,7 @@ const Export = (() => {
         }
 
         const sizeMB = blob.size / (1024 * 1024);
-        const filename = `${_buildBaseName(nombre, formatName)}_${cfg.suffix}.${cfg.type}`;
+        const filename = `${_webBase(nombre, formatName, cfg)}${cfg.web ? '-' : '_'}${cfg.suffix}.${cfg.type}`;
 
         if (cfg.type === 'png' && sizeMB > cfg.maxMB) {
           warnings.push(`⚠️ ${formatName}: ${sizeMB.toFixed(2)}MB supera el límite de ${cfg.maxMB}MB (exportado igualmente)`);
@@ -336,7 +331,7 @@ const Export = (() => {
             const mockCv = await _renderMockupVariantCanvas(formatName, mv.key);
             const mockBlob = mockCv ? await _jpgWithMaxSize(mockCv, 5) : null;
             if (mockBlob) {
-              const mockName = `${_buildBaseName(nombre, formatName)}_${cfg.suffix}_${mv.suffix}.jpg`;
+              const mockName = `${_webBase(nombre, formatName, cfg)}${cfg.web ? '-' : '_'}${cfg.suffix}${cfg.web ? '-' : '_'}${cfg.web ? mv.suffix.toLowerCase() : mv.suffix}.jpg`;
               zip.file(mockName, await mockBlob.arrayBuffer());
             } else {
               warnings.push(`⚠️ ${formatName} (${mv.suffix}): no se pudo generar el mockup.`);
@@ -409,7 +404,6 @@ const Export = (() => {
 
     const layers = [...State.layers].reverse();
     for (const layer of layers) {
-      if (layer.isMarcaIplus) continue;
       if (layer.isMolduraFanart) continue; // se dibuja al final, por encima de todo
       if (!_isLayerVisible(layer, formatName)) continue;
       await _drawLayerMaybeMasked(ctx, layer, formatName, W, H);
@@ -437,7 +431,7 @@ const Export = (() => {
     // Pastilla Freemium (solo en MUX4 TXT y MOVIL TXT cuando versión es Freemium)
     if (typeof Layout !== 'undefined' && Layout.isFreemium(formatName) &&
         typeof Pastilla !== 'undefined' &&
-        (formatName === 'MUX4 TXT' || formatName === 'MOVIL TXT' || formatName === 'TEXTO HORIZONTAL' || formatName === 'TEXTO VERTICAL')) {
+        TEXT_BLOCK_FORMATS.includes(formatName)) {
       const src = Pastilla.getFreemiumSrc();
       const _presetPF = typeof Layout !== 'undefined' && Layout.getPreset && Layout.getPreset(formatName);
       const posY = (_presetPF && _presetPF['PASTILLA_FREEMIUM']?.y) ?? 95;
@@ -460,14 +454,6 @@ const Export = (() => {
       });
     }
 
-    const marca = State.layers.find(l => l.isMarcaIplus);
-    if (marca && formatName === 'IPLUS PUBLI') {
-      await _drawLayer(ctx, marca, formatName, W, H);
-    }
-    const marcaSony = State.layers.find(l => l.isMarcaSony);
-    if (marcaSony && formatName === 'SONY') {
-      await _drawLayer(ctx, marcaSony, formatName, W, H);
-    }
     // MOLDURA FANART MOD N — siempre por encima de todo
     const moldura = State.layers.find(l => l.isMolduraFanart);
     if (moldura && formatName === 'FANART MOD N' && _isLayerVisible(moldura, formatName)) {
@@ -600,7 +586,21 @@ const Export = (() => {
   //  - MOVIL MUX FONDO  → COMPOSICIÓN MOVIL TEXTO
   //  - AMAZON BG        → AMAZON LOGO
   async function _drawCompositionOverlay(ctx, formatName) {
-    if (formatName !== 'MUX4 FONDO' && formatName !== 'MOVIL MUX FONDO' && formatName !== 'AMAZON BG') return;
+    // Título de REFERENCIA FIJO: excluido del PNG por _isLayerVisible, pero el
+    // mockup existe justo para enseñar cómo queda la página, así que aquí se
+    // repinta. La geometría la da AutoLayout.tituloFijoRect, LA MISMA que usa el
+    // editor en _applyParams (canvas.js) — por eso no pueden descuadrarse.
+    if (typeof AutoLayout !== 'undefined' && AutoLayout.tituloFijoConfig
+        && AutoLayout.tituloFijoConfig(formatName)) {
+      const comp = State.layers.find(l => l.isComposicionComTituloH);
+      if (comp && comp.src) {
+        const r = AutoLayout.tituloFijoRect(formatName, comp);
+        if (r) await _drawImage(ctx, comp.src, r.left, r.top, r.drawW, r.drawH);
+      }
+      return;
+    }
+
+    if (formatName !== 'MUX4 FONDO' && formatName !== 'MOVIL MUX FONDO') return;
 
     if (formatName === 'MUX4 FONDO') {
       const comp = State.layers.find(l => l.isComposicion);
@@ -627,21 +627,6 @@ const Export = (() => {
       const src  = comp.srcMovilFondo || comp.src;
       await _drawImage(ctx, src, posX, posY, nw, nh);
       return;
-    }
-
-    if (formatName === 'AMAZON BG') {
-      // El AMAZON LOGO (composición isComposicionAmazon) NO se exporta en AMAZON BG
-      // (queda excluido en _isLayerVisible), pero en el MOCKUP debe verse.
-      // En el editor NO es arrastrable: el canvas la FIJA en (104, 65) a tamaño
-      // natural (ver _applyParams en canvas.js). Replicamos esa posición EXACTA.
-      // El canvas de diseño ya está en coordenadas de contenido (1920×720).
-      const comp = State.layers.find(l => l.isComposicionAmazon);
-      if (!comp || !comp.src) return;
-      const nw = comp.naturalWidth  || 640;
-      const nh = comp.naturalHeight || 480;
-      const AMAZON_LOGO_X = 104;  // debe coincidir con _applyParams (canvas.js)
-      const AMAZON_LOGO_Y = 65;
-      await _drawImage(ctx, comp.src, AMAZON_LOGO_X, AMAZON_LOGO_Y, nw, nh);
     }
   }
 
@@ -836,7 +821,7 @@ const Export = (() => {
         Formats.fanartRoleVisibility(layer.id, formatName) === false) return false;
     if (layer.isTitleLayer) {
       const _v = (typeof Formats !== 'undefined' && Formats.getTextVariant) ? Formats.getTextVariant(formatName) : null;
-      const inTextFormat = (formatName === 'MUX4 TXT' || formatName === 'MOVIL TXT' || formatName === 'TEXTO HORIZONTAL' || formatName === 'TEXTO VERTICAL' || formatName === 'AMAZON LOGO' || formatName === 'TÍTULO FICHA')
+      const inTextFormat = TEXT_HOST_FORMATS.includes(formatName)
                        || _v === 'TITLE_H' || _v === 'TITLE_V';
       if (!inTextFormat) return false;
       if (typeof Formats !== 'undefined' && Formats.isActiveTitleForFormat &&
@@ -844,6 +829,29 @@ const Export = (() => {
       const fmtVisible = State.formatParams?.[formatName]?.[layer.id]?.visible;
       return fmtVisible !== false;
     }
+    // Título de REFERENCIA FIJO: se ve en el editor pero NO se exporta — la web
+    // compone el texto por su cuenta. El MOCKUP sí lo pinta, vía
+    // _drawCompositionOverlay (mismo criterio que AMAZON BG).
+    if (typeof AutoLayout !== 'undefined' && AutoLayout.esTituloFijo
+        && AutoLayout.esTituloFijo(formatName, layer)) return false;
+
+    // COMPOSICIÓN COM TITULO H: no se enruta por variante como las H/V. Solo se
+    // ve donde esté declarada en TITULO_FIJO (auto-layout.js), y ahí va clavada.
+    // En cualquier otro formato no pinta nada. Tampoco se exporta: la web
+    // compone el texto por su cuenta (sí sale en el MOCKUP).
+    if (layer.isComposicionComTituloH) {
+      const _vc = (typeof Formats !== 'undefined' && Formats.getTextVariant) ? Formats.getTextVariant(formatName) : null;
+      if (_vc !== 'COM_H') return false;
+      const fmtVisible = State.formatParams?.[formatName]?.[layer.id]?.visible;
+      return fmtVisible !== undefined ? fmtVisible : true;
+    }
+
+    // Donde hay TÍTULO FIJO, la composición H/V normal NO se pinta: el título
+    // de ese formato es la composición clavada, y si no saldrían los dos.
+    if (typeof AutoLayout !== 'undefined' && AutoLayout.tituloFijoConfig
+        && AutoLayout.tituloFijoConfig(formatName)
+        && (layer.isComposicionTextoH || layer.isComposicionTextoV)) return false;
+
     // Composiciones H/V: según la variante del formato
     if (layer.isComposicionTextoH || layer.isComposicionTextoV) {
       const _v = (typeof Formats !== 'undefined' && Formats.getTextVariant) ? Formats.getTextVariant(formatName) : null;
@@ -870,9 +878,6 @@ const Export = (() => {
       const fmtVisible = State.formatParams?.[formatName]?.[layer.id]?.visible;
       return fmtVisible !== undefined ? fmtVisible : true;
     }
-    if (layer.isComposicionAmazon) return false;
-    if (layer.isMarcaSony) return formatName === 'SONY';
-    if (layer.isMarcaIplus) return formatName === 'IPLUS PUBLI';
     if (layer.isMolduraFanart) {
       if (formatName !== 'FANART MOD N') return false;
       const fmtVisible = State.formatParams?.[formatName]?.[layer.id]?.visible;
@@ -884,7 +889,7 @@ const Export = (() => {
       return fmtVisible !== undefined ? fmtVisible : true;
     }
     if (layer.exclusiveFormat) return layer.exclusiveFormat === formatName;
-    if ((formatName === 'MUX4 TXT' || formatName === 'MOVIL TXT' || formatName === 'TÍTULO FICHA' || formatName === 'AMAZON LOGO' || formatName === 'TEXTO HORIZONTAL' || formatName === 'TEXTO VERTICAL') && !layer._layoutGenerated) return false;
+    if (TEXT_HOST_FORMATS.includes(formatName) && !layer._layoutGenerated) return false;
     const fmtVisible = State.formatParams?.[formatName]?.[layer.id]?.visible;
     return fmtVisible !== undefined ? fmtVisible : layer.visible !== false;
   }
@@ -1335,6 +1340,17 @@ const Export = (() => {
 
   // Construye el "base name" del fichero para cada formato.
   // Caso especial: MOD N y FANART MOD N intercalan fecha (MES3+AA, ej. ENE26) entre nombre y suffix.
+  // Los formatos de COMERCIAL siguen la nomenclatura WEB: minúsculas y guiones
+  // normales, no MAYÚSCULAS_CON_GUION_BAJO como el resto de la herramienta. Lo
+  // pide el CMS. Afecta también al nombre del proyecto: "El ser querido" tiene
+  // que salir como "El-ser-querido", porque un espacio en una URL no vale.
+  function _webBase(nombre, formatName, cfg) {
+    const base = _buildBaseName(nombre, formatName);
+    // Ojo: el nombre del proyecto llega ya saneado con guiones BAJOS, así que
+    // hay que convertir ambos — buscar solo espacios no encuentra nada.
+    return cfg && cfg.web ? base.trim().replace(/[\s_]+/g, '-') : base;
+  }
+
   function _buildBaseName(nombre, formatName) {
     if (formatName === 'FANART MOD N' || formatName === 'MOD N') {
       const meses = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];

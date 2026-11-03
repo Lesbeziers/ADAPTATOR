@@ -2,6 +2,80 @@
 // STATE.JS — Modelo de datos central
 // ============================================================
 
+// ── TAXONOMÍA DE FORMATOS ANFITRIÓN ─────────────────────────
+// Hay formatos que NO son una pieza a entregar, sino un lienzo donde se COMPONE
+// un asset (el título, el logo) que luego viaja a los demás formatos. Se
+// comportan distinto en media app, y hasta ahora la lista se escribía a mano en
+// cada sitio: 24 copias repartidas por 11 archivos. Añadir uno nuevo obligaba a
+// encontrarlas todas, y olvidar una NO da error — da un fallo silencioso (que no
+// funcionen los degradados ahí, o que no se exporte).
+//
+// OJO: no son la misma lista. Son tres círculos concéntricos, y mezclarlos
+// rompe cosas. De fuera adentro:
+
+// LOS 6 — lienzos de composición. Las capas normales importadas no se dibujan
+// aquí: este formato no es la pieza, es el taller.
+const TEXT_HOST_FORMATS = [
+  'MUX4 TXT', 'MOVIL TXT', 'TEXTO HORIZONTAL', 'TEXTO VERTICAL',
+  'COM TITULO H',
+  'TÍTULO FICHA',
+];
+
+// LOS 5 — de los anteriores, aquellos donde las HERRAMIENTAS DE CAPA
+// (degradado, sólido, texto, logo) cambian de comportamiento. TÍTULO FICHA
+// queda fuera: no se le añaden capas de estas.
+const TEXT_TOOL_FORMATS = [
+  'MUX4 TXT', 'MOVIL TXT', 'TEXTO HORIZONTAL', 'TEXTO VERTICAL',
+  'COM TITULO H',
+];
+
+// LOS 5 — los maestros de texto: lienzos donde se edita el título. Se muestran
+// a doble ancho y no marcan el candado manual (no son receptores).
+const TEXT_MASTER_FORMATS = [
+  'MUX4 TXT', 'MOVIL TXT', 'TEXTO HORIZONTAL', 'TEXTO VERTICAL',
+  'COM TITULO H',
+];
+
+// LOS 4 — de esos, los que llevan BLOQUE DE TEXTO: maquetación automática por
+// presets y pastilla Freemium.
+//
+// COM TITULO H queda FUERA aunque sea maestro. En las piezas WEB de COMERCIAL
+// el texto NO va quemado en la imagen de título, por SEO: la web lo compone en
+// HTML y solo consume el PNG del título. Así que ahí no hay bloque que maquetar
+// ni pastilla que poner — solo el PNG, apoyado abajo a la izquierda.
+//
+// Esto además evita un problema de fondo: los presets dan por supuesto que un
+// formato derivado es un escalado UNIFORME de su origen (TEXTO HORIZONTAL es
+// MUX4 TXT x2,449/2,450), y COM TITULO H no lo es (x2,176/x1,616), así que
+// derivarlos le descuadraba la maquetación.
+//
+// NO confundir con el orden de los botones en `modalities.textos`, que es UI.
+const TEXT_BLOCK_FORMATS = [
+  'MUX4 TXT', 'MOVIL TXT', 'TEXTO HORIZONTAL', 'TEXTO VERTICAL',
+];
+
+
+// ── COMPOSICIONES AUTO-GENERADAS ────────────────────────────
+// Las composiciones no son capas del usuario: nacen de un formato maestro y se
+// regeneran solas. Por eso NO se ofrecen en el modal de roles, NO se guardan
+// como assets y NO cuentan como imágenes importadas.
+//
+// Esta lista existe porque enumerar las banderas a mano en cada sitio ya ha
+// fallado TRES veces al añadir una composición nueva: se coló en la carpeta
+// imagenes/ del proyecto guardado, se listó en el panel de capas, y acabó
+// ofreciéndose en el modal de roles como si fuera un archivo recién importado.
+// Nueve sitios repetían la misma enumeración y bastaba olvidar uno.
+const COMPOSICION_FLAGS = [
+  'isComposicion',          // MUX4 TXT
+  'isComposicionMovil',     // MOVIL TXT
+  'isComposicionTextoH',    // TEXTO HORIZONTAL
+  'isComposicionTextoV',    // TEXTO VERTICAL
+  'isComposicionComTituloH',// COM TITULO H
+];
+function esComposicionAuto(l) {
+  return !!l && COMPOSICION_FLAGS.some(f => l[f]);
+}
+
 const State = {
 
   view: 'editor',
@@ -42,8 +116,6 @@ const State = {
     locked:  {},       // { formatId: bool } — bloqueo por formato
     // Posición y escala por defecto (hardcodeada) — placeholder, Wilson pasa valores reales
     defaults: {
-      '199 PUBLI':        { x: 753,  y: -278,  scale: 0.5   },
-      'IPLUS PUBLI':      { x: 567,  y: -280,  scale: 0.36  },
       'MOD DEST 2':       { x: 294,  y: -94,   scale: 0.47  },
       'MUX4 TXT':         { x: 0,    y: -135,   scale: 0.48  },
       'WEB PUBLI':        { x: 386,  y: -202,  scale: 0.34  },
@@ -52,11 +124,9 @@ const State = {
     },
   },
   formatSizes: {
-    '199 PUBLI':        { w: 1920, h: 636,  maxMB: 4    },
     'AD PAUSE':         { w: 1280, h: 720,  maxMB: 0.1, displayContext: { w: 1920, h: 1080, contentX: 322, contentY: 98 } },
     'APPLE TV':         { w: 908,  h: 512,  maxMB: 1    },
     'FANART DEST.':     { w: 1920, h: 1080, maxMB: 1.5  },
-    'IPLUS PUBLI':      { w: 1280, h: 620,  maxMB: 0.15, safeArea: { x: 160, y: -54, w: 960, h: 512 } },
     'MOD DEST 1':       { w: 1636, h: 296,  maxMB: 1    },
     'MOD DEST 1 SIL':   { w: 1920, h: 400,  maxMB: 1,   maskRect: { x: 0, y: 53,  w: 1636, h: 296, r: 4 } },
     'MOD DEST 2':       { w: 803,  h: 296,  maxMB: 1    },
@@ -69,6 +139,12 @@ const State = {
     'MOVIL TXT':        { w: 1440, h: 466,  maxMB: 0.6  },
     'TEXTO HORIZONTAL': { w: 1920, h: 779,  maxMB: 0.6  },
     'TEXTO VERTICAL':   { w: 1080, h: 350,  maxMB: 0.6  },
+    // COM TITULO H — asset de título del pack COMERCIAL. Tamaño CONFIRMADO por
+    // los diseñadores (2026-10-29) mirando un pack ya exportado de una serie
+    // hecha de forma tradicional. Es el tamaño de ENTREGA, y por tanto también
+    // el de exportación, y se entrega con el nombre 'cabecera-slider-tt'.
+    // Ese "formato" no existe como pieza: ES este título, y estaba duplicado.
+    'COM TITULO H':     { w: 1156, h: 348,  maxMB: 0.6  },
     'WEB PUBLI':        { w: 2000, h: 465,  maxMB: 1, displayContext: { w: 1920, h: 850, contentX: 26, contentY: 115, contentW: 1868, contentH: 434 } },
     'WOW PUBLI':        { w: 1280, h: 258,  maxMB: 0.25 },
     'TÍTULO FICHA':     { w: 2172, h: 300,  maxMB: 0.6  },
@@ -87,10 +163,7 @@ const State = {
     'MOD N':            { w: 386,  h: 217,  maxMB: 0.6  },
     'FANART MOD N':     { w: 1920, h: 1080, maxMB: 10   },
     'MOD N SIL':        { w: 449,  h: 300,  maxMB: 0.6, maskRect: { x: 0, y: 42,  w: 385,  h: 217, r: 4 } },
-    'AMAZON BG':        { w: 1920, h: 720,  maxMB: 0.45, displayContext: { w: 1920, h: 1080, contentX: 0, contentY: 0, contentW: 1920, contentH: 720 } },
-    'AMAZON LOGO':      { w: 640,  h: 260,  maxMB: 0.45 },
     'PERFIL':           { w: 425,  h: 479,  maxMB: 10, maskCircle: { cx: 0, cy: 26, r: 195 }, maskRect: { x: 0, y: -110, w: 390, h: 260, r: 0 } },
-    'SONY':             { w: 204,  h: 306,  maxMB: 10   },
     'XIAOMI BANNER':    { w: 1280, h: 360,  maxMB: 10   },
 
     // ── COMERCIAL (pack web responsive) ────────────────────
@@ -106,7 +179,6 @@ const State = {
     'Carrusel-Horizontal':                { w: 800,  h: 450,  maxMB: 100 },
     'Cabecera-Slider-Escritorio':         { w: 3840, h: 2160, maxMB: 100 },
     'Cabecera-Slider-Movil':              { w: 2160, h: 3840, maxMB: 100 },
-    'Cabecera-Slider-TT':                 { w: 1156, h: 348,  maxMB: 100 },
     'Cabecera-Slider-Mediano-Escritorio': { w: 3840, h: 1200, maxMB: 100 },
     'Slider-Mediano-Escritorio':          { w: 3840, h: 1200, maxMB: 100 },
     'Cabecera-Slider-Mediano-Movil':      { w: 1536, h: 1536, maxMB: 100 },
@@ -130,7 +202,6 @@ const State = {
 
   // Configuración de capas de sistema por formato
   systemLayers: {
-    '199 PUBLI':         [ { key: 'mockup', label: 'ZONA DE SEGURIDAD', src: 'assets/img/checkers/199_PUBLI_Check.png' } ],
     'AD PAUSE': [
       { key: 'fondo',    label: 'FONDO',             src: 'assets/img/checkers/fondo_ad.jpg',          zBase: true },
       { key: 'mockup',   label: 'ZONA DE SEGURIDAD', src: 'assets/img/checkers/AD_PAUSE_Checker.png',  contentArea: true },
@@ -138,7 +209,6 @@ const State = {
     ],
     'APPLE TV':          [ { key: 'mockup', label: 'ZONA DE SEGURIDAD', src: 'assets/img/checkers/APPLETV_Check.png' } ],
     'FANART DEST.':      [ { key: 'mockup', label: 'MOCKUP', src: 'assets/img/checkers/FANART_DESTACADO_PUBLI_Check.png' } ],
-    'IPLUS PUBLI':       [ { key: 'mockup', label: 'ZONA DE SEGURIDAD', src: 'assets/img/checkers/IPLUS_PUBLI_Check.png' } ],
     'MOD DEST 1':        [ { key: 'mockup', label: 'ZONA DE SEGURIDAD', src: 'assets/img/checkers/MOD_DESTACADO1_Check.png' } ],
     'MOD DEST 1 SIL':    [ { key: 'mockup', label: 'ZONA DE SEGURIDAD', src: 'assets/img/checkers/MOD_DESTACADO1_SIL_Check.png' } ],
     'MOD DEST 2':        [ { key: 'mockup', label: 'ZONA DE SEGURIDAD', src: 'assets/img/checkers/MOD_DESTACADO2_Check.png' } ],
@@ -156,6 +226,8 @@ const State = {
     ],
     'MOVIL TXT':         [ { key: 'mockup', label: 'ZONA DE SEGURIDAD', src: 'assets/img/checkers/SMARTPHONE_MUX_TXT_Check.png' } ],
     'TEXTO HORIZONTAL':  [ { key: 'mockup', label: 'ZONA DE SEGURIDAD', src: 'assets/img/checkers/MUX4_TXT_Check.png' } ],
+    // COM TITULO H va SIN zona de seguridad: el asset es el título a pelo.
+    'COM TITULO H':      [],
     'TEXTO VERTICAL':    [ { key: 'mockup', label: 'ZONA DE SEGURIDAD', src: 'assets/img/checkers/SMARTPHONE_MUX_TXT_Check.png' } ],
     'WEB PUBLI': [
       { key: 'mockup',   label: 'MOCKUP',             src: 'assets/img/checkers/WEB_MOCKUP.png' },
@@ -186,13 +258,7 @@ const State = {
     'DEST. DOBLE 4 SIL': [ { key: 'mockup', label: 'ZONA DE SEGURIDAD', src: 'assets/img/checkers/MOD_DES_DOBLE_SIL_4_Checker.png' } ],
     'MOD N':             [ { key: 'mockup', label: 'ZONA DE SEGURIDAD', src: 'assets/img/checkers/MOD_N_Checker.png' } ],
     'MOD N SIL':         [ { key: 'mockup', label: 'ZONA DE SEGURIDAD', src: 'assets/img/checkers/MOD_N_SIL_Checker.png' } ],
-    'AMAZON BG': [
-      { key: 'mockup',    label: 'MOCKUP',    src: 'assets/img/checkers/AMAZON_MOCKUP_Check.png' },
-      { key: 'seguridad', label: 'ZONA DE SEGURIDAD', src: 'assets/img/checkers/AMAZON_SEGURIDAD_Check.png' },
-    ],
-    'AMAZON LOGO':       [ { key: 'mockup', label: 'ZONA DE SEGURIDAD', src: 'assets/img/checkers/AMAZON_LOGO_Checker.png' } ],
     'PERFIL':            [ { key: 'mockup', label: 'ZONA DE SEGURIDAD', src: 'assets/img/checkers/perfil_checker.png' } ],
-    'SONY':              [ { key: 'mockup', label: 'ZONA DE SEGURIDAD', src: 'assets/img/checkers/SONY_Checker.png' } ],
     'XIAOMI BANNER':     [],
 
     // ── COMERCIAL (pack web responsive) ────────────────────
@@ -220,7 +286,6 @@ const State = {
       { key: 'mockup',    label: 'MOCKUP',            src: 'assets/img/checkers/MK_Cabecera_Slider_Movil.png' },
       { key: 'seguridad', label: 'ZONA DE SEGURIDAD', src: 'assets/img/checkers/SF_Cabecera_Slider_Movil.png' },
     ],
-    'Cabecera-Slider-TT':                 [],
     'Cabecera-Slider-Mediano-Escritorio': [ { key: 'mockup', label: 'ZONA DE SEGURIDAD', src: 'assets/img/checkers/SF_Cabecera_Slider_Mediano_Escritorio.png' } ],
     'Slider-Mediano-Escritorio':          [ { key: 'mockup', label: 'ZONA DE SEGURIDAD', src: 'assets/img/checkers/SF_Slider_Mediano_Escritorio.png' } ],
     'Cabecera-Slider-Mediano-Movil':      [ { key: 'mockup', label: 'ZONA DE SEGURIDAD', src: 'assets/img/checkers/SF_Cabecera_Slider_Mediano_Movil.png' } ],
@@ -234,15 +299,16 @@ const State = {
       id: 'textos',
       label: 'Textos',
       formats: [
-        'TEXTO HORIZONTAL', 'TEXTO VERTICAL', 'MUX4 TXT', 'MOVIL TXT'
+        'TEXTO HORIZONTAL', 'TEXTO VERTICAL', 'MUX4 TXT', 'MOVIL TXT',
+        'COM TITULO H'
       ]
     },
     {
       id: 'dispositivos',
       label: 'Dispositivos',
       formats: [
-        '199 PUBLI', 'AD PAUSE', 'APPLE TV', 'FANART DEST.',
-        'IPLUS PUBLI', 'MOD DEST 1', 'MOD DEST 1 SIL', 'MOD DEST 2',
+        'AD PAUSE', 'APPLE TV', 'FANART DEST.',
+        'MOD DEST 1', 'MOD DEST 1 SIL', 'MOD DEST 2',
         'MOD DEST 2 SIL', 'MOD DEST 3', 'MOD DEST 3 SIL', 'MUX4 FONDO',
         'MOVIL MUX FONDO', 'WEB PUBLI',
         'WOW PUBLI', 'TÍTULO FICHA'
@@ -274,7 +340,6 @@ const State = {
         'Cabecera-Detalle-Escritorio', 'Cabecera-Detalle-Movil',
         'Carrusel-Vertical', 'Carrusel-Horizontal',
         'Cabecera-Slider-Escritorio', 'Cabecera-Slider-Movil',
-        'Cabecera-Slider-TT',
         'Cabecera-Slider-Mediano-Escritorio', 'Slider-Mediano-Escritorio',
         'Cabecera-Slider-Mediano-Movil', 'Slider-Mediano-Movil'
       ]
@@ -283,7 +348,7 @@ const State = {
       id: 'otros',
       label: 'Otros',
       formats: [
-        'AMAZON BG', 'AMAZON LOGO', 'PERFIL', 'SONY', 'XIAOMI BANNER'
+        'PERFIL', 'XIAOMI BANNER'
       ]
     }
   ],
