@@ -1202,7 +1202,31 @@ const AutoLayout = (() => {
       scaleModeDefault: 'crop',
     },
     'Cabecera-Slider-Mediano-Escritorio': {                    // 3840x1200 ar 3.20
-      focusZone:   { x: 0.000, y: 0.000, w: 1.000, h: 1.000 },
+      // UNA SOLA OPCIÓN: el safe deja un único sitio donde maquetar. Su banda
+      // recomendada va de x=2059 a x=3362 (medida de
+      // SF_Cabecera_Slider_Mediano_Escritorio.png) → centro 2710,5, y la guía
+      // vertical del diseñador está en 2701. Nueve píxeles entre dos fuentes
+      // independientes.
+      //
+      // Centrado en la guía, misma técnica que Cabecera-Slider-Escritorio: zona
+      // SIMÉTRICA respecto a la guía, alcanzando el borde más lejano (el
+      // izquierdo, a 2701 px):
+      //
+      //   semiancho = max(2701, 3840-2701) = 2701  →  ancho 5402
+      //   w = 5402 / 3840 = 1,4068      x = (2701-2701) / 3840 = 0
+      //   centro = (0 + 1,4068/2) x 3840 = 2701,06 ✓
+      //
+      // ⚠️ ESTO CAMBIA LA ESCALA, y el diseñador había dicho "la que pone ahora
+      // mismo". No hay forma de evitarlo: a sangre la imagen mide justo 3840 de
+      // ancho, así que moverla a la guía SIN ampliar abriría 781 px de hueco por
+      // la izquierda (un 20 % de la pieza). Ampliar x1,4068 es el precio de
+      // poner un punto descentrado en su sitio sin destapar el borde contrario.
+      // Si se prefiere congelar la escala y asumir el hueco: w: 1.000, x: 0.2034.
+      //
+      // El título NO existe en esta pieza: está en TEXT_VARIANT_NONE
+      // (formats.js), así que no se pinta ni se exporta. Tampoco entra en
+      // TITULO_FIJO, que es para los Slider que SÍ lo enseñan en el mockup.
+      focusZone:   { x: 0.000, y: 0.000, w: 1.4068, h: 1.000 },
       anchorPoint: { x: 0.50,  y: 0.22  },
       crop: { fill: 3.00, anchorFraction: 0.25 },
       fit:  { fill: 1.00, anchorFraction: 0.30 },
