@@ -1135,10 +1135,31 @@ const AutoLayout = (() => {
       // restringen algo (Modulo-Escritorio, Cabecera-Detalle-Escritorio) lo
       // hacen solo en ancho, porque ahí la imagen sí ocupa media pieza.
       //
+      // CENTRADO EN LA GUÍA DEL DISEÑADOR, no en la pieza (2026-11-03).
+      // La guía vertical de su proyecto está en x=2398 (+478 del centro), y
+      // coincide con el centro de la ventana segura medida del safe (2401,5):
+      // dos fuentes independientes, 3 px de diferencia.
+      //
+      // Para que el sujeto caiga sobre la guía Y la imagen siga llenando la
+      // pieza, la zona tiene que ser SIMÉTRICA respecto a la guía y alcanzar el
+      // borde más lejano — aquí el izquierdo, a 2398 px:
+      //
+      //   semiancho = max(2398, 3840-2398) = 2398  →  ancho 4796
+      //   w = 4796 / 3840 = 1,249        x = (2398-2398) / 3840 = 0
+      //   centro = (0 + 1,249/2) x 3840  = 2398,08 ✓
+      //
+      // Sí, w > 1: la zona SOBRESALE de la pieza por la derecha, y es correcto.
+      // Es lo que obliga al motor a ampliar lo justo para que no asome hueco
+      // por la izquierda. Coste: ~25 % más de zoom que a sangre (1,249x), y lo
+      // que sobresale del recorte focal se pierde por la derecha.
+      // La alternativa era no tocar la zona y pedir al diseñador que encuadrara
+      // el sujeto a la derecha en CADA campaña; se descartó porque el sitio del
+      // sujeto es una propiedad del FORMATO, no de la pieza de turno.
+      //
       // El título NO se maqueta aquí: este formato lo entrega como asset suelto
       // y va clavado por TITULO_FIJO, que ya tiene sus coordenadas. No se
       // exporta en la pieza; solo se pinta en el JPG de MOCKUP.
-      focusZone:   { x: 0.000, y: 0.000, w: 1.000, h: 1.000 },
+      focusZone:   { x: 0.000, y: 0.000, w: 1.249, h: 1.000 },
       anchorPoint: { x: 0.50,  y: 0.22  },
       crop: { fill: 1.50, anchorFraction: 0.25 },
       fit:  { fill: 1.00, anchorFraction: 0.30 },
