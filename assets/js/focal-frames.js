@@ -370,14 +370,18 @@ const FocalFrames = (() => {
     if (lz) lz.style.zIndex = _savedLienzoZ || '';
   }
 
-  // Habilita "Hecho" solo cuando las 4 bandas han sido definidas (visitadas).
+  // Habilita "Hecho" solo cuando TODAS las bandas han sido definidas (visitadas).
+  // El recuento sale de BANDS.length. El "4/4" estaba escrito a mano y se quedó
+  // mintiendo al añadir CUADRADO (2026-10-20), que las subió a cinco: decía
+  // "Listo: 4/4" habiendo visitado 5, y daba a entender que el encuadre estaba
+  // completo aunque una banda se hubiera quedado con la siembra por defecto.
   function _refreshDone() {
     const total = BANDS.length;
     const n = _visited.size;
     const ready = n >= total;
     if (_hintEl) {
       _hintEl.textContent = ready
-        ? 'Listo: 4/4 proporciones definidas.'
+        ? `Listo: ${total}/${total} proporciones definidas.`
         : `Pasa por las ${total} proporciones para terminar (${n}/${total}).`;
     }
     if (!_doneBtn) return;
