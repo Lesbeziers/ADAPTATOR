@@ -623,21 +623,20 @@ const Formats = (() => {
     'Cabecera-Detalle-Escritorio', 'Cabecera-Detalle-Movil',
     'Carrusel-Vertical', 'Carrusel-Horizontal',
     'Cabecera-Slider-Escritorio', 'Cabecera-Slider-Movil',
-    'Slider-Mediano-Escritorio',
     'Cabecera-Slider-Mediano-Movil', 'Slider-Mediano-Movil',
   ];
   // Formatos que NO reciben texto (sin variante): la familia FANART/BG, más
   // TODOS los anfitriones — en un lienzo de composición no se elige variante,
   // porque el lienzo ES la composición.
   //
-  // Y 'Cabecera-Slider-Mediano-Escritorio', que es de otra naturaleza: sí es
-  // una pieza, pero el diseñador decidió que NO lleva título de ninguna clase.
+  // Y los dos Mediano Escritorio, que son de otra naturaleza: sí son piezas,
+  // pero el diseñador decidió que NO llevan título de ninguna clase.
   // Sin variante, la composición no se pinta en el lienzo (canvas.js pide
   // _vc === 'COM_H') ni se exporta (_isLayerVisible, misma condición). No es
   // "apagar el ojo de la capa": es que ahí no existe.
   const TEXT_VARIANT_NONE = ['FANART', 'FANART MÓVIL', 'FANART DEST.', 'FANART MOD N', 'MOD N', 'PERFIL',
                              'MUX4 FONDO', 'MOVIL MUX FONDO',
-                             'Cabecera-Slider-Mediano-Escritorio',
+                             'Cabecera-Slider-Mediano-Escritorio', 'Slider-Mediano-Escritorio',
                              ...TEXT_HOST_FORMATS];
 
   function _defaultTextVariant(fid) {

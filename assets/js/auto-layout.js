@@ -1233,7 +1233,19 @@ const AutoLayout = (() => {
       scaleModeDefault: 'crop',
     },
     'Slider-Mediano-Escritorio': {                             // 3840x1200 ar 3.20
-      focusZone:   { x: 0.000, y: 0.000, w: 1.000, h: 1.000 },
+      // Gemelo de Cabecera-Slider-Mediano-Escritorio: misma medida, misma guía,
+      // y tampoco lleva título. COMPROBADO antes de copiar, no asumido: los dos
+      // checkers son archivos DISTINTOS (md5 distinto, cambia la rotulación)
+      // pero su zona recomendada cae exactamente igual, x 2059→3362, centro
+      // 2710,5. Por eso la guía del diseñador en 2701 vale para los dos.
+      //
+      //   semiancho = max(2701, 3840-2701) = 2701  →  ancho 5402
+      //   w = 5402 / 3840 = 1,4068      x = 0      centro = 2701,06
+      //
+      // Sin título: está en TEXT_VARIANT_NONE (formats.js), así que la
+      // composición no se pinta ni se exporta. Ver la nota larga del gemelo
+      // para el porqué de ampliar x1,4068 en vez de dejar la escala a sangre.
+      focusZone:   { x: 0.000, y: 0.000, w: 1.4068, h: 1.000 },
       anchorPoint: { x: 0.50,  y: 0.22  },
       crop: { fill: 3.00, anchorFraction: 0.25 },
       fit:  { fill: 1.00, anchorFraction: 0.30 },
