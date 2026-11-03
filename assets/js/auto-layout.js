@@ -1252,7 +1252,31 @@ const AutoLayout = (() => {
       scaleModeDefault: 'crop',
     },
     'Cabecera-Slider-Mediano-Movil': {                         // 1536x1536 ar 1.00
-      focusZone:   { x: 0.000, y: 0.000, w: 1.000, h: 1.000 },
+      // La imagen NO va a sangre: se coloca al lado, dentro de la franja válida
+      // del safe (y 433→1085 a todo el ancho). El recorte 1:1 de la banda
+      // CUADRADO vale tal cual — lo confirmó el diseñador.
+      //
+      // Sus medidas: escala 125 %, Y=490 del panel, y la X sale de su guía
+      // vertical en x=1089 (+321 del centro de 768). Sobre el retrato de
+      // referencia 1049×1487:
+      //
+      //   lado de zona = 1049 x 1,25         = 1311   (zona CUADRADA: la banda
+      //                                                es 1:1, así que cubrir
+      //                                                clava los dos ejes)
+      //   w = h = 1311 / 1536                = 0,8535
+      //   centro (1089, 768+490=1258)
+      //   x = (1089 - 655,5) / 1536          = 0,2822
+      //   y = (1258 - 655,5) / 1536          = 0,3922
+      //
+      // ⚠️ SUPUESTO QUE HAY QUE VIGILAR: el motor centra el RECORTE FOCAL en la
+      // zona, no la caja de la imagen. La X es inequívoca (la guía marca dónde
+      // va el recorte), pero la Y viene del panel, que es centro de CAJA. Las
+      // dos coinciden solo si el cuadrado focal está centrado verticalmente en
+      // la imagen. Si el diseñador encuadró la cara (parte alta), la Y saldrá
+      // desplazada y habrá que recalcular con su marco real.
+      //
+      // Sin título: está en TEXT_VARIANT_NONE (formats.js).
+      focusZone:   { x: 0.2822, y: 0.3922, w: 0.8535, h: 0.8535 },
       anchorPoint: { x: 0.50,  y: 0.22  },
       crop: { fill: 1.30, anchorFraction: 0.25 },
       fit:  { fill: 1.00, anchorFraction: 0.30 },
