@@ -1260,23 +1260,34 @@ const AutoLayout = (() => {
       // vertical en x=1089 (+321 del centro de 768). Sobre el retrato de
       // referencia 1049×1487:
       //
-      //   lado de zona = 1049 x 1,25         = 1311   (zona CUADRADA: la banda
-      //                                                es 1:1, así que cubrir
-      //                                                clava los dos ejes)
-      //   w = h = 1311 / 1536                = 0,8535
-      //   centro (1089, 768+490=1258)
-      //   x = (1089 - 655,5) / 1536          = 0,2822
-      //   y = (1258 - 655,5) / 1536          = 0,3922
+      // El motor centra el RECORTE FOCAL en la zona, NO la caja de la imagen.
+      // Esa distinción es la clave aquí y conviene no olvidarla:
       //
-      // ⚠️ SUPUESTO QUE HAY QUE VIGILAR: el motor centra el RECORTE FOCAL en la
-      // zona, no la caja de la imagen. La X es inequívoca (la guía marca dónde
-      // va el recorte), pero la Y viene del panel, que es centro de CAJA. Las
-      // dos coinciden solo si el cuadrado focal está centrado verticalmente en
-      // la imagen. Si el diseñador encuadró la cara (parte alta), la Y saldrá
-      // desplazada y habrá que recalcular con su marco real.
+      //  · En X da igual. El recorte de la banda CUADRADO solo cabe a todo el
+      //    ancho del retrato, así que su centro ES el centro de la imagen. Por
+      //    eso la guía vertical basta.
+      //  · En Y NO da igual. Ese recorte puede deslizarse, y el diseñador lo
+      //    dejó pegado arriba para coger la cara: {x:0, y:0, w:1, h:0.7381},
+      //    o sea 1049x1097,5 px con su centro al 0,3691 de la altura.
+      //
+      // Primera versión de esta entrada asumió el recorte centrado y la imagen
+      // salió 243 px baja — justo la diferencia: 1858,8 x (0,5 - 0,3691).
+      //
+      // Cuenta buena, con las dos guías del diseñador (1088, 1254) y 125 %:
+      //
+      //   lado de zona = 1049 x 1,25 = 1311,25    (cuadrada; manda el ancho,
+      //     porque 1311,25/1049 = 1,250 > 1311,25/1097,5 = 1,195)
+      //   w = h = 1311,25 / 1536     = 0,8537
+      //   zonaX = 1088                            → x = (1088-655,6)/1536 = 0,2815
+      //   zonaY = 1254 - 1858,8 x (0,5 - 0,3691)
+      //         = 1254 - 243,3 = 1010,7           → y = (1010,7-655,6)/1536 = 0,2312
+      //
+      // Lo que queda clavado es que el RECORTE caiga con su centro en y≈1011.
+      // Si en otra campaña se encuadra la cara más alta o más baja, el sujeto
+      // seguirá ahí y será la caja la que se mueva — que es lo correcto.
       //
       // Sin título: está en TEXT_VARIANT_NONE (formats.js).
-      focusZone:   { x: 0.2822, y: 0.3922, w: 0.8535, h: 0.8535 },
+      focusZone:   { x: 0.2815, y: 0.2312, w: 0.8537, h: 0.8537 },
       anchorPoint: { x: 0.50,  y: 0.22  },
       crop: { fill: 1.30, anchorFraction: 0.25 },
       fit:  { fill: 1.00, anchorFraction: 0.30 },
