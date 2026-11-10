@@ -1138,31 +1138,39 @@ const AutoLayout = (() => {
       // móvil (textos y CTA), así que no es un hueco, es sitio reservado.
       //
       // Zona despejada de SU colocación, no estimada. Dio escala 200 %, X=0 e
-      // Y=-214 sobre el retrato de referencia (1049x1487):
+      // Y=-214 sobre el retrato de referencia (1049x1487).
       //
-      //   dibujado = 1049x2 por 1487x2        = 2098 x 2974
-      //   w = 2098 / 2160 = 0,9713      h = 2974 / 3840 = 0,7745
-      //   centro (1080, 1706) → x = 31/2160 = 0,0144   y = 219/3840 = 0,0570
+      // ⚠️ LA ZONA ES LA CAJA QUE LLENA EL RECORTE FOCAL, NO LA IMAGEN. Es la
+      // distinción que más caro se paga en esta tabla. El recorte VERTICAL del
+      // diseñador no es a todo el ancho: {x: 0.0980, w: 0.8039} → 843,3 px de
+      // los 1049 naturales, y centrado en los dos ejes.
       //
-      // Contraste de que el marco focal es la imagen entera: el 258,2 % que
-      // daba el motor a sangre es exactamente 3840/1487.
+      //   alto:  recorte = imagen (h: 1) → 1487 x 2 = 2974
+      //          h = 2974/3840 = 0,7745    y = 219/3840 = 0,0570  (centro 1706)
+      //   ancho: recorte al 200 % = 843,3 x 2 = 1686,7
+      //          w = 1686,7/2160 = 0,7809   x = (1080-843,3)/2160 = 0,1096
       //
-      // ⚠️ Al 200 % exacto la imagen mide 2098 de ancho en una pieza de 2160:
-      // quedan 31 px de fondo a cada lado. Es consecuencia de que 200 sea un
-      // número redondo, no una decisión de diseño. Para que llegue a los bordes
-      // bastaría w: 1.000 → 2160/1049 = 205,9 %. Pendiente de confirmar.
+      // La primera versión usó 2098 (= 1049x2), como si el recorte fuera la
+      // imagen entera. Medido: salía al 248,8 %, y de paso disparaba el margen
+      // superior mínimo, que bajaba la imagen 336 px (Y=122 en vez de -214).
+      //
+      // Consecuencia a tener presente: si se reencuadra recortando MÁS por los
+      // lados, la imagen se amplía para que el recorte siga llenando la caja.
+      // Es lo correcto —el sujeto conserva su tamaño en la pieza— pero implica
+      // que ese "200 %" no es una constante del formato, sino el valor que sale
+      // con este encuadre.
       //
       // DOS VARIANTES, misma zona movida en X (como Cabecera-Detalle-Movil):
       // centrada en la pieza, o centrada en la guía vertical del diseñador.
-      //   guía x=1556 (+476 del centro) → x = (1556-1049)/2160 = 0,2347
+      //   guía x=1556 (+476 del centro) → x = (1556-843,3)/2160 = 0,3299
       // La A es la que manda; cambiar el defecto es intercambiar las letras.
       variants: {
         A: { label: 'Imagen centrada',
-             focusZone: { x: 0.0144, y: 0.0570, w: 0.9713, h: 0.7745 } },
+             focusZone: { x: 0.1096, y: 0.0570, w: 0.7809, h: 0.7745 } },
         B: { label: 'Imagen a la derecha',
-             focusZone: { x: 0.2347, y: 0.0570, w: 0.9713, h: 0.7745 } },
+             focusZone: { x: 0.3299, y: 0.0570, w: 0.7809, h: 0.7745 } },
       },
-      focusZone:   { x: 0.0144, y: 0.0570, w: 0.9713, h: 0.7745 },   // = variante A
+      focusZone:   { x: 0.1096, y: 0.0570, w: 0.7809, h: 0.7745 },   // = variante A
       anchorPoint: { x: 0.50,  y: 0.22  },
       crop: { fill: 1.20, anchorFraction: 0.25 },
       fit:  { fill: 1.00, anchorFraction: 0.30 },
