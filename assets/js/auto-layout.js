@@ -94,7 +94,12 @@ const AutoLayout = (() => {
     // Se anota la banda de cada uno para poder seguir el avance por tandas.
     'Cabecera-Slider-Mediano-Movil': { img: { scale: 62, x: -193, y: 250 } },   // 1:1
     'Modulo-Movil':                  { img: { scale: 48, x: -401, y: 189 } },   // 1:1
-    // pendiente: Slider-Mediano-Movil (1:1), y el resto
+    'Slider-Mediano-Movil':          { img: { scale: 62, x: -525, y: 250 } },   // 1:1 ← BANDA 1:1 COMPLETA
+    // Nota: Slider-Mediano-Movil NO venía en la lista de ratios del equipo de
+    // diseño, y le asignamos 1:1 por ser gemelo del Cabecera. Que SÍ exista
+    // material 4500x4500 con marca para él lo confirma: fue un olvido al
+    // listar, no un formato retirado. Y los valores lo corroboran — misma
+    // escala (62 %) y misma Y (250) que su gemelo, solo cambia la X.
 
     // ── OTROS ──────────────────────────────────────────────
     // pendiente de medir
