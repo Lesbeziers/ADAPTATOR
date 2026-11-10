@@ -93,7 +93,8 @@ const AutoLayout = (() => {
     // al encaje automático, de modo que las tandas parciales nunca rompen nada.
     // Se anota la banda de cada uno para poder seguir el avance por tandas.
     'Cabecera-Slider-Mediano-Movil': { img: { scale: 62, x: -193, y: 250 } },   // 1:1
-    // pendiente: Modulo-Movil y Slider-Mediano-Movil (1:1), y el resto
+    'Modulo-Movil':                  { img: { scale: 48, x: -401, y: 189 } },   // 1:1
+    // pendiente: Slider-Mediano-Movil (1:1), y el resto
 
     // ── OTROS ──────────────────────────────────────────────
     // pendiente de medir
