@@ -100,6 +100,7 @@ const AutoLayout = (() => {
     // material 4500x4500 con marca para él lo confirma: fue un olvido al
     // listar, no un formato retirado. Y los valores lo corroboran — misma
     // escala (62 %) y misma Y (250) que su gemelo, solo cambia la X.
+    'Cabecera-Detalle-Movil':        { img: { scale: 111, x: -546, y: -330 } },  // 9:16
 
     // ── OTROS ──────────────────────────────────────────────
     // pendiente de medir
