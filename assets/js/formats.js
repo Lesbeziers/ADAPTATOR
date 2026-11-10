@@ -838,9 +838,14 @@ const Formats = (() => {
     const role = State.layerRoles?.[layerId];
     const isF  = FANART_FORMATS.includes(formatName);
     if (role === 'fanart') return isF;  // el fanart solo se ve en formatos FANART
-    if (isF && (role === 'subject' || role === 'background')) {
+    // Regla del diseñador: si llega un FANART, ESA imagen sustituye al montaje.
+    // `imagen_big` entra aquí por lo mismo que subject y background: en modo BIG
+    // la creatividad completa también queda tapada por el fanart. auto-layout.js
+    // ya lo daba por hecho al maquetar ("tapados por el fanart"), pero la
+    // visibilidad no lo contemplaba y la capa BIG se seguía PINTANDO encima.
+    if (isF && (role === 'subject' || role === 'background' || role === 'imagen_big')) {
       const hasFanart = State.layers.some(l => State.layerRoles?.[l.id] === 'fanart');
-      if (hasFanart) return false;      // subject/fondo tapados por el fanart
+      if (hasFanart) return false;      // subject / fondo / BIG tapados por el fanart
     }
     return null;                         // no aplica regla fanart
   }
