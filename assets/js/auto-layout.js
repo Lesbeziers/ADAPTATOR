@@ -108,6 +108,7 @@ const AutoLayout = (() => {
     // copiar-pegar: las dos piezas miden 1200x1800, así que misma forma y misma
     // colocación. Si algún día una de las dos cambia de tamaño, esto deja de
     // valer y hay que volver a medirla.
+    'CARTEL COM. V':                 { img: { scale:  86, x: -721, y: -185 } },  // 9:16
 
     // ── OTROS ──────────────────────────────────────────────
     // pendiente de medir
