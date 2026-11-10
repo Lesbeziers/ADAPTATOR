@@ -71,7 +71,8 @@ const AutoLayout = (() => {
     'MOD DEST 3':      { img: { scale: 35,   x: -168, y:  474 },
                          txt: { H: { scale: 12,   x: -108, y:   0 }, V: { scale:  46, x: -108, y:   0 } } },
     'MUX4 FONDO':      { img: { scale: 50,   x:  -20, y:  350 } },
-    'MOVIL MUX FONDO': { img: { scale: 84,   x: -655, y:  253 } },
+    'MOVIL MUX FONDO': { img: { scale: 86,   x: -712, y: -404 } },   // 9:16 · medido 2026-11-03,
+                                     // sustituye al provisional de la demo (84 / -655 / 253)
     'WEB PUBLI':       { img: { scale: 55,   x: -205, y:  698 },
                          txt: { H: { scale: 28,   x: -222, y: -23 }, V: { scaleX: 78, scaleY: 77, x: -250, y: -23 } } },
     'WOW PUBLI':       { img: { scale: 43,   x: -113, y:  590 },
@@ -113,6 +114,12 @@ const AutoLayout = (() => {
                                      // pequeña de la herramienta (386x548): por debajo del 12,2 %
                                      // (548/4500) el máster ya no llegaría a taparla.
     'Mosaico-Vertical':              { img: { scale:  40, x: -335, y:  -44 } },  // 9:16
+    // FANART MÓVIL lleva los mismos valores que MOVIL MUX FONDO. No es pereza:
+    // las dos piezas miden 1440x2986, y además aquí la imagen BIG solo actúa de
+    // RESPALDO. Los formatos FANART se alimentan de un asset propio con su rol;
+    // cuando ese fanart llega, fanartRoleVisibility oculta la BIG y manda el
+    // fanart. Esto es solo para que la pantalla no se quede vacía si no viene.
+    'FANART MÓVIL':                  { img: { scale:  86, x: -712, y: -404 } },  // 9:16 ← BANDA COMPLETA
 
     // ── OTROS ──────────────────────────────────────────────
     // pendiente de medir
