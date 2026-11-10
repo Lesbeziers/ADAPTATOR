@@ -102,6 +102,7 @@ const AutoLayout = (() => {
     // escala (62 %) y misma Y (250) que su gemelo, solo cambia la X.
     'Cabecera-Detalle-Movil':        { img: { scale: 111, x: -546, y: -330 } },  // 9:16
     'Cabecera-Slider-Movil':         { img: { scale: 111, x: -432, y: -368 } },  // 9:16
+    'CARÁTULA V':                    { img: { scale:  48, x: -402, y:  -99 } },  // 9:16
 
     // ── OTROS ──────────────────────────────────────────────
     // pendiente de medir
