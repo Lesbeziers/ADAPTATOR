@@ -103,6 +103,11 @@ const AutoLayout = (() => {
     'Cabecera-Detalle-Movil':        { img: { scale: 111, x: -546, y: -330 } },  // 9:16
     'Cabecera-Slider-Movil':         { img: { scale: 111, x: -432, y: -368 } },  // 9:16
     'CARÁTULA V':                    { img: { scale:  48, x: -402, y:  -99 } },  // 9:16
+    'Carrusel-Vertical':             { img: { scale:  48, x: -402, y:  -99 } },  // 9:16 — idénticos
+    // CARÁTULA V y Carrusel-Vertical comparten los tres valores. No es un
+    // copiar-pegar: las dos piezas miden 1200x1800, así que misma forma y misma
+    // colocación. Si algún día una de las dos cambia de tamaño, esto deja de
+    // valer y hay que volver a medirla.
 
     // ── OTROS ──────────────────────────────────────────────
     // pendiente de medir
