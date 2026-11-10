@@ -109,6 +109,9 @@ const AutoLayout = (() => {
     // colocación. Si algún día una de las dos cambia de tamaño, esto deja de
     // valer y hay que volver a medirla.
     'CARTEL COM. V':                 { img: { scale:  86, x: -721, y: -185 } },  // 9:16
+    'DEST. DOBLE 4':                 { img: { scale:  16, x: -136, y:  -46 } },  // 9:16 — la pieza más
+                                     // pequeña de la herramienta (386x548): por debajo del 12,2 %
+                                     // (548/4500) el máster ya no llegaría a taparla.
 
     // ── OTROS ──────────────────────────────────────────────
     // pendiente de medir
