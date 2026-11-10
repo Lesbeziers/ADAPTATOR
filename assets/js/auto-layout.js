@@ -112,6 +112,7 @@ const AutoLayout = (() => {
     'DEST. DOBLE 4':                 { img: { scale:  16, x: -136, y:  -46 } },  // 9:16 — la pieza más
                                      // pequeña de la herramienta (386x548): por debajo del 12,2 %
                                      // (548/4500) el máster ya no llegaría a taparla.
+    'Mosaico-Vertical':              { img: { scale:  40, x: -335, y:  -44 } },  // 9:16
 
     // ── OTROS ──────────────────────────────────────────────
     // pendiente de medir
