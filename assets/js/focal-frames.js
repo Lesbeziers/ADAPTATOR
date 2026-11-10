@@ -16,69 +16,143 @@ const FocalFrames = (() => {
   // ── BANDAS ────────────────────────────────────────────────
   // Orden de pestañas en la UI, de más vertical a más apaisado.
   //
-  // CUADRADO se añadió al llegar la modalidad COMERCIAL. Antes no existía, y
-  // con razón: el único formato que rozaba el 1:1 era PERFIL, que va por otro
-  // camino (se excluye por maskCircle). Comercial trajo tres cuadrados de
-  // verdad —Modulo-Movil 1200×1200 y los dos Slider-Mediano-Movil 1536×1536—
-  // que sin esta banda caían a fallback genérico y se quedaban sin el encuadre
-  // que el diseñador había definido.
-  const BANDS = ['VERTICAL', 'CUADRADO', '16:9', 'PANO', 'ULTRA'];
+  // ⚠️ TAXONOMÍA NUEVA (2026-11-03). La definieron los diseñadores de formatos
+  // y sustituye a la anterior, que deducía la banda de la proporción del
+  // formato con umbrales puestos por nosotros:
+  //
+  //   antes:  VERTICAL 9:16 · CUADRADO 1:1 · 16:9 · PANO 3:1 · ULTRA 5:1
+  //   ahora:  9:16 · 1:1 · 16:9 · 21:9 · 32:9
+  //
+  // Las tres primeras son la misma proporción con otro nombre, así que 26 de
+  // los 35 formatos no cambian de encuadre. Lo que cambia de verdad es el
+  // extremo ancho: 3:1 y 5:1 pasan a 21:9 (2,33) y 32:9 (3,56), los dos más
+  // estrechos que lo que sustituyen.
+  //
+  // Y sobre todo cambia el MECANISMO: ya no se deduce, se asigna. Ver la tabla
+  // FORMAT_BAND más abajo y el porqué.
+  const BANDS = ['9:16', '1:1', '16:9', '21:9', '32:9'];
 
   // Proporción de referencia (w/h) del marco que el usuario encuadra por banda.
   // Es el AR representativo de la banda; cada formato concreto re-deriva su
   // colocación por cover-fit, así que un AR de formato algo distinto se absorbe.
   const BAND_REP_AR = {
-    'VERTICAL': 9 / 16,   // 0.5625
-    'CUADRADO': 1,        // 1.0
-    '16:9':     16 / 9,   // 1.7778
-    'PANO':     3 / 1,    // 3.0
-    'ULTRA':    5 / 1,    // 5.0
+    '9:16':  9 / 16,   // 0.5625
+    '1:1':   1,        // 1.0
+    '16:9': 16 / 9,    // 1.7778
+    '21:9': 21 / 9,    // 2.3333
+    '32:9': 32 / 9,    // 3.5556
   };
 
   // Etiqueta visible por banda
   const BAND_LABEL = {
-    'VERTICAL': 'VERTICAL · 9:16',
-    'CUADRADO': 'CUADRADO · 1:1',
-    '16:9':     'HORIZONTAL · 16:9',
-    'PANO':     'PANORÁMICO · 3:1',
-    'ULTRA':    'TIRA ULTRA · 5:1',
+    '9:16': 'VERTICAL · 9:16',
+    '1:1':  'CUADRADO · 1:1',
+    '16:9': 'HORIZONTAL · 16:9',
+    '21:9': 'PANORÁMICO · 21:9',
+    '32:9': 'TIRA ULTRA · 32:9',
   };
 
   // Alto de trabajo del marco fantasma en px (el ancho sale del AR de la banda)
   const FRAME_H = 900;
 
   // ── CLASIFICACIÓN: FORMATO → BANDA ────────────────────────
-  // Usa la proporción del área VISIBLE real (maskRect / safeArea /
-  // displayContext.contentW-H), no el lienzo bruto. Devuelve null cuando el
-  // formato no entra en ninguna banda editable (PERFIL, por su máscara
-  // circular) → el motor hace fallback a la colocación genérica.
+  //
+  // ASIGNACIÓN EXPLÍCITA, no deducida. Antes la banda salía de la proporción
+  // del formato con umbrales nuestros; ahora la decide el equipo de diseño,
+  // formato a formato. El cambio es deliberado y tiene un precio aceptado: al
+  // dar de alta un formato nuevo hay que asignarle banda a mano, porque ya no
+  // se deduce sola. El respaldo de abajo evita que se rompa mientras tanto.
+  //
+  // Los SIL NO están en la tabla: heredan la de su formato padre. No es un
+  // atajo, es que su ventana visible tiene la misma proporción que la pieza
+  // del padre — comprobado en los siete, coinciden hasta la segunda decimal.
+  // Así una sola línea sirve para los dos y no se pueden desincronizar.
+  //
+  // PERFIL queda fuera (máscara circular) y los seis maestros de texto también
+  // (no reciben imagen: su lienzo ES la composición).
+  const FORMAT_BAND = {
+    // ── 1:1 ──
+    'Cabecera-Slider-Mediano-Movil': '1:1',
+    'Modulo-Movil':                  '1:1',
+    'Slider-Mediano-Movil':          '1:1',   // no venía en su lista: gemelo del Cabecera
+
+    // ── 9:16 ──
+    'Cabecera-Detalle-Movil': '9:16',
+    'Cabecera-Slider-Movil':  '9:16',
+    'CARÁTULA V':             '9:16',
+    'Carrusel-Vertical':      '9:16',
+    'CARTEL COM. V':          '9:16',
+    'DEST. DOBLE 4':          '9:16',
+    'Mosaico-Vertical':       '9:16',
+    'MOVIL MUX FONDO':        '9:16',   // su "SmartPhone MUX Fondo"
+    'FANART MÓVIL':           '9:16',
+
+    // ── 16:9 ──
+    'AD PAUSE':                    '16:9',
+    'Cabecera-Detalle-Escritorio': '16:9',
+    'Cabecera-Slider-Escritorio':  '16:9',
+    'CARÁTULA H':                  '16:9',
+    'Carrusel-Horizontal':         '16:9',
+    'CARTEL COM. H':               '16:9',
+    'MOD DEST 3':                  '16:9',   // su "Mod Destacado doble 3"; no existe
+                                             // un Doble 3, y 1,78 encaja exacto aquí
+    'Modulo-Escritorio':           '16:9',
+    'MOD N':                       '16:9',
+    'Mosaico-Horizontal':          '16:9',
+    'MUX4 FONDO':                  '16:9',
+    'FANART':                      '16:9',
+    'FANART DEST.':                '16:9',
+    'FANART MOD N':                '16:9',   // su "FANART COLECCION", confirmado
+
+    // ── 21:9 ──
+    'DEST. DOBLE 1': '21:9',
+    'DEST. DOBLE 2': '21:9',   // ⚠ mide 1,47 — más estrecho que un 16:9. Aquí
+                               // conserva el 63 % del encuadre; en 16:9 sería
+                               // el 82 %. Se deja como lo especificaron, con la
+                               // duda planteada y pendiente de respuesta.
+    'MOD DEST 2':    '21:9',   // no venía en su lista (2,71; 86 % aquí, 76 % en 32:9)
+
+    // ── 32:9 ──
+    'WEB PUBLI':                         '32:9',
+    'MOD DEST 1':                        '32:9',   // ⚠ mide 5,53: conserva el 64 %
+    'WOW PUBLI':                         '32:9',   // ⚠ mide 4,96: conserva el 72 %
+    'XIAOMI BANNER':                     '32:9',   // el único que MEJORA: 84 % → 100 %
+    'Cabecera-Slider-Mediano-Escritorio':'32:9',
+    'Slider-Mediano-Escritorio':         '32:9',   // no venía en su lista: gemelo
+  };
+
+  // Formatos sin banda: no reciben imagen de sujeto que encuadrar.
+  const SIN_BANDA = new Set(['PERFIL', ...(typeof TEXT_HOST_FORMATS !== 'undefined' ? TEXT_HOST_FORMATS : [])]);
+
   function bandForFormat(fid) {
     const s = State.formatSizes?.[fid];
     if (!s) return null;
+    if (s.maskCircle) return null;                 // PERFIL → fuera de esta feature
+    if (SIN_BANDA.has(fid)) return null;
 
-    let w, h;
-    if (s.maskCircle) {
-      return null;                                  // PERFIL → fuera de esta feature
-    } else if (s.maskRect) {
-      w = s.maskRect.w; h = s.maskRect.h;           // SIL → ventana visible
-    } else if (s.safeArea) {
-      w = s.safeArea.w; h = s.safeArea.h;           // IPLUS → zona de seguridad
-    } else if (s.displayContext) {
-      const dc = s.displayContext;                  // WEB / AMAZON / AD PAUSE
-      w = dc.contentW || s.w;
-      h = dc.contentH || s.h;
-    } else {
-      w = s.w; h = s.h;
+    const directa = FORMAT_BAND[fid];
+    if (directa) return directa;
+
+    // Los SIL heredan del padre: misma proporción visible, una sola decisión.
+    if (s.maskRect) {
+      const padre = FORMAT_BAND[fid.replace(/ SIL$/, '')];
+      if (padre) return padre;
     }
-    if (!(w > 0) || !(h > 0)) return null;
 
+    // RESPALDO para un formato que aún no se haya asignado: la banda cuyo ratio
+    // menos deforme su área visible. Evita que un alta nueva se quede sin
+    // encuadre, pero NO sustituye a la asignación — hay que añadirlo arriba.
+    let w, h;
+    if (s.maskRect)           { w = s.maskRect.w;  h = s.maskRect.h; }
+    else if (s.safeArea)      { w = s.safeArea.w;  h = s.safeArea.h; }
+    else if (s.displayContext){ w = s.displayContext.contentW || s.w;
+                                h = s.displayContext.contentH || s.h; }
+    else                      { w = s.w; h = s.h; }
+    if (!(w > 0) || !(h > 0)) return null;
     const ar = w / h;
-    if (ar < 0.85) return 'VERTICAL';
-    if (ar < 1.2)  return 'CUADRADO';               // Modulo-Movil, Slider-Mediano-Movil…
-                                                    // (PERFIL ya salió antes por maskCircle)
-    if (ar < 2.2)  return '16:9';
-    if (ar < 3.9)  return 'PANO';
-    return 'ULTRA';
+    return BANDS.reduce((mejor, b) =>
+      Math.max(ar, BAND_REP_AR[b]) / Math.min(ar, BAND_REP_AR[b]) <
+      Math.max(ar, BAND_REP_AR[mejor]) / Math.min(ar, BAND_REP_AR[mejor]) ? b : mejor, BANDS[0]);
   }
 
   // ── ACCESO A FRAMES ───────────────────────────────────────

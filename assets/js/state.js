@@ -98,7 +98,11 @@ const State = {
   // usuario define UNA vez por banda de proporción. Cada formato deriva su
   // colocación inicial por cover-fit del rect de su banda. Solo se guardan
   // las bandas realmente encuadradas; ausencia → colocación genérica.
-  // { [layerId]: { VERTICAL:{x,y,w,h}, '16:9':{...}, PANO:{...}, ULTRA:{...} } }
+  // { [layerId]: { '9:16':{x,y,w,h}, '1:1':{...}, '16:9':{...}, '21:9':{...}, '32:9':{...} } }
+  // Las claves son las BANDAS de focal-frames.js, y CAMBIARON el 2026-11-03
+  // (antes: VERTICAL / CUADRADO / 16:9 / PANO / ULTRA). Un proyecto guardado
+  // antes de esa fecha trae claves que ya nadie lee → hay que reencuadrarlo.
+  // Es una consecuencia asumida al adoptar la taxonomía del equipo de diseño.
   focalFrames: {},
 
   // ── GUÍAS DE COMPOSICIÓN ─────────────────────────────────
