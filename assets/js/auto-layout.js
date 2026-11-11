@@ -135,6 +135,7 @@ const AutoLayout = (() => {
     'CARÁTULA H':                    { img: { scale:  44, x:    6, y:  176 } },  // 16:9
     'Carrusel-Horizontal':           { img: { scale:  18, x:    2, y:   70 } },  // 16:9
     'CARTEL COM. H':                 { img: { scale:  88, x:  -12, y:  352 } },  // 16:9
+    'Modulo-Escritorio':             { img: { scale:  64, x:   -2, y:  248 } },  // 16:9
 
     // ── OTROS ──────────────────────────────────────────────
     // pendiente de medir
