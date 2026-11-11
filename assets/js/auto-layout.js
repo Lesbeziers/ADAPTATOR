@@ -83,7 +83,8 @@ const AutoLayout = (() => {
                                      // estaba mal nombrado en los crops que pasaron. Ya no es una
                                      // deducción nuestra.
                          txt: { H: { scale: 12,   x: -108, y:   0 }, V: { scale:  46, x: -108, y:   0 } } },
-    'MUX4 FONDO':      { img: { scale: 50,   x:  -20, y:  350 } },
+    'MUX4 FONDO':      { img: { scale: 48,   x: -101, y: -111 } },   // 16:9 · medido 2026-11-04,
+                                     // sustituye al provisional de la demo (50 / -20 / 350)
     'MOVIL MUX FONDO': { img: { scale: 86,   x: -712, y: -404 } },   // 9:16 · medido 2026-11-03,
                                      // sustituye al provisional de la demo (84 / -655 / 253)
     'WEB PUBLI':       { img: { scale: 55,   x: -205, y:  698 },
