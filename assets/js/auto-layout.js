@@ -64,7 +64,13 @@ const AutoLayout = (() => {
     'AD PAUSE':        { img: { scale: 29,   x:   -2, y:  115 },   // 16:9 · medido 2026-11-04,
                                      // sustituye al provisional de la demo (36 / 0 / 302)
                          txt: { H: { scale: 39,   x: -240, y:   0 }, V: { scale: 100, x: -269, y:   0 } } },
-    'FANART DEST.':    { img: { scale: 100,  x: -442, y: 1134 } },
+    // Los tres FANART llevan de RESPALDO la misma composición que MUX4 FONDO.
+    // Solo se ve cuando NO llega un asset con rol fanart: si llega, manda él y se
+    // coloca a sangre con _applyBackground (eso ya funcionaba, no hay que calcular
+    // nada — el fanart siempre es 1920x1080 o 3840x2160, nunca una medida rara).
+    'FANART DEST.':    { img: { scale: 48,   x: -101, y: -111 } },   // = MUX4 FONDO, misma
+                                     // medida de pieza (1920x1080). Sustituye al
+                                     // provisional de la demo (100 / -442 / 1134),
     'MOD DEST 1':      { img: { scale: 36.6, x:   -2, y:  481 },
                          txt: { H: { scale: 30.4, x: -352, y:   0 }, V: { scale:  56, x: -352, y:   0 } } },
     'MOD DEST 2':      { img: { scale: 31,   x: -117, y:  392 },
@@ -97,9 +103,15 @@ const AutoLayout = (() => {
     // Los 4 maestros ocultan las capas normales: la imagen BIG no se dibuja ahí.
 
     // ── GRÁFICA OFICIAL ────────────────────────────────────
-    // pendiente de medir
+    // FANART mide 3840x2160, el DOBLE que MUX4 FONDO. Copiar sus cifras tal cual
+    // dejaría el máster a 2160 px de ancho sobre una pieza de 3840: media pieza
+    // destapada. Se duplican las tres, que da la MISMA composición relativa.
+    'FANART':          { img: { scale: 96,   x: -202, y: -222 } },   // = MUX4 FONDO x2
+    // pendiente: las dos CARÁTULA y los dos CARTEL COM. ya están en COMERCIAL/aquí
 
     // ── MÓDULOS DOBLES + N ─────────────────────────────────
+    'FANART MOD N':    { img: { scale: 48,   x: -101, y: -111 } },   // = MUX4 FONDO, misma
+                                     // medida de pieza (1920x1080)
     'MOD N':           { img: { scale:  9,   x:   -3, y:   22 } },   // 16:9
     // Esta entrada SOLO se usa en modo BIG. Con tres imágenes, MOD N se maqueta
     // por su camino propio (_applyModN) y aquí no se mira nunca. Ver formats.js.
