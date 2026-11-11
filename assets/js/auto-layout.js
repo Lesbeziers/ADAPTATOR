@@ -108,7 +108,10 @@ const AutoLayout = (() => {
     'WEB PUBLI':       { img: { scale: 45,   x:    0, y:  149 },   // 32:9 · medido 2026-11-04,
                                      // sustituye al provisional de la demo (55 / -205 / 698)
                          txt: { H: { scale: 28,   x: -222, y: -23 }, V: { scaleX: 78, scaleY: 77, x: -250, y: -23 } } },
-    'WOW PUBLI':       { img: { scale: 43,   x: -113, y:  590 },
+    'WOW PUBLI':       { img: { scale: 29,   x:   -4, y:  115 },   // 32:9 · medido 2026-11-04,
+                                     // sustituye al provisional de la demo (43 / -113 / 590).
+                                     // Casi calcado a AD PAUSE (29 / -2 / 115): las dos piezas
+                                     // miden 1280 de ancho y la escala la manda el ancho.
                          txt: { H: { scale: 26.5, x: -199, y:   0 }, V: { scale:  60, x: -275, y:   0 } } },
     // TÍTULO FICHA no entra: es maestro de texto, no muestra la imagen BIG.
 
