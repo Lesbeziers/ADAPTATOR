@@ -1563,6 +1563,34 @@ const AutoLayout = (() => {
         const val = selects[l.id].value;
         roles[l.id] = val || null;
       });
+
+      // AVISO ANTE UN CAMBIO DE SISTEMA SIN QUERER.
+      //
+      // Los dos sistemas son excluyentes POR DEFINICIÓN y se elige al empezar.
+      // Eso no se valida ni se bloquea, y está bien así. Añadir capas sueltas
+      // después de una IMAGEN BIG tampoco es mezclar: es el caso previsto y
+      // soportado (un humo sobre negro, por ejemplo).
+      //
+      // Lo único que puede fallar por descuido es asignar IMAGEN BIG en un
+      // proyecto YA maquetado a la multi-asset: en cuanto existe esa capa se
+      // ocultan 9 formatos y la colocación pasa a gobernarla BIG_LAYOUT, sin
+      // preguntar. Con un único usuario que conoce la regla daba igual; ahora
+      // lo abre más gente, así que conviene que no ocurra sin enterarse.
+      //
+      // No se bloquea —a veces se querrá a propósito— y al cancelar NO se
+      // cierra la modal, para poder corregir el rol sin repetir la importación.
+      const _vieneBig = Object.values(roles).includes('imagen_big');
+      const _yaMulti  = State.layers.some(l =>
+        !imageLayers.includes(l) &&
+        (State.layerRoles?.[l.id] === 'background' || State.layerRoles?.[l.id] === 'subject'));
+      if (_vieneBig && _yaMulti && !confirm(
+            'Este proyecto está maquetado con el sistema Multi-Asset.\n\n' +
+            'Al asignar el rol IMAGEN BIG se cambia al sistema BIG: se ocultarán 9 formatos ' +
+            '(los 7 SIL, PERFIL y MOD N) y la colocación pasará a gobernarse por la tabla BIG.\n\n' +
+            '¿Continuar?')) {
+        return;
+      }
+
       overlay.remove();
       onConfirm(roles);
     });
