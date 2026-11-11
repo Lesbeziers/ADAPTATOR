@@ -61,7 +61,8 @@ const AutoLayout = (() => {
     // Los tres sin `txt` (FANART DEST., MUX4 FONDO, MOVIL MUX FONDO) no llevan
     // texto por diseño: el suyo viaja en otro asset y se edita en la modalidad
     // TEXTOS. No es que falte medirlos.
-    'AD PAUSE':        { img: { scale: 36,   x:    0, y:  302 },
+    'AD PAUSE':        { img: { scale: 29,   x:   -2, y:  115 },   // 16:9 · medido 2026-11-04,
+                                     // sustituye al provisional de la demo (36 / 0 / 302)
                          txt: { H: { scale: 39,   x: -240, y:   0 }, V: { scale: 100, x: -269, y:   0 } } },
     'FANART DEST.':    { img: { scale: 100,  x: -442, y: 1134 } },
     'MOD DEST 1':      { img: { scale: 36.6, x:   -2, y:  481 },
