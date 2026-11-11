@@ -79,6 +79,9 @@ const AutoLayout = (() => {
                                      // esta pieza, 0,07 % de desvío, y los dos ejes dan la misma
                                      // escala (11,903 % por ancho, 11,911 % por alto). El 12 %
                                      // medido lo confirma.
+                                     // ✅ Y lo confirmó el propio equipo de diseño el 2026-11-04:
+                                     // estaba mal nombrado en los crops que pasaron. Ya no es una
+                                     // deducción nuestra.
                          txt: { H: { scale: 12,   x: -108, y:   0 }, V: { scale:  46, x: -108, y:   0 } } },
     'MUX4 FONDO':      { img: { scale: 50,   x:  -20, y:  350 } },
     'MOVIL MUX FONDO': { img: { scale: 86,   x: -712, y: -404 } },   // 9:16 · medido 2026-11-03,

@@ -94,8 +94,10 @@ const FocalFrames = (() => {
     'CARÁTULA H':                  '16:9',
     'Carrusel-Horizontal':         '16:9',
     'CARTEL COM. H':               '16:9',
-    'MOD DEST 3':                  '16:9',   // su "Mod Destacado doble 3"; no existe
-                                             // un Doble 3, y 1,78 encaja exacto aquí
+    'MOD DEST 3':                  '16:9',   // en su lista venía como "Mod Destacado
+                                             // doble 3". CONFIRMADO por el equipo de
+                                             // diseño (2026-11-04): estaba mal nombrado,
+                                             // no existe un Doble 3. Es este.
     'Modulo-Escritorio':           '16:9',
     'MOD N':                       '16:9',
     'Mosaico-Horizontal':          '16:9',
