@@ -69,7 +69,16 @@ const AutoLayout = (() => {
                          txt: { H: { scale: 30.4, x: -352, y:   0 }, V: { scale:  56, x: -352, y:   0 } } },
     'MOD DEST 2':      { img: { scale: 31,   x: -117, y:  392 },
                          txt: { H: { scale: 19.2, x: -170, y:   0 }, V: { scaleX: 54, scaleY: 55, x: -193, y: 0 } } },
-    'MOD DEST 3':      { img: { scale: 35,   x: -168, y:  474 },
+    'MOD DEST 3':      { img: { scale: 12,   x:   -2, y:   47 },   // 16:9 · medido 2026-11-04,
+                                     // sustituye al provisional de la demo (35 / -168 / 474).
+                                     // Es el formato que el equipo de diseño llamó "Mod Destacado
+                                     // doble 3" en su lista de ratios. NO existe un Destacado
+                                     // Doble 3 —esa familia va 1, 2 y 4— y nunca ha existido
+                                     // (comprobado en toda la historia del repo). La marca de su
+                                     // máster mide 4419x2485: proporción 1,7783 contra 1,7770 de
+                                     // esta pieza, 0,07 % de desvío, y los dos ejes dan la misma
+                                     // escala (11,903 % por ancho, 11,911 % por alto). El 12 %
+                                     // medido lo confirma.
                          txt: { H: { scale: 12,   x: -108, y:   0 }, V: { scale:  46, x: -108, y:   0 } } },
     'MUX4 FONDO':      { img: { scale: 50,   x:  -20, y:  350 } },
     'MOVIL MUX FONDO': { img: { scale: 86,   x: -712, y: -404 } },   // 9:16 · medido 2026-11-03,
