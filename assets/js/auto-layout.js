@@ -142,6 +142,7 @@ const AutoLayout = (() => {
     'Carrusel-Horizontal':           { img: { scale:  18, x:    2, y:   70 } },  // 16:9
     'CARTEL COM. H':                 { img: { scale:  88, x:  -12, y:  352 } },  // 16:9
     'Modulo-Escritorio':             { img: { scale:  64, x:   -2, y:  248 } },  // 16:9
+    'Mosaico-Horizontal':            { img: { scale:  29, x:  -15, y:  -23 } },  // 16:9
 
     // ── OTROS ──────────────────────────────────────────────
     // pendiente de medir
