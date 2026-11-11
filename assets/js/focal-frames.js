@@ -105,14 +105,21 @@ const FocalFrames = (() => {
     'FANART':                      '16:9',
     'FANART DEST.':                '16:9',
     'FANART MOD N':                '16:9',   // su "FANART COLECCION", confirmado
+    'DEST. DOBLE 2':               '16:9',   // mide 803x548 → 1,47. Estuvo en 21:9 por
+                                             // un error NUESTRO: tradujimos su "MOD
+                                             // Destacado Doble 2" por este formato cuando
+                                             // en realidad era MOD DEST 2. O sea que nadie
+                                             // decidió nunca meterlo en 21:9, donde además
+                                             // conservaba solo el 63 % del encuadre.
+                                             // Aquí conserva el 82 %. (2026-11-04)
 
     // ── 21:9 ──
     'DEST. DOBLE 1': '21:9',
-    'DEST. DOBLE 2': '21:9',   // ⚠ mide 1,47 — más estrecho que un 16:9. Aquí
-                               // conserva el 63 % del encuadre; en 16:9 sería
-                               // el 82 %. Se deja como lo especificaron, con la
-                               // duda planteada y pendiente de respuesta.
-    'MOD DEST 2':    '21:9',   // no venía en su lista (2,71; 86 % aquí, 76 % en 32:9)
+    'MOD DEST 2':    '21:9',   // En su lista venía como "MOD Destacado Doble 2",
+                               // mal nombrado igual que el Destacado 3. La marca
+                               // de su máster mide 4226x1558 → 2,713, que es esta
+                               // pieza (803/296) y no el Doble 2 (803/548 = 1,465).
+                               // Así que SÍ estaba en su lista, con el nombre del otro.
 
     // ── 32:9 ──
     'WEB PUBLI':                         '32:9',
