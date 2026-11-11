@@ -845,7 +845,10 @@ const Canvas = (() => {
     const mirrorBtn = document.getElementById('canvas-mirror-btn');
     const modnBtn   = document.getElementById('canvas-modn-btn');
     const variantWrapEl = document.getElementById('canvas-variant-wrap');
-    const isModN = fmt === 'MOD N';
+    // El editor de color de MOD N solo tiene sentido con sus capas propias,
+    // y en modo BIG no se fabrican: ahí es un formato normal.
+    const isModN = fmt === 'MOD N' &&
+      !(typeof Formats !== 'undefined' && Formats.isBigMode && Formats.isBigMode());
 
     if (controls) {
       controls.classList.toggle('visible', show);

@@ -822,6 +822,9 @@ const AutoLayout = (() => {
     'MOD N': {
       // Layout personalizado — la maquetación se hace en _applyModN()
       // (crea 8 capas auto-generadas con exclusiveFormat:'MOD N' + duplica el sujeto para blur).
+      // …salvo en modo BIG, donde se salta ese atajo y SÍ se usa esta config:
+      // por eso lleva focusZone, que en el camino tradicional no se mira nunca.
+      focusZone:   { x: 0.000, y: 0.000, w: 1.000, h: 1.000 },
       scaleModeDefault: 'crop',
       crop: { fill: 1.00, anchorFraction: 0.50 },
       fit:  { fill: 1.00, anchorFraction: 0.50 },
@@ -1536,8 +1539,22 @@ const AutoLayout = (() => {
       return;
     }
 
-    // MOD N: layout custom que crea capas auto-generadas
-    if (formatName === 'MOD N') {
+    // MOD N: layout custom que crea capas auto-generadas.
+    //
+    // SOLO fuera del modo BIG. Con tres imágenes, MOD N sigue siendo lo que
+    // era: su sólido, sus cinco degradados, el duplicado desenfocado del
+    // sujeto, el logo "Colección M+" y su capa de TÍTULO. Nada de eso cambia.
+    //
+    // Pero "Colección M+" es un TIPO DE MÓDULO, con colores y características
+    // propias, y una creatividad BIG ya viene resuelta de Photoshop. Así que
+    // en modo BIG esa parafernalia no aplica: el formato se comporta como
+    // cualquier otro y solo representa la imagen con su posición y su corte,
+    // gobernado por BIG_LAYOUT. Decisión del diseñador (2026-11-04).
+    //
+    // Al no entrar aquí, _ensureModNLayers no llega a fabricar esas capas, así
+    // que no quedan colgadas: no hay nada que ocultar ni que limpiar después.
+    const _bigMode = (typeof Formats !== 'undefined' && Formats.isBigMode) ? Formats.isBigMode() : false;
+    if (formatName === 'MOD N' && !_bigMode) {
       _applyModN(layers);
       return;
     }
