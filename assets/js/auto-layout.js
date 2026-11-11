@@ -96,7 +96,10 @@ const AutoLayout = (() => {
     // pendiente de medir
 
     // ── MÓDULOS DOBLES + N ─────────────────────────────────
-    // pendiente de medir
+    'MOD N':           { img: { scale:  9,   x:   -3, y:   22 } },   // 16:9
+    // Esta entrada SOLO se usa en modo BIG. Con tres imágenes, MOD N se maqueta
+    // por su camino propio (_applyModN) y aquí no se mira nunca. Ver formats.js.
+    // pendiente: los tres DEST. DOBLE
 
     // ── COMERCIAL ──────────────────────────────────────────
     // El diseñador mide POR BANDA de encuadre, no por modalidad, así que esta
