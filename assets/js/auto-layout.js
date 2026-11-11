@@ -63,7 +63,7 @@ const AutoLayout = (() => {
     // TEXTOS. No es que falte medirlos.
     'AD PAUSE':        { img: { scale: 29,   x:   -2, y:  115 },   // 16:9 · medido 2026-11-04,
                                      // sustituye al provisional de la demo (36 / 0 / 302)
-                         txt: { H: { scale: 39,   x: -240, y:   0 }, V: { scale: 100, x: -269, y:   0 } } },
+                       },
     // Los tres FANART llevan de RESPALDO la misma composición que MUX4 FONDO.
     // Solo se ve cuando NO llega un asset con rol fanart: si llega, manda él y se
     // coloca a sangre con _applyBackground (eso ya funcionaba, no hay que calcular
@@ -77,7 +77,7 @@ const AutoLayout = (() => {
                                      // mueve (36,6 → 37): solo cambia la Y, de 481 a 146.
                                      // Casi calcado a DEST. DOBLE 1 (37 / 2 / 147), y con razón:
                                      // comparten ancho (1636) y la escala la manda el ancho.
-                         txt: { H: { scale: 30.4, x: -352, y:   0 }, V: { scale:  56, x: -352, y:   0 } } },
+                       },
     'MOD DEST 2':      { img: { scale: 19,   x:   -7, y:   70 },   // 21:9 · medido 2026-11-04,
                                      // sustituye al provisional de la demo (31 / -117 / 392).
                                      // SEGUNDO caso del mismo lío de nombres: el equipo de diseño
@@ -86,7 +86,7 @@ const AutoLayout = (() => {
                                      // (803/296 = 2,713), no el Doble 2 (803/548 = 1,465).
                                      // OJO: la escala NO distingue entre los dos —comparten ancho
                                      // y la escala la manda el ancho—, solo la proporción.
-                         txt: { H: { scale: 19.2, x: -170, y:   0 }, V: { scaleX: 54, scaleY: 55, x: -193, y: 0 } } },
+                       },
     'MOD DEST 3':      { img: { scale: 12,   x:   -2, y:   47 },   // 16:9 · medido 2026-11-04,
                                      // sustituye al provisional de la demo (35 / -168 / 474).
                                      // Es el formato que el equipo de diseño llamó "Mod Destacado
@@ -100,19 +100,19 @@ const AutoLayout = (() => {
                                      // ✅ Y lo confirmó el propio equipo de diseño el 2026-11-04:
                                      // estaba mal nombrado en los crops que pasaron. Ya no es una
                                      // deducción nuestra.
-                         txt: { H: { scale: 12,   x: -108, y:   0 }, V: { scale:  46, x: -108, y:   0 } } },
+                       },
     'MUX4 FONDO':      { img: { scale: 48,   x: -101, y: -111 } },   // 16:9 · medido 2026-11-04,
                                      // sustituye al provisional de la demo (50 / -20 / 350)
     'MOVIL MUX FONDO': { img: { scale: 86,   x: -712, y: -404 } },   // 9:16 · medido 2026-11-03,
                                      // sustituye al provisional de la demo (84 / -655 / 253)
     'WEB PUBLI':       { img: { scale: 45,   x:    0, y:  149 },   // 32:9 · medido 2026-11-04,
                                      // sustituye al provisional de la demo (55 / -205 / 698)
-                         txt: { H: { scale: 28,   x: -222, y: -23 }, V: { scaleX: 78, scaleY: 77, x: -250, y: -23 } } },
+                       },
     'WOW PUBLI':       { img: { scale: 29,   x:   -4, y:  115 },   // 32:9 · medido 2026-11-04,
                                      // sustituye al provisional de la demo (43 / -113 / 590).
                                      // Casi calcado a AD PAUSE (29 / -2 / 115): las dos piezas
                                      // miden 1280 de ancho y la escala la manda el ancho.
-                         txt: { H: { scale: 26.5, x: -199, y:   0 }, V: { scale:  60, x: -275, y:   0 } } },
+                       },
     // TÍTULO FICHA no entra: es maestro de texto, no muestra la imagen BIG.
 
     // ── TEXTOS ─────────────────────────────────────────────
@@ -1574,6 +1574,42 @@ const AutoLayout = (() => {
     document.body.appendChild(overlay);
   }
 
+  // Devuelve la textZone de la variante cuyo TÍTULO va a la izquierda, o null
+  // si ese formato no ofrece ninguna.
+  //
+  // La intención está escrita en la etiqueta: "Imagen derecha / Texto
+  // izquierda". ⚠️ Hay que mirar la parte del TEXTO, no la de la imagen:
+  // "Imagen izquierda / Texto derecha" es la variante CONTRARIA, y buscar solo
+  // "izquierda" la daría por buena.
+  function _zonaTituloIzquierda(cfg) {
+    if (!cfg || !cfg.variants) return null;
+    for (const k of Object.keys(cfg.variants)) {
+      const v = cfg.variants[k];
+      if (v && v.textZone && /(?:texto|t[ií]tulo)\s+izquierda/i.test(v.label || '')) {
+        return v.textZone;
+      }
+    }
+    return null;
+  }
+
+  // ÚNICO sitio donde se decide la textZone de un formato.
+  //
+  // Existe porque la decisión estaba DUPLICADA: applyToFormat la resolvía por
+  // su cuenta y repositionTextComp —que corre después de toda la maquetación y
+  // re-encaja el título— la volvía a resolver con su propia línea, pisando a la
+  // primera. Mientras la zona izquierda y la de por defecto coincidieran no se
+  // notaba; solo lo destapó DEST. DOBLE 2, el único formato donde difieren
+  // (izquierda x:0.050 frente a base x:0.480).
+  function _resolverTextZone(formatName, cfg, variantKey) {
+    const bigMode = (typeof Formats !== 'undefined' && Formats.isBigMode)
+      ? Formats.isBigMode() : false;
+    if (bigMode) {
+      const izq = _zonaTituloIzquierda(cfg);
+      if (izq) return izq;
+    }
+    return cfg.variants?.[variantKey]?.textZone || cfg.textZone;
+  }
+
   // ── MOTOR DE MAQUETACIÓN ──────────────────────────────────
   function applyToFormat(formatName, roles, layers) {
     const cfg = FORMAT_CONFIG[formatName];
@@ -1637,7 +1673,21 @@ const AutoLayout = (() => {
     // Resolver textZone y focusZone según variante activa — sin mutar cfg
     const variantKey = _variant[formatName];
     const activeVariant = cfg.variants?.[variantKey];
-    const textZone  = activeVariant?.textZone  || cfg.textZone;
+    // EN MODO BIG EL TÍTULO VA SIEMPRE A LA IZQUIERDA. Las variantes pierden
+    // sentido aquí: describen repartos del tipo "Imagen derecha / Texto
+    // izquierda", y en BIG la imagen está clavada por BIG_LAYOUT, así que esa
+    // mitad de la etiqueta sería mentira — se elegiría "imagen izquierda" y la
+    // imagen no se movería.
+    //
+    // Se REAPROVECHA la zona ya medida para _TRAD en vez de inventar valores, y
+    // se sigue colocando POR ZONA: así el título se alinea por su píxel real
+    // (contentBounds) y no por el bounding del asset.
+    //
+    // Donde no hay variante "izquierda" se usa la de por defecto. Son 7
+    // formatos, y en 6 la pieza es vertical o cuadrada: ahí el eje
+    // izquierda/derecha no existe —el título ocupa el ancho y se ancla arriba o
+    // abajo—, así que no es que les falte la opción, es que no aplica.
+    const textZone  = _resolverTextZone(formatName, cfg, variantKey);
     const focusZone = activeVariant?.focusZone || cfg.focusZone;
 
     // FANART: si hay asset con rol 'fanart' y este es un formato FANART, se coloca SOLO el
@@ -2774,7 +2824,7 @@ const AutoLayout = (() => {
       if (!fmtSize) return;
       const mirrored   = _mirrored[formatName] || false;
       const variantKey = _variant[formatName] || 'A';
-      const textZone   = cfg.variants?.[variantKey]?.textZone || cfg.textZone;
+      const textZone   = _resolverTextZone(formatName, cfg, variantKey);
       if (!textZone) return;
       _applyTitle(formatName, comp, fmtSize.w, fmtSize.h, cfg, mirrored, textZone);
     });
