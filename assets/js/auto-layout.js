@@ -105,7 +105,8 @@ const AutoLayout = (() => {
                                      // sustituye al provisional de la demo (50 / -20 / 350)
     'MOVIL MUX FONDO': { img: { scale: 86,   x: -712, y: -404 } },   // 9:16 · medido 2026-11-03,
                                      // sustituye al provisional de la demo (84 / -655 / 253)
-    'WEB PUBLI':       { img: { scale: 55,   x: -205, y:  698 },
+    'WEB PUBLI':       { img: { scale: 45,   x:    0, y:  149 },   // 32:9 · medido 2026-11-04,
+                                     // sustituye al provisional de la demo (55 / -205 / 698)
                          txt: { H: { scale: 28,   x: -222, y: -23 }, V: { scaleX: 78, scaleY: 77, x: -250, y: -23 } } },
     'WOW PUBLI':       { img: { scale: 43,   x: -113, y:  590 },
                          txt: { H: { scale: 26.5, x: -199, y:   0 }, V: { scale:  60, x: -275, y:   0 } } },
