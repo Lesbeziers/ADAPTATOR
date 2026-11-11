@@ -184,7 +184,7 @@ const AutoLayout = (() => {
     // diseñador las encuadró por separado; no es un descuido.
 
     // ── OTROS ──────────────────────────────────────────────
-    // pendiente de medir
+    'XIAOMI BANNER':   { img: { scale: 31,   x:   -2, y:  105 } },   // 32:9
   };
 
   // Traduce una entrada de la tabla a los params que entiende el motor.
