@@ -1460,14 +1460,24 @@ const AutoLayout = (() => {
     modal.appendChild(subtitle);
 
     // Filas de capas
+    // ORDEN DEL DESPLEGABLE, decidido por el diseñador (2026-11-04).
+    //
+    // Antes IMAGEN BIG era la PRIMERA opción, que es el peor sitio para la
+    // única que cambia el sistema de maquetación entero: la más fácil de
+    // pulsar sin querer y pegada a las dos del día a día. El error real que se
+    // teme es justo ese — ir a marcar IMAGEN PRINCIPAL y marcar IMAGEN BIG.
+    //
+    // El orden lo manda este array, no la lógica: la preselección se hace por
+    // VALOR (`detectedRoles[...] === opt.value`), así que mover filas es
+    // seguro y sin rol detectado se sigue seleccionando NINGUNO.
     const TODOS_LOS_ROLES = [
-      { value: 'imagen_big', label: 'IMAGEN BIG' },
-      { value: 'background', label: 'FONDO' },
+      { value: null,         label: 'NINGUNO' },
       { value: 'subject',    label: 'IMAGEN PRINCIPAL' },
+      { value: 'imagen_big', label: 'IMAGEN BIG' },
       { value: 'title_h',    label: 'TÍTULO HORIZONTAL' },
       { value: 'title_v',    label: 'TÍTULO VERTICAL' },
+      { value: 'background', label: 'FONDO' },
       { value: 'fanart',     label: 'FANART' },
-      { value: null,         label: 'NINGUNO' },
     ];
 
     // ROLES ÚNICOS. Un rol describe lo que el asset ES, y de cada cosa solo hay
