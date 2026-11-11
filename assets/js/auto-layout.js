@@ -71,7 +71,12 @@ const AutoLayout = (() => {
     'FANART DEST.':    { img: { scale: 48,   x: -101, y: -111 } },   // = MUX4 FONDO, misma
                                      // medida de pieza (1920x1080). Sustituye al
                                      // provisional de la demo (100 / -442 / 1134),
-    'MOD DEST 1':      { img: { scale: 36.6, x:   -2, y:  481 },
+    'MOD DEST 1':      { img: { scale: 37,   x:   -2, y:  146 },   // 32:9 · medido 2026-11-04,
+                                     // sustituye al provisional de la demo (36,6 / -2 / 481).
+                                     // Único de los seis provisionales cuya ESCALA casi no se
+                                     // mueve (36,6 → 37): solo cambia la Y, de 481 a 146.
+                                     // Casi calcado a DEST. DOBLE 1 (37 / 2 / 147), y con razón:
+                                     // comparten ancho (1636) y la escala la manda el ancho.
                          txt: { H: { scale: 30.4, x: -352, y:   0 }, V: { scale:  56, x: -352, y:   0 } } },
     'MOD DEST 2':      { img: { scale: 19,   x:   -7, y:   70 },   // 21:9 · medido 2026-11-04,
                                      // sustituye al provisional de la demo (31 / -117 / 392).
