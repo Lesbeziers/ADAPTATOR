@@ -115,7 +115,8 @@ const AutoLayout = (() => {
     'MOD N':           { img: { scale:  9,   x:   -3, y:   22 } },   // 16:9
     // Esta entrada SOLO se usa en modo BIG. Con tres imágenes, MOD N se maqueta
     // por su camino propio (_applyModN) y aquí no se mira nunca. Ver formats.js.
-    // pendiente: los tres DEST. DOBLE
+    'DEST. DOBLE 1':   { img: { scale: 37,   x:    2, y:  147 } },   // 21:9
+    // pendiente: DEST. DOBLE 2 y DEST. DOBLE 4
 
     // ── COMERCIAL ──────────────────────────────────────────
     // El diseñador mide POR BANDA de encuadre, no por modalidad, así que esta
