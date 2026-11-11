@@ -399,8 +399,24 @@ const Layers = (() => {
         } else {
           fitScale = zoneH / contH;
         }
-        // No upscaling: si el asset ya cabe al 100%, usarlo tal cual
-        const scale = Math.min(fitScale, 1.0);
+        // ENCAJE COMPLETO, también hacia arriba.
+        //
+        // Aquí había un `Math.min(fitScale, 1.0)` con el comentario "no
+        // upscaling: si el asset ya cabe al 100%, usarlo tal cual". La
+        // intención era no emborronar un título pequeño ampliándolo, pero el
+        // efecto era peor: un título que llegara chico se quedaba flotando sin
+        // llenar su zona, y como de este maestro se HORNEA la composición, ese
+        // tamaño se arrastraba a todos los formatos que la consumen.
+        //
+        // Lo delató un título de 600x117 en MUX4 TXT: la zona mide 703x235 y
+        // el encaje pedía 117 %, pero el tope lo dejaba en 100 % — 600 px de
+        // 703, y de ahí un 31 % del ancho en MUX4 FONDO. Con títulos grandes no
+        // se notaba nunca, porque ahí el encaje siempre reduce.
+        //
+        // Contrapartida real: un título entregado pequeño se amplía y pierde
+        // nitidez. Pero eso es un problema del ASSET, no del encaje, y así se
+        // ve a simple vista en vez de disimularse con un título diminuto.
+        const scale = fitScale;
 
         const drawW = nw * scale;
         const drawH = nh * scale;
