@@ -123,6 +123,7 @@ const AutoLayout = (() => {
     'FANART MÓVIL':                  { img: { scale:  86, x: -712, y: -404 } },  // 9:16 ← BANDA COMPLETA
     'Cabecera-Detalle-Escritorio':   { img: { scale:  86, x:  -11, y: -129 } },  // 16:9
     'Cabecera-Slider-Escritorio':    { img: { scale: 100, x: -326, y:  -24 } },  // 16:9
+    'CARÁTULA H':                    { img: { scale:  44, x:    6, y:  176 } },  // 16:9
 
     // ── OTROS ──────────────────────────────────────────────
     // pendiente de medir
