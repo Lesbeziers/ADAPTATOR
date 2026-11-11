@@ -174,6 +174,10 @@ const AutoLayout = (() => {
     'Modulo-Escritorio':             { img: { scale:  64, x:   -2, y:  248 } },  // 16:9
     'Mosaico-Horizontal':            { img: { scale:  29, x:  -15, y:  -23 } },  // 16:9
     'Cabecera-Slider-Mediano-Escritorio': { img: { scale: 98, x: -7, y: 379 } }, // 32:9
+    'Slider-Mediano-Escritorio':          { img: { scale: 96, x: -10, y: 277 } },// 32:9
+    // Los dos Mediano Escritorio miden igual (3840x1200) pero NO comparten
+    // valores, a diferencia de los dos Mediano Móvil. Son piezas distintas y el
+    // diseñador las encuadró por separado; no es un descuido.
 
     // ── OTROS ──────────────────────────────────────────────
     // pendiente de medir
