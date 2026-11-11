@@ -1687,31 +1687,19 @@ const AutoLayout = (() => {
     if (!State.formatParams[formatName]) State.formatParams[formatName] = {};
 
     // Inicializar estado de escala, espejo y variante.
-    //
-    // CADA FORMATO ARRANCA EN SU PROPIO MODO (`scaleModeDefault`, que en casi
-    // todos es RECORTE). Tener encuadre focal ya no lo cambia.
-    //
-    // Aquí había una excepción: si el sujeto tenía encuadre en su banda, el
-    // formato arrancaba en ENCAJE. El razonamiento era defendible —encaje
-    // muestra la región enmarcada COMPLETA, y recorte hace zoom más allá del
-    // encuadre, cortando justo lo que el usuario enmarcó—. Pero deshacía el
-    // propósito del auto-crop: si el encuadre ya decide QUÉ parte se ve, que
-    // luego el formato lo encoja para que quepa entero es contradecir esa
-    // decisión. El diseñador lo zanjó: "tiene que arrancar en recorte, porque
-    // para eso hemos hecho los auto-recortes del principio".
-    //
-    // Dónde se notaba: cuando la zona del formato NO se parece a la banda.
-    // MOVIL MUX FONDO es el caso de libro — banda 9:16 (0,5625) contra una
-    // focusZone de 1440x1427 (1,01). En encaje la imagen se metía dentro del
-    // hueco visible de la pantalla en vez de llenarlo. Los SIL estaban rotos
-    // casi todos por lo mismo. Donde la zona y la banda coinciden, encaje y
-    // recorte dan lo mismo y el cambio no se nota.
-    //
-    // Contrapartida asumida: en los formatos cuya zona no coincida con su
-    // banda se perderá algo de lo enmarcado por los bordes. Se revisan uno a
-    // uno los que pierdan de más. El toggle sigue ahí para alejar a mano.
+    // Si el formato usará ENCUADRE FOCAL del sujeto, el modo natural es FIT
+    // (contain): muestra la región encuadrada COMPLETA. Cover (crop) haría zoom
+    // más allá del encuadre y recortaría justo lo que el usuario enmarcó. Los
+    // formatos SIN encuadre conservan su default original (crop). El toggle
+    // sigue disponible por si se quiere acercar.
     if (!_scaleMode[formatName]) {
-      _scaleMode[formatName] = cfg.scaleModeDefault;
+      let _focalDefault = false;
+      if (typeof FocalFrames !== 'undefined' && cfg.fit) {
+        const _b = FocalFrames.bandForFormat(formatName);
+        const _subj = _b ? (layers || []).find(l => roles[l.id] === 'subject') : null;
+        if (_subj && FocalFrames.getFrame(_subj.id, _b)) _focalDefault = true;
+      }
+      _scaleMode[formatName] = _focalDefault ? 'fit' : cfg.scaleModeDefault;
     }
     if (_mirrored[formatName] === undefined) _mirrored[formatName] = false;
     if (!_variant[formatName]) _variant[formatName] = 'A';
