@@ -122,6 +122,7 @@ const AutoLayout = (() => {
     // fanart. Esto es solo para que la pantalla no se quede vacía si no viene.
     'FANART MÓVIL':                  { img: { scale:  86, x: -712, y: -404 } },  // 9:16 ← BANDA COMPLETA
     'Cabecera-Detalle-Escritorio':   { img: { scale:  86, x:  -11, y: -129 } },  // 16:9
+    'Cabecera-Slider-Escritorio':    { img: { scale: 100, x: -326, y:  -24 } },  // 16:9
 
     // ── OTROS ──────────────────────────────────────────────
     // pendiente de medir
