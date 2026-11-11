@@ -73,7 +73,14 @@ const AutoLayout = (() => {
                                      // provisional de la demo (100 / -442 / 1134),
     'MOD DEST 1':      { img: { scale: 36.6, x:   -2, y:  481 },
                          txt: { H: { scale: 30.4, x: -352, y:   0 }, V: { scale:  56, x: -352, y:   0 } } },
-    'MOD DEST 2':      { img: { scale: 31,   x: -117, y:  392 },
+    'MOD DEST 2':      { img: { scale: 19,   x:   -7, y:   70 },   // 21:9 · medido 2026-11-04,
+                                     // sustituye al provisional de la demo (31 / -117 / 392).
+                                     // SEGUNDO caso del mismo lío de nombres: el equipo de diseño
+                                     // lo pasó como "MOD Destacado Doble 2". La marca implícita
+                                     // mide 4226x1558 → proporción 2,713, que es esta pieza
+                                     // (803/296 = 2,713), no el Doble 2 (803/548 = 1,465).
+                                     // OJO: la escala NO distingue entre los dos —comparten ancho
+                                     // y la escala la manda el ancho—, solo la proporción.
                          txt: { H: { scale: 19.2, x: -170, y:   0 }, V: { scaleX: 54, scaleY: 55, x: -193, y: 0 } } },
     'MOD DEST 3':      { img: { scale: 12,   x:   -2, y:   47 },   // 16:9 · medido 2026-11-04,
                                      // sustituye al provisional de la demo (35 / -168 / 474).
