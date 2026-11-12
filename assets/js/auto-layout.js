@@ -262,10 +262,22 @@ const AutoLayout = (() => {
     applyBigTitle(formatName);
   }
 
-  // Aire mínimo sobre el sujeto, en proporción del alto de la pieza. Ver
-  // _applySubjectFocal para el porqué. 5 % acordado con el diseñador como
-  // punto de partida, a subir o bajar según se vea en material real.
-  const MARGEN_SUPERIOR_MIN = 0.05;
+  // NO HAY MARGEN SUPERIOR MÍNIMO, Y ES DELIBERADO.
+  //
+  // Hubo una guarda que garantizaba un 5 % de aire sobre el sujeto, para que a
+  // una figura no se le pegase la cabeza al filo. Vivía en el segundo algoritmo
+  // de colocación (_applySubjectFocal) y se quedó sin uso al unificar los dos
+  // caminos en _applySubject.
+  //
+  // Medido antes de darla por necesaria: los formatos que colocan el sujeto a
+  // ras del borde superior son MOD DEST 1/2/3 SIL, DEST. DOBLE 1/2/4 SIL,
+  // MOD N SIL, FANART MÓVIL y PERFIL. O sea, las siluetas y el perfil, donde
+  // ir a ras del borde ES el diseño. Y dan el mismo 0 % con recorte focal y
+  // sin él: la guarda no tapaba ningún caso que el recorte destape.
+  //
+  // Reponerla movería hacia abajo esos diez formatos, todos validados en
+  // material real. Si algún día hace falta, va por formato (como el resto de
+  // la geometría de FORMAT_CONFIG), no como regla global.
 
   // ── CONFIGURACIÓN DE ZONAS POR FORMATO ───────────────────
   // textZone:    zona donde se coloca el TÍTULO (proporcional 0-1)
@@ -1093,9 +1105,16 @@ const AutoLayout = (() => {
       //
       // Las zonas NO son un número a ojo: salen de despejar la referencia del
       // diseñador. Él colocó el sujeto al 140 % en x=623, y=-393, con un recorte
-      // focal de w=0,8176 sobre un asset de 1049x1487. Como `_applySubjectFocal`
-      // hace que el RECORTE llene la focusZone, la zona que produce ese resultado
-      // mide 1201x2082 px (0,5559 x 0,5421) y se centra donde deba.
+      // focal de w=0,8176 sobre un asset de 1049x1487. La zona que produce ese
+      // resultado mide 1201x2082 px (0,5559 x 0,5421) y se centra donde deba.
+      //
+      // OJO AL DESPEJE SI SE REHACE: se hizo cuando el recorte focal tenía su
+      // propio algoritmo, que hacía cover = max(ancho, alto) e ignoraba el
+      // `fill` del formato. Aquí mandaba EL ANCHO (1201/857,7 = 1,400). Hoy hay
+      // un solo camino y escala por ALTO, aplicando el `fill` (ver _applySubject):
+      // el 140 % exacto ya no se reproduce por esa vía. No se ha tocado porque
+      // el recorte del diseñador era de alto completo (h=1), y con h=1 el
+      // cálculo coincide con el de siempre, que es el validado en material real.
       //
       // Lo que se guarda es la ZONA, no el 140 %. El porcentaje era un resultado,
       // no una regla: dependía del tamaño en píxeles de ESE recorte, y con otro
@@ -1379,14 +1398,12 @@ const AutoLayout = (() => {
       //   zonaY = 768 - 1487 x (0,5 - 0,3880)
       //         = 768 - 166,5 = 601,5          → y = (601,5-524,5)/1536 = 0,0501
       //
-      // margenSuperiorMin: 0 — AQUÍ LA REGLA GLOBAL ESTORBA. Al 100 % la imagen
-      // mide 1487 de alto en una pieza de 1536: el borde superior cae en y=24,5
-      // y el mínimo del 5 % (76,8) la empujaría 52,3 px hacia abajo, dejándola
-      // descentrada justo en el formato que pide estar centrado. La regla existe
-      // para que a un sujeto no se le pegue la cabeza al filo; cuando el diseño
-      // pide centrado explícito, manda el diseño.
+      // Este formato pide estar CENTRADO de verdad: al 100 % la imagen mide
+      // 1487 de alto en una pieza de 1536, así que el borde superior cae en
+      // y=24,5 y cualquier mínimo de aire arriba la descentraría. Llevaba una
+      // clave `margenSuperiorMin: 0` para desactivar la guarda global del 5 %;
+      // esa guarda ya no existe (ver arriba), así que la clave sobra.
       focusZone:   { x: 0.1585, y: 0.0501, w: 0.6829, h: 0.6829 },
-      margenSuperiorMin: 0,
       anchorPoint: { x: 0.50,  y: 0.22  },
       crop: { fill: 1.30, anchorFraction: 0.25 },
       fit:  { fill: 1.00, anchorFraction: 0.30 },
@@ -1924,74 +1941,6 @@ const AutoLayout = (() => {
     _setParams(formatName, layer.id, {
       x: Math.round(x),
       y: Math.round(y),
-      scaleX: Math.round(scaleX * 10) / 10,
-      scaleY: Math.round(scaleY * 10) / 10,
-      rotation: 0,
-    });
-  }
-
-  // Colocación del sujeto a partir de un RECTÁNGULO FOCAL definido por el
-  // usuario (espacio normalizado de la imagen). Hace cover-fit del rect sobre
-  // la focusZone del formato (no el frame completo): en formatos con texto la
-  // focusZone es una sub-zona deliberada; en full-bleed ≈ {0,0,1,1}. Una regla.
-  //   crop = cover (max)  ·  fit = contain (min)
-  // No usa contentBounds ni heurísticas anchorEdge/fill: el encuadre del
-  // usuario manda. Convención de salida idéntica a _applySubject (x,y = offset
-  // del centro de la imagen respecto al centro del formato).
-  function _applySubjectFocal(formatName, layer, W, H, fz, mirrored, fr, scaleMode) {
-    const nw = layer.naturalWidth  || 200;
-    const nh = layer.naturalHeight || 200;
-
-    const fzWpx = W * fz.w;
-    const fzHpx = H * fz.h;
-    const frWpx = nw * fr.w;
-    const frHpx = nh * fr.h;
-    if (!(frWpx > 0) || !(frHpx > 0)) return;
-
-    const s = (scaleMode === 'fit')
-      ? Math.min(fzWpx / frWpx, fzHpx / frHpx)   // contain: se ve el rect entero
-      : Math.max(fzWpx / frWpx, fzHpx / frHpx);  // cover: el rect llena la zona
-
-    const scaleX = s * 100;
-    const scaleY = s * 100;
-    const drawW = nw * s;
-    const drawH = nh * s;
-
-    // Centro del rect focal dentro de la imagen dibujada (mirror voltea X).
-    const frCxNorm = mirrored ? (1 - (fr.x + fr.w / 2)) : (fr.x + fr.w / 2);
-    const frCyNorm = fr.y + fr.h / 2;
-    // Centro de la focusZone en px del formato (mirror voltea X, igual que _applySubject).
-    const zoneCx = W * (mirrored ? (1 - (fz.x + fz.w / 2)) : (fz.x + fz.w / 2));
-    const zoneCy = H * (fz.y + fz.h / 2);
-
-    // Colocar la imagen para que el centro del rect focal caiga en el centro de la zona.
-    const cx = zoneCx - frCxNorm * drawW + drawW / 2;
-    let   cy = zoneCy - frCyNorm * drawH + drawH / 2;
-
-    // MARGEN SUPERIOR MÍNIMO. Cuando el recorte focal es más alto que la pieza
-    // en proporción, la altura es la que manda y el recorte ENCAJA EXACTO: su
-    // borde superior cae en y=0 y el sujeto queda pegado al borde. Con un
-    // recorte de persona eso deja la cabeza tocando el filo.
-    //
-    // Se corrige BAJANDO la imagen, no reescalándola: reescalar tiraría por la
-    // borda la precisión del encuadre que el diseñador eligió a mano.
-    //
-    // Y es un MÍNIMO GARANTIZADO, no un desplazamiento fijo: donde ya sobra
-    // aire arriba no se toca nada. Aplicarlo siempre habría movido sin motivo
-    // los formatos que ya estaban bien.
-    //
-    // Un formato puede rebajarlo o anularlo con `margenSuperiorMin` (fracción
-    // del alto; 0 = sin mínimo). Hace falta donde el diseño pide la imagen
-    // CENTRADA de verdad y el alto dibujado casi llena la pieza: ahí la regla
-    // y la petición se contradicen, y manda la petición explícita del formato.
-    const _cfgMargen = FORMAT_CONFIG[formatName]?.margenSuperiorMin;
-    const margenMin = H * (_cfgMargen !== undefined ? _cfgMargen : MARGEN_SUPERIOR_MIN);
-    const bordeArriba = cy - drawH / 2;
-    if (bordeArriba < margenMin) cy += margenMin - bordeArriba;
-
-    _setParams(formatName, layer.id, {
-      x: Math.round(cx - W / 2),
-      y: Math.round(cy - H / 2),
       scaleX: Math.round(scaleX * 10) / 10,
       scaleY: Math.round(scaleY * 10) / 10,
       rotation: 0,
