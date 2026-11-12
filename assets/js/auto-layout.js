@@ -1762,11 +1762,9 @@ const AutoLayout = (() => {
         // a la colocación genérica de siempre (feature puramente aditiva).
         const _band = (typeof FocalFrames !== 'undefined') ? FocalFrames.bandForFormat(formatName) : null;
         const _fr   = _band ? FocalFrames.getFrame(layer.id, _band) : null;
-        if (_fr) {
-          _applySubjectFocal(formatName, layer, W, H, focusZone, mirrored, _fr, scaleMode);
-        } else {
-          _applySubject(formatName, layer, W, H, cfg, scaleCfg, mirrored, focusZone);
-        }
+        // UN SOLO CAMINO. El recorte entra como un parámetro más, no como un
+        // algoritmo alternativo: ver el reparto de papeles en _applySubject.
+        _applySubject(formatName, layer, W, H, cfg, scaleCfg, mirrored, focusZone, _fr);
 
       } else if (role === 'title_h' || role === 'title_v' || role === 'title') {
         // Si textZone es null, el formato no tiene zona de título (ej. FANART DEST.)
@@ -1840,11 +1838,28 @@ const AutoLayout = (() => {
     });
   }
 
-  function _applySubject(formatName, layer, W, H, cfg, scaleCfg, mirrored, focusZone) {
+  // `fr` (opcional) es el RECORTE FOCAL del sujeto para la banda de este formato.
+  //
+  // REPARTO DE PAPELES, que es lo que se había roto: el recorte manda en QUÉ se
+  // ve; el `fill` de cada formato manda en CUÁNTO y DÓNDE. Antes existía un
+  // segundo camino (_applySubjectFocal) que, en cuanto había recorte, tiraba por
+  // la borda el `fill` afinado formato a formato y hacía un cover genérico sobre
+  // la focusZone. Resultado medido con el mismo sujeto: AD PAUSE pasaba del
+  // 145 % al 48 %. No era un ajuste fino, era otro algoritmo.
+  //
+  // La fusión: el recorte ocupa el lugar que antes ocupaba el asset ENTERO.
+  // Sin recorte la referencia es {0,0,1,1} y la fórmula queda idéntica a la de
+  // siempre —cero regresión—; con recorte, lo enmarcado recibe el tamaño y el
+  // anclaje afinados del formato y lo que sobra se sale por los bordes. Así, un
+  // recorte de pecho para arriba sale de pecho para arriba también en un ultra
+  // wide, que era justo lo que el diseñador pedía.
+  function _applySubject(formatName, layer, W, H, cfg, scaleCfg, mirrored, focusZone, fr) {
     const nw = layer.naturalWidth  || 200;
     const nh = layer.naturalHeight || 200;
     const fz  = focusZone || cfg.focusZone;
     const ap  = cfg.anchorPoint;
+    // Referencia de TAMAÑO: el recorte focal si lo hay, si no el asset entero.
+    const ref = fr || { x: 0, y: 0, w: 1, h: 1 };
 
     // fill > 1 → más grande que la focusZone (CROP)
     // fill = 1 → llena exactamente el alto de la focusZone (FIT)
@@ -1858,14 +1873,16 @@ const AutoLayout = (() => {
     }
 
     const fzH   = H * fz.h;
-    const drawH = fzH * fill;
+    // La REFERENCIA ocupa fzH*fill de alto. Con ref.h = 1 (sin recorte) esto es
+    // exactamente `fzH * fill`, el cálculo de toda la vida.
+    const drawH = (fzH * fill) / (ref.h > 0 ? ref.h : 1);
     const drawW = (nw / nh) * drawH;
     const scaleX = (drawW / nw) * 100;
     const scaleY = (drawH / nh) * 100;
 
-    // Punto de anclaje en el asset
-    // Si hay contentBounds, usar el centro del contenido real en lugar del centro del bounding box
-    const cb = layer.contentBounds;
+    // Punto de anclaje en el asset. Se ancla lo ENMARCADO si hay recorte; si no,
+    // el contenido real (contentBounds), que es el comportamiento de siempre.
+    const cb = fr || layer.contentBounds;
     const contentCxInDraw = cb ? (cb.x + cb.w / 2) * drawW : drawW / 2;
     const contentCyInDraw = cb ? (cb.y + cb.h / 2) * drawH : drawH / 2;
 
