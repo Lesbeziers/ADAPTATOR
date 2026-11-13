@@ -125,7 +125,6 @@ const State = {
   },
   formatSizes: {
     'AD PAUSE':         { w: 1280, h: 720,  maxMB: 0.1, displayContext: { w: 1920, h: 1080, contentX: 322, contentY: 98 } },
-    'APPLE TV':         { w: 908,  h: 512,  maxMB: 1    },
     'FANART DEST.':     { w: 1920, h: 1080, maxMB: 1.5  },
     'MOD DEST 1':       { w: 1636, h: 296,  maxMB: 1    },
     'MOD DEST 1 SIL':   { w: 1920, h: 400,  maxMB: 1,   maskRect: { x: 0, y: 53,  w: 1636, h: 296, r: 4 } },
@@ -207,7 +206,6 @@ const State = {
       { key: 'mockup',   label: 'ZONA DE SEGURIDAD', src: 'assets/img/checkers/AD_PAUSE_Checker.png',  contentArea: true },
       { key: 'pastilla', label: 'PASTILLA PUBLI',    src: 'assets/img/checkers/pasti_publi.png',       contextPos: { x: 875, y: 77 }, defaultVisible: true },
     ],
-    'APPLE TV':          [ { key: 'mockup', label: 'ZONA DE SEGURIDAD', src: 'assets/img/checkers/APPLETV_Check.png' } ],
     'FANART DEST.':      [ { key: 'mockup', label: 'MOCKUP', src: 'assets/img/checkers/FANART_DESTACADO_PUBLI_Check.png' } ],
     'MOD DEST 1':        [ { key: 'mockup', label: 'ZONA DE SEGURIDAD', src: 'assets/img/checkers/MOD_DESTACADO1_Check.png' } ],
     'MOD DEST 1 SIL':    [ { key: 'mockup', label: 'ZONA DE SEGURIDAD', src: 'assets/img/checkers/MOD_DESTACADO1_SIL_Check.png' } ],
@@ -307,7 +305,7 @@ const State = {
       id: 'dispositivos',
       label: 'Dispositivos',
       formats: [
-        'AD PAUSE', 'APPLE TV', 'FANART DEST.',
+        'AD PAUSE', 'FANART DEST.',
         'MOD DEST 1', 'MOD DEST 1 SIL', 'MOD DEST 2',
         'MOD DEST 2 SIL', 'MOD DEST 3', 'MOD DEST 3 SIL', 'MUX4 FONDO',
         'MOVIL MUX FONDO', 'WEB PUBLI',

@@ -2,12 +2,16 @@
 // FOCAL-FRAMES.JS — Encuadre focal del sujeto por banda de proporción
 // ============================================================
 //
-// El usuario define UNA vez por banda de proporción (4 bandas) qué región de
-// la imagen-sujeto es la importante, reutilizando el viewport y los gestos de
-// mover/escalar. Se guarda como un rectángulo focal normalizado (0–1) sobre la
-// imagen origen, en State.focalFrames[layerId][band]. Cada formato deriva su
-// colocación inicial por cover-fit del rect de su banda (ver auto-layout.js
-// _applySubjectFocal). Feature aditiva: sin rect → colocación genérica.
+// El usuario define UNA vez por banda de proporción (las de BANDS, abajo) qué
+// región de la imagen-sujeto es la importante, reutilizando el viewport y los
+// gestos de mover/escalar. Se guarda como un rectángulo focal normalizado (0–1)
+// sobre la imagen origen, en State.focalFrames[layerId][band].
+//
+// El rect NO es un algoritmo de colocación aparte: entra como REFERENCIA DE
+// TAMAÑO en la colocación normal (auto-layout.js, _applySubject), de modo que
+// lo enmarcado ocupa el sitio que ocuparía la figura entera. El recorte manda
+// en QUÉ se ve; el `fill` de cada formato, en CUÁNTO y DÓNDE.
+// Feature aditiva: sin rect → colocación genérica.
 //
 // PERFIL queda EXCLUIDO (se autocoloca con MediaPipe, se trabajará aparte).
 

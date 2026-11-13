@@ -130,14 +130,23 @@ const Formats = (() => {
   //    de hecho un recorte circular sí saldría de una imagen plana); se excluye
   //    aparte, por el motivo de abajo.
   //
-  //  · PERFIL y MOD N: maquetación ad-hoc que exige un sujeto recortado
+  //  · PERFIL: maquetación ad-hoc que exige un sujeto recortado
   //    (`layers.find(l => roles[l.id]==='subject'); if (!subject) return;`), y
-  //    cuya gracia —autocentrar la cara, o duplicar el sujeto y desenfocarlo de
-  //    fondo— no tiene sentido sobre una creatividad ya resuelta.
+  //    cuya gracia —autocentrar la cara— no tiene sentido sobre una creatividad
+  //    ya resuelta.
+  //
+  // MOD N ESTUVO AQUÍ y salió el 2026-11-04. Se excluyó por el mismo motivo que
+  // PERFIL, pero el equipo de diseño acabó mandando marca BIG para él. La
+  // solución no fue parchear su layout: en modo BIG se salta el atajo de
+  // _applyModN (ver auto-layout.js) y el formato se comporta como cualquier
+  // otro, gobernado por BIG_LAYOUT. Su parafernalia de "Colección M+"
+  // —degradados, sólido, blur, logo y capa de título— es propia de ese tipo de
+  // módulo y no aplica a una creatividad ya resuelta en Photoshop.
+  // El camino tradicional de tres imágenes NO cambia en nada.
   //
   // No hace falta filtrar además la exportación: solo se marca OK el formato
   // ACTIVO, y solo puede activarse un formato presente en esta rejilla.
-  const BIG_HIDDEN_FORMATS = ['PERFIL', 'MOD N'];
+  const BIG_HIDDEN_FORMATS = ['PERFIL'];
 
   function _isSilFormat(fid) {
     const s = State.formatSizes?.[fid];
@@ -838,9 +847,14 @@ const Formats = (() => {
     const role = State.layerRoles?.[layerId];
     const isF  = FANART_FORMATS.includes(formatName);
     if (role === 'fanart') return isF;  // el fanart solo se ve en formatos FANART
-    if (isF && (role === 'subject' || role === 'background')) {
+    // Regla del diseñador: si llega un FANART, ESA imagen sustituye al montaje.
+    // `imagen_big` entra aquí por lo mismo que subject y background: en modo BIG
+    // la creatividad completa también queda tapada por el fanart. auto-layout.js
+    // ya lo daba por hecho al maquetar ("tapados por el fanart"), pero la
+    // visibilidad no lo contemplaba y la capa BIG se seguía PINTANDO encima.
+    if (isF && (role === 'subject' || role === 'background' || role === 'imagen_big')) {
       const hasFanart = State.layers.some(l => State.layerRoles?.[l.id] === 'fanart');
-      if (hasFanart) return false;      // subject/fondo tapados por el fanart
+      if (hasFanart) return false;      // subject / fondo / BIG tapados por el fanart
     }
     return null;                         // no aplica regla fanart
   }

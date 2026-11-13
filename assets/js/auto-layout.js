@@ -61,39 +61,130 @@ const AutoLayout = (() => {
     // Los tres sin `txt` (FANART DEST., MUX4 FONDO, MOVIL MUX FONDO) no llevan
     // texto por diseño: el suyo viaja en otro asset y se edita en la modalidad
     // TEXTOS. No es que falte medirlos.
-    'AD PAUSE':        { img: { scale: 36,   x:    0, y:  302 },
-                         txt: { H: { scale: 39,   x: -240, y:   0 }, V: { scale: 100, x: -269, y:   0 } } },
-    'APPLE TV':        { img: { scale: 20.4, x:   -4, y:  152 },
-                         txt: { H: { scale: 24.1, x: -175, y:   0 }, V: { scale:  73, x: -205, y:   0 } } },
-    'FANART DEST.':    { img: { scale: 100,  x: -442, y: 1134 } },
-    'MOD DEST 1':      { img: { scale: 36.6, x:   -2, y:  481 },
-                         txt: { H: { scale: 30.4, x: -352, y:   0 }, V: { scale:  56, x: -352, y:   0 } } },
-    'MOD DEST 2':      { img: { scale: 31,   x: -117, y:  392 },
-                         txt: { H: { scale: 19.2, x: -170, y:   0 }, V: { scaleX: 54, scaleY: 55, x: -193, y: 0 } } },
-    'MOD DEST 3':      { img: { scale: 35,   x: -168, y:  474 },
-                         txt: { H: { scale: 12,   x: -108, y:   0 }, V: { scale:  46, x: -108, y:   0 } } },
-    'MUX4 FONDO':      { img: { scale: 50,   x:  -20, y:  350 } },
-    'MOVIL MUX FONDO': { img: { scale: 84,   x: -655, y:  253 } },
-    'WEB PUBLI':       { img: { scale: 55,   x: -205, y:  698 },
-                         txt: { H: { scale: 28,   x: -222, y: -23 }, V: { scaleX: 78, scaleY: 77, x: -250, y: -23 } } },
-    'WOW PUBLI':       { img: { scale: 43,   x: -113, y:  590 },
-                         txt: { H: { scale: 26.5, x: -199, y:   0 }, V: { scale:  60, x: -275, y:   0 } } },
+    'AD PAUSE':        { img: { scale: 29,   x:   -2, y:  115 },   // 16:9 · medido 2026-11-04,
+                                     // sustituye al provisional de la demo (36 / 0 / 302)
+                       },
+    // Los tres FANART llevan de RESPALDO la misma composición que MUX4 FONDO.
+    // Solo se ve cuando NO llega un asset con rol fanart: si llega, manda él y se
+    // coloca a sangre con _applyBackground (eso ya funcionaba, no hay que calcular
+    // nada — el fanart siempre es 1920x1080 o 3840x2160, nunca una medida rara).
+    'FANART DEST.':    { img: { scale: 48,   x: -101, y: -111 } },   // = MUX4 FONDO, misma
+                                     // medida de pieza (1920x1080). Sustituye al
+                                     // provisional de la demo (100 / -442 / 1134),
+    'MOD DEST 1':      { img: { scale: 37,   x:   -2, y:  146 },   // 32:9 · medido 2026-11-04,
+                                     // sustituye al provisional de la demo (36,6 / -2 / 481).
+                                     // Único de los seis provisionales cuya ESCALA casi no se
+                                     // mueve (36,6 → 37): solo cambia la Y, de 481 a 146.
+                                     // Casi calcado a DEST. DOBLE 1 (37 / 2 / 147), y con razón:
+                                     // comparten ancho (1636) y la escala la manda el ancho.
+                       },
+    'MOD DEST 2':      { img: { scale: 19,   x:   -7, y:   70 },   // 21:9 · medido 2026-11-04,
+                                     // sustituye al provisional de la demo (31 / -117 / 392).
+                                     // SEGUNDO caso del mismo lío de nombres: el equipo de diseño
+                                     // lo pasó como "MOD Destacado Doble 2". La marca implícita
+                                     // mide 4226x1558 → proporción 2,713, que es esta pieza
+                                     // (803/296 = 2,713), no el Doble 2 (803/548 = 1,465).
+                                     // OJO: la escala NO distingue entre los dos —comparten ancho
+                                     // y la escala la manda el ancho—, solo la proporción.
+                       },
+    'MOD DEST 3':      { img: { scale: 12,   x:   -2, y:   47 },   // 16:9 · medido 2026-11-04,
+                                     // sustituye al provisional de la demo (35 / -168 / 474).
+                                     // Es el formato que el equipo de diseño llamó "Mod Destacado
+                                     // doble 3" en su lista de ratios. NO existe un Destacado
+                                     // Doble 3 —esa familia va 1, 2 y 4— y nunca ha existido
+                                     // (comprobado en toda la historia del repo). La marca de su
+                                     // máster mide 4419x2485: proporción 1,7783 contra 1,7770 de
+                                     // esta pieza, 0,07 % de desvío, y los dos ejes dan la misma
+                                     // escala (11,903 % por ancho, 11,911 % por alto). El 12 %
+                                     // medido lo confirma.
+                                     // ✅ Y lo confirmó el propio equipo de diseño el 2026-11-04:
+                                     // estaba mal nombrado en los crops que pasaron. Ya no es una
+                                     // deducción nuestra.
+                       },
+    'MUX4 FONDO':      { img: { scale: 48,   x: -101, y: -111 } },   // 16:9 · medido 2026-11-04,
+                                     // sustituye al provisional de la demo (50 / -20 / 350)
+    'MOVIL MUX FONDO': { img: { scale: 86,   x: -712, y: -404 } },   // 9:16 · medido 2026-11-03,
+                                     // sustituye al provisional de la demo (84 / -655 / 253)
+    'WEB PUBLI':       { img: { scale: 45,   x:    0, y:  149 },   // 32:9 · medido 2026-11-04,
+                                     // sustituye al provisional de la demo (55 / -205 / 698)
+                       },
+    'WOW PUBLI':       { img: { scale: 29,   x:   -4, y:  115 },   // 32:9 · medido 2026-11-04,
+                                     // sustituye al provisional de la demo (43 / -113 / 590).
+                                     // Casi calcado a AD PAUSE (29 / -2 / 115): las dos piezas
+                                     // miden 1280 de ancho y la escala la manda el ancho.
+                       },
     // TÍTULO FICHA no entra: es maestro de texto, no muestra la imagen BIG.
 
     // ── TEXTOS ─────────────────────────────────────────────
     // Los 4 maestros ocultan las capas normales: la imagen BIG no se dibuja ahí.
 
     // ── GRÁFICA OFICIAL ────────────────────────────────────
-    // pendiente de medir
+    // FANART mide 3840x2160, el DOBLE que MUX4 FONDO. Copiar sus cifras tal cual
+    // dejaría el máster a 2160 px de ancho sobre una pieza de 3840: media pieza
+    // destapada. Se duplican las tres, que da la MISMA composición relativa.
+    'FANART':          { img: { scale: 96,   x: -202, y: -222 } },   // = MUX4 FONDO x2
+    // pendiente: las dos CARÁTULA y los dos CARTEL COM. ya están en COMERCIAL/aquí
 
     // ── MÓDULOS DOBLES + N ─────────────────────────────────
-    // pendiente de medir
+    'FANART MOD N':    { img: { scale: 48,   x: -101, y: -111 } },   // = MUX4 FONDO, misma
+                                     // medida de pieza (1920x1080)
+    'MOD N':           { img: { scale:  9,   x:   -3, y:   22 } },   // 16:9
+    // Esta entrada SOLO se usa en modo BIG. Con tres imágenes, MOD N se maqueta
+    // por su camino propio (_applyModN) y aquí no se mira nunca. Ver formats.js.
+    'DEST. DOBLE 1':   { img: { scale: 37,   x:    2, y:  147 } },   // 21:9
+    'DEST. DOBLE 2':   { img: { scale: 19,   x:    0, y:    0 } },   // 16:9 · centrado exacto.
+                                     // Marca implícita 4226x2884 → 1,465 = 803/548, o sea ESTA
+                                     // pieza. Contrasta con MOD DEST 2, cuya marca da 2,713 pese
+                                     // a llevar la misma escala: comparten ancho.
+    // DEST. DOBLE 4 ya está en la sección de arriba (banda 9:16)
 
     // ── COMERCIAL ──────────────────────────────────────────
-    // pendiente de medir
+    // El diseñador mide POR BANDA de encuadre, no por modalidad, así que esta
+    // sección se va llenando en desorden. No pasa nada: un formato ausente cae
+    // al encaje automático, de modo que las tandas parciales nunca rompen nada.
+    // Se anota la banda de cada uno para poder seguir el avance por tandas.
+    'Cabecera-Slider-Mediano-Movil': { img: { scale: 62, x: -193, y: 250 } },   // 1:1
+    'Modulo-Movil':                  { img: { scale: 48, x: -401, y: 189 } },   // 1:1
+    'Slider-Mediano-Movil':          { img: { scale: 62, x: -525, y: 250 } },   // 1:1 ← BANDA 1:1 COMPLETA
+    // Nota: Slider-Mediano-Movil NO venía en la lista de ratios del equipo de
+    // diseño, y le asignamos 1:1 por ser gemelo del Cabecera. Que SÍ exista
+    // material 4500x4500 con marca para él lo confirma: fue un olvido al
+    // listar, no un formato retirado. Y los valores lo corroboran — misma
+    // escala (62 %) y misma Y (250) que su gemelo, solo cambia la X.
+    'Cabecera-Detalle-Movil':        { img: { scale: 111, x: -546, y: -330 } },  // 9:16
+    'Cabecera-Slider-Movil':         { img: { scale: 111, x: -432, y: -368 } },  // 9:16
+    'CARÁTULA V':                    { img: { scale:  48, x: -402, y:  -99 } },  // 9:16
+    'Carrusel-Vertical':             { img: { scale:  48, x: -402, y:  -99 } },  // 9:16 — idénticos
+    // CARÁTULA V y Carrusel-Vertical comparten los tres valores. No es un
+    // copiar-pegar: las dos piezas miden 1200x1800, así que misma forma y misma
+    // colocación. Si algún día una de las dos cambia de tamaño, esto deja de
+    // valer y hay que volver a medirla.
+    'CARTEL COM. V':                 { img: { scale:  86, x: -721, y: -185 } },  // 9:16
+    'DEST. DOBLE 4':                 { img: { scale:  16, x: -136, y:  -46 } },  // 9:16 — la pieza más
+                                     // pequeña de la herramienta (386x548): por debajo del 12,2 %
+                                     // (548/4500) el máster ya no llegaría a taparla.
+    'Mosaico-Vertical':              { img: { scale:  40, x: -335, y:  -44 } },  // 9:16
+    // FANART MÓVIL lleva los mismos valores que MOVIL MUX FONDO. No es pereza:
+    // las dos piezas miden 1440x2986, y además aquí la imagen BIG solo actúa de
+    // RESPALDO. Los formatos FANART se alimentan de un asset propio con su rol;
+    // cuando ese fanart llega, fanartRoleVisibility oculta la BIG y manda el
+    // fanart. Esto es solo para que la pantalla no se quede vacía si no viene.
+    'FANART MÓVIL':                  { img: { scale:  86, x: -712, y: -404 } },  // 9:16 ← BANDA COMPLETA
+    'Cabecera-Detalle-Escritorio':   { img: { scale:  86, x:  -11, y: -129 } },  // 16:9
+    'Cabecera-Slider-Escritorio':    { img: { scale: 100, x: -326, y:  -24 } },  // 16:9
+    'CARÁTULA H':                    { img: { scale:  44, x:    6, y:  176 } },  // 16:9
+    'Carrusel-Horizontal':           { img: { scale:  18, x:    2, y:   70 } },  // 16:9
+    'CARTEL COM. H':                 { img: { scale:  88, x:  -12, y:  352 } },  // 16:9
+    'Modulo-Escritorio':             { img: { scale:  64, x:   -2, y:  248 } },  // 16:9
+    'Mosaico-Horizontal':            { img: { scale:  29, x:  -15, y:  -23 } },  // 16:9
+    'Cabecera-Slider-Mediano-Escritorio': { img: { scale: 98, x: -7, y: 379 } }, // 32:9
+    'Slider-Mediano-Escritorio':          { img: { scale: 96, x: -10, y: 277 } },// 32:9
+    // Los dos Mediano Escritorio miden igual (3840x1200) pero NO comparten
+    // valores, a diferencia de los dos Mediano Móvil. Son piezas distintas y el
+    // diseñador las encuadró por separado; no es un descuido.
 
     // ── OTROS ──────────────────────────────────────────────
-    // pendiente de medir
+    'XIAOMI BANNER':   { img: { scale: 31,   x:   -2, y:  105 } },   // 32:9
   };
 
   // Traduce una entrada de la tabla a los params que entiende el motor.
@@ -171,10 +262,22 @@ const AutoLayout = (() => {
     applyBigTitle(formatName);
   }
 
-  // Aire mínimo sobre el sujeto, en proporción del alto de la pieza. Ver
-  // _applySubjectFocal para el porqué. 5 % acordado con el diseñador como
-  // punto de partida, a subir o bajar según se vea en material real.
-  const MARGEN_SUPERIOR_MIN = 0.05;
+  // NO HAY MARGEN SUPERIOR MÍNIMO, Y ES DELIBERADO.
+  //
+  // Hubo una guarda que garantizaba un 5 % de aire sobre el sujeto, para que a
+  // una figura no se le pegase la cabeza al filo. Vivía en el segundo algoritmo
+  // de colocación (_applySubjectFocal) y se quedó sin uso al unificar los dos
+  // caminos en _applySubject.
+  //
+  // Medido antes de darla por necesaria: los formatos que colocan el sujeto a
+  // ras del borde superior son MOD DEST 1/2/3 SIL, DEST. DOBLE 1/2/4 SIL,
+  // MOD N SIL, FANART MÓVIL y PERFIL. O sea, las siluetas y el perfil, donde
+  // ir a ras del borde ES el diseño. Y dan el mismo 0 % con recorte focal y
+  // sin él: la guarda no tapaba ningún caso que el recorte destape.
+  //
+  // Reponerla movería hacia abajo esos diez formatos, todos validados en
+  // material real. Si algún día hace falta, va por formato (como el resto de
+  // la geometría de FORMAT_CONFIG), no como regla global.
 
   // ── CONFIGURACIÓN DE ZONAS POR FORMATO ───────────────────
   // textZone:    zona donde se coloca el TÍTULO (proporcional 0-1)
@@ -622,37 +725,6 @@ const AutoLayout = (() => {
       anchorEdge: 'top',
     },
 
-    'APPLE TV': {
-      variants: {
-        A: {
-          label: 'Imagen derecha / Texto izquierda',
-          textZone:  { x: 0.052, y: 0.203, w: 0.510, h: 0.438 },
-          focusZone: { x: 0.454, y: 0.000, w: 0.545, h: 0.998 },
-        },
-        B: {
-          label: 'Imagen izquierda / Texto derecha',
-          textZone:  { x: 0.438, y: 0.203, w: 0.510, h: 0.438 },
-          focusZone: { x: 0.001, y: 0.000, w: 0.545, h: 0.998 },
-        },
-        C: {
-          label: 'Centro / Título abajo',
-          textZone:  { x: 0.188, y: 0.582, w: 0.624, h: 0.340 },
-          focusZone: { x: 0.229, y: 0.000, w: 0.542, h: 0.999 },
-        },
-        D: {
-          label: 'Centro / Título arriba',
-          textZone:  { x: 0.188, y: 0.078, w: 0.624, h: 0.340 },
-          focusZone: { x: 0.229, y: 0.000, w: 0.542, h: 0.999 },
-        },
-      },
-      textZone:    { x: 0.052, y: 0.203, w: 0.510, h: 0.438 },
-      focusZone:   { x: 0.454, y: 0.000, w: 0.545, h: 0.998 },
-      anchorPoint: { x: 0.50,  y: 0.22  },
-      crop: { fill: 3.00, anchorFraction: 0.25 },
-      fit:  { fill: 1.00, anchorFraction: 0.30 },
-      scaleModeDefault: 'crop',
-      hasMirror: true,
-    },
     'WEB PUBLI': {
       // Fondo: cubre el formato completo
       // Sujeto: zona central x=0.256–0.742, alto completo
@@ -808,6 +880,9 @@ const AutoLayout = (() => {
     'MOD N': {
       // Layout personalizado — la maquetación se hace en _applyModN()
       // (crea 8 capas auto-generadas con exclusiveFormat:'MOD N' + duplica el sujeto para blur).
+      // …salvo en modo BIG, donde se salta ese atajo y SÍ se usa esta config:
+      // por eso lleva focusZone, que en el camino tradicional no se mira nunca.
+      focusZone:   { x: 0.000, y: 0.000, w: 1.000, h: 1.000 },
       scaleModeDefault: 'crop',
       crop: { fill: 1.00, anchorFraction: 0.50 },
       fit:  { fill: 1.00, anchorFraction: 0.50 },
@@ -1030,9 +1105,16 @@ const AutoLayout = (() => {
       //
       // Las zonas NO son un número a ojo: salen de despejar la referencia del
       // diseñador. Él colocó el sujeto al 140 % en x=623, y=-393, con un recorte
-      // focal de w=0,8176 sobre un asset de 1049x1487. Como `_applySubjectFocal`
-      // hace que el RECORTE llene la focusZone, la zona que produce ese resultado
-      // mide 1201x2082 px (0,5559 x 0,5421) y se centra donde deba.
+      // focal de w=0,8176 sobre un asset de 1049x1487. La zona que produce ese
+      // resultado mide 1201x2082 px (0,5559 x 0,5421) y se centra donde deba.
+      //
+      // OJO AL DESPEJE SI SE REHACE: se hizo cuando el recorte focal tenía su
+      // propio algoritmo, que hacía cover = max(ancho, alto) e ignoraba el
+      // `fill` del formato. Aquí mandaba EL ANCHO (1201/857,7 = 1,400). Hoy hay
+      // un solo camino y escala por ALTO, aplicando el `fill` (ver _applySubject):
+      // el 140 % exacto ya no se reproduce por esa vía. No se ha tocado porque
+      // el recorte del diseñador era de alto completo (h=1), y con h=1 el
+      // cálculo coincide con el de siempre, que es el validado en material real.
       //
       // Lo que se guarda es la ZONA, no el 140 %. El porcentaje era un resultado,
       // no una regla: dependía del tamaño en píxeles de ESE recorte, y con otro
@@ -1171,31 +1253,39 @@ const AutoLayout = (() => {
       // móvil (textos y CTA), así que no es un hueco, es sitio reservado.
       //
       // Zona despejada de SU colocación, no estimada. Dio escala 200 %, X=0 e
-      // Y=-214 sobre el retrato de referencia (1049x1487):
+      // Y=-214 sobre el retrato de referencia (1049x1487).
       //
-      //   dibujado = 1049x2 por 1487x2        = 2098 x 2974
-      //   w = 2098 / 2160 = 0,9713      h = 2974 / 3840 = 0,7745
-      //   centro (1080, 1706) → x = 31/2160 = 0,0144   y = 219/3840 = 0,0570
+      // ⚠️ LA ZONA ES LA CAJA QUE LLENA EL RECORTE FOCAL, NO LA IMAGEN. Es la
+      // distinción que más caro se paga en esta tabla. El recorte VERTICAL del
+      // diseñador no es a todo el ancho: {x: 0.0980, w: 0.8039} → 843,3 px de
+      // los 1049 naturales, y centrado en los dos ejes.
       //
-      // Contraste de que el marco focal es la imagen entera: el 258,2 % que
-      // daba el motor a sangre es exactamente 3840/1487.
+      //   alto:  recorte = imagen (h: 1) → 1487 x 2 = 2974
+      //          h = 2974/3840 = 0,7745    y = 219/3840 = 0,0570  (centro 1706)
+      //   ancho: recorte al 200 % = 843,3 x 2 = 1686,7
+      //          w = 1686,7/2160 = 0,7809   x = (1080-843,3)/2160 = 0,1096
       //
-      // ⚠️ Al 200 % exacto la imagen mide 2098 de ancho en una pieza de 2160:
-      // quedan 31 px de fondo a cada lado. Es consecuencia de que 200 sea un
-      // número redondo, no una decisión de diseño. Para que llegue a los bordes
-      // bastaría w: 1.000 → 2160/1049 = 205,9 %. Pendiente de confirmar.
+      // La primera versión usó 2098 (= 1049x2), como si el recorte fuera la
+      // imagen entera. Medido: salía al 248,8 %, y de paso disparaba el margen
+      // superior mínimo, que bajaba la imagen 336 px (Y=122 en vez de -214).
+      //
+      // Consecuencia a tener presente: si se reencuadra recortando MÁS por los
+      // lados, la imagen se amplía para que el recorte siga llenando la caja.
+      // Es lo correcto —el sujeto conserva su tamaño en la pieza— pero implica
+      // que ese "200 %" no es una constante del formato, sino el valor que sale
+      // con este encuadre.
       //
       // DOS VARIANTES, misma zona movida en X (como Cabecera-Detalle-Movil):
       // centrada en la pieza, o centrada en la guía vertical del diseñador.
-      //   guía x=1556 (+476 del centro) → x = (1556-1049)/2160 = 0,2347
+      //   guía x=1556 (+476 del centro) → x = (1556-843,3)/2160 = 0,3299
       // La A es la que manda; cambiar el defecto es intercambiar las letras.
       variants: {
         A: { label: 'Imagen centrada',
-             focusZone: { x: 0.0144, y: 0.0570, w: 0.9713, h: 0.7745 } },
+             focusZone: { x: 0.1096, y: 0.0570, w: 0.7809, h: 0.7745 } },
         B: { label: 'Imagen a la derecha',
-             focusZone: { x: 0.2347, y: 0.0570, w: 0.9713, h: 0.7745 } },
+             focusZone: { x: 0.3299, y: 0.0570, w: 0.7809, h: 0.7745 } },
       },
-      focusZone:   { x: 0.0144, y: 0.0570, w: 0.9713, h: 0.7745 },   // = variante A
+      focusZone:   { x: 0.1096, y: 0.0570, w: 0.7809, h: 0.7745 },   // = variante A
       anchorPoint: { x: 0.50,  y: 0.22  },
       crop: { fill: 1.20, anchorFraction: 0.25 },
       fit:  { fill: 1.00, anchorFraction: 0.30 },
@@ -1308,14 +1398,12 @@ const AutoLayout = (() => {
       //   zonaY = 768 - 1487 x (0,5 - 0,3880)
       //         = 768 - 166,5 = 601,5          → y = (601,5-524,5)/1536 = 0,0501
       //
-      // margenSuperiorMin: 0 — AQUÍ LA REGLA GLOBAL ESTORBA. Al 100 % la imagen
-      // mide 1487 de alto en una pieza de 1536: el borde superior cae en y=24,5
-      // y el mínimo del 5 % (76,8) la empujaría 52,3 px hacia abajo, dejándola
-      // descentrada justo en el formato que pide estar centrado. La regla existe
-      // para que a un sujeto no se le pegue la cabeza al filo; cuando el diseño
-      // pide centrado explícito, manda el diseño.
+      // Este formato pide estar CENTRADO de verdad: al 100 % la imagen mide
+      // 1487 de alto en una pieza de 1536, así que el borde superior cae en
+      // y=24,5 y cualquier mínimo de aire arriba la descentraría. Llevaba una
+      // clave `margenSuperiorMin: 0` para desactivar la guarda global del 5 %;
+      // esa guarda ya no existe (ver arriba), así que la clave sobra.
       focusZone:   { x: 0.1585, y: 0.0501, w: 0.6829, h: 0.6829 },
-      margenSuperiorMin: 0,
       anchorPoint: { x: 0.50,  y: 0.22  },
       crop: { fill: 1.30, anchorFraction: 0.25 },
       fit:  { fill: 1.00, anchorFraction: 0.30 },
@@ -1389,14 +1477,24 @@ const AutoLayout = (() => {
     modal.appendChild(subtitle);
 
     // Filas de capas
+    // ORDEN DEL DESPLEGABLE, decidido por el diseñador (2026-11-04).
+    //
+    // Antes IMAGEN BIG era la PRIMERA opción, que es el peor sitio para la
+    // única que cambia el sistema de maquetación entero: la más fácil de
+    // pulsar sin querer y pegada a las dos del día a día. El error real que se
+    // teme es justo ese — ir a marcar IMAGEN PRINCIPAL y marcar IMAGEN BIG.
+    //
+    // El orden lo manda este array, no la lógica: la preselección se hace por
+    // VALOR (`detectedRoles[...] === opt.value`), así que mover filas es
+    // seguro y sin rol detectado se sigue seleccionando NINGUNO.
     const TODOS_LOS_ROLES = [
-      { value: 'imagen_big', label: 'IMAGEN BIG' },
-      { value: 'background', label: 'FONDO' },
+      { value: null,         label: 'NINGUNO' },
       { value: 'subject',    label: 'IMAGEN PRINCIPAL' },
+      { value: 'imagen_big', label: 'IMAGEN BIG' },
       { value: 'title_h',    label: 'TÍTULO HORIZONTAL' },
       { value: 'title_v',    label: 'TÍTULO VERTICAL' },
+      { value: 'background', label: 'FONDO' },
       { value: 'fanart',     label: 'FANART' },
-      { value: null,         label: 'NINGUNO' },
     ];
 
     // ROLES ÚNICOS. Un rol describe lo que el asset ES, y de cada cosa solo hay
@@ -1492,6 +1590,34 @@ const AutoLayout = (() => {
         const val = selects[l.id].value;
         roles[l.id] = val || null;
       });
+
+      // AVISO ANTE UN CAMBIO DE SISTEMA SIN QUERER.
+      //
+      // Los dos sistemas son excluyentes POR DEFINICIÓN y se elige al empezar.
+      // Eso no se valida ni se bloquea, y está bien así. Añadir capas sueltas
+      // después de una IMAGEN BIG tampoco es mezclar: es el caso previsto y
+      // soportado (un humo sobre negro, por ejemplo).
+      //
+      // Lo único que puede fallar por descuido es asignar IMAGEN BIG en un
+      // proyecto YA maquetado a la multi-asset: en cuanto existe esa capa se
+      // ocultan 9 formatos y la colocación pasa a gobernarla BIG_LAYOUT, sin
+      // preguntar. Con un único usuario que conoce la regla daba igual; ahora
+      // lo abre más gente, así que conviene que no ocurra sin enterarse.
+      //
+      // No se bloquea —a veces se querrá a propósito— y al cancelar NO se
+      // cierra la modal, para poder corregir el rol sin repetir la importación.
+      const _vieneBig = Object.values(roles).includes('imagen_big');
+      const _yaMulti  = State.layers.some(l =>
+        !imageLayers.includes(l) &&
+        (State.layerRoles?.[l.id] === 'background' || State.layerRoles?.[l.id] === 'subject'));
+      if (_vieneBig && _yaMulti && !confirm(
+            'Este proyecto está maquetado con el sistema Multi-Asset.\n\n' +
+            'Al asignar el rol IMAGEN BIG se cambia al sistema BIG: se ocultarán 9 formatos ' +
+            '(los 7 SIL, PERFIL y MOD N) y la colocación pasará a gobernarse por la tabla BIG.\n\n' +
+            '¿Continuar?')) {
+        return;
+      }
+
       overlay.remove();
       onConfirm(roles);
     });
@@ -1501,6 +1627,42 @@ const AutoLayout = (() => {
     modal.appendChild(btnRow);
     overlay.appendChild(modal);
     document.body.appendChild(overlay);
+  }
+
+  // Devuelve la textZone de la variante cuyo TÍTULO va a la izquierda, o null
+  // si ese formato no ofrece ninguna.
+  //
+  // La intención está escrita en la etiqueta: "Imagen derecha / Texto
+  // izquierda". ⚠️ Hay que mirar la parte del TEXTO, no la de la imagen:
+  // "Imagen izquierda / Texto derecha" es la variante CONTRARIA, y buscar solo
+  // "izquierda" la daría por buena.
+  function _zonaTituloIzquierda(cfg) {
+    if (!cfg || !cfg.variants) return null;
+    for (const k of Object.keys(cfg.variants)) {
+      const v = cfg.variants[k];
+      if (v && v.textZone && /(?:texto|t[ií]tulo)\s+izquierda/i.test(v.label || '')) {
+        return v.textZone;
+      }
+    }
+    return null;
+  }
+
+  // ÚNICO sitio donde se decide la textZone de un formato.
+  //
+  // Existe porque la decisión estaba DUPLICADA: applyToFormat la resolvía por
+  // su cuenta y repositionTextComp —que corre después de toda la maquetación y
+  // re-encaja el título— la volvía a resolver con su propia línea, pisando a la
+  // primera. Mientras la zona izquierda y la de por defecto coincidieran no se
+  // notaba; solo lo destapó DEST. DOBLE 2, el único formato donde difieren
+  // (izquierda x:0.050 frente a base x:0.480).
+  function _resolverTextZone(formatName, cfg, variantKey) {
+    const bigMode = (typeof Formats !== 'undefined' && Formats.isBigMode)
+      ? Formats.isBigMode() : false;
+    if (bigMode) {
+      const izq = _zonaTituloIzquierda(cfg);
+      if (izq) return izq;
+    }
+    return cfg.variants?.[variantKey]?.textZone || cfg.textZone;
   }
 
   // ── MOTOR DE MAQUETACIÓN ──────────────────────────────────
@@ -1514,8 +1676,22 @@ const AutoLayout = (() => {
       return;
     }
 
-    // MOD N: layout custom que crea capas auto-generadas
-    if (formatName === 'MOD N') {
+    // MOD N: layout custom que crea capas auto-generadas.
+    //
+    // SOLO fuera del modo BIG. Con tres imágenes, MOD N sigue siendo lo que
+    // era: su sólido, sus cinco degradados, el duplicado desenfocado del
+    // sujeto, el logo "Colección M+" y su capa de TÍTULO. Nada de eso cambia.
+    //
+    // Pero "Colección M+" es un TIPO DE MÓDULO, con colores y características
+    // propias, y una creatividad BIG ya viene resuelta de Photoshop. Así que
+    // en modo BIG esa parafernalia no aplica: el formato se comporta como
+    // cualquier otro y solo representa la imagen con su posición y su corte,
+    // gobernado por BIG_LAYOUT. Decisión del diseñador (2026-11-04).
+    //
+    // Al no entrar aquí, _ensureModNLayers no llega a fabricar esas capas, así
+    // que no quedan colgadas: no hay nada que ocultar ni que limpiar después.
+    const _bigMode = (typeof Formats !== 'undefined' && Formats.isBigMode) ? Formats.isBigMode() : false;
+    if (formatName === 'MOD N' && !_bigMode) {
       _applyModN(layers);
       return;
     }
@@ -1552,7 +1728,21 @@ const AutoLayout = (() => {
     // Resolver textZone y focusZone según variante activa — sin mutar cfg
     const variantKey = _variant[formatName];
     const activeVariant = cfg.variants?.[variantKey];
-    const textZone  = activeVariant?.textZone  || cfg.textZone;
+    // EN MODO BIG EL TÍTULO VA SIEMPRE A LA IZQUIERDA. Las variantes pierden
+    // sentido aquí: describen repartos del tipo "Imagen derecha / Texto
+    // izquierda", y en BIG la imagen está clavada por BIG_LAYOUT, así que esa
+    // mitad de la etiqueta sería mentira — se elegiría "imagen izquierda" y la
+    // imagen no se movería.
+    //
+    // Se REAPROVECHA la zona ya medida para _TRAD en vez de inventar valores, y
+    // se sigue colocando POR ZONA: así el título se alinea por su píxel real
+    // (contentBounds) y no por el bounding del asset.
+    //
+    // Donde no hay variante "izquierda" se usa la de por defecto. Son 7
+    // formatos, y en 6 la pieza es vertical o cuadrada: ahí el eje
+    // izquierda/derecha no existe —el título ocupa el ancho y se ancla arriba o
+    // abajo—, así que no es que les falte la opción, es que no aplica.
+    const textZone  = _resolverTextZone(formatName, cfg, variantKey);
     const focusZone = activeVariant?.focusZone || cfg.focusZone;
 
     // FANART: si hay asset con rol 'fanart' y este es un formato FANART, se coloca SOLO el
@@ -1589,11 +1779,9 @@ const AutoLayout = (() => {
         // a la colocación genérica de siempre (feature puramente aditiva).
         const _band = (typeof FocalFrames !== 'undefined') ? FocalFrames.bandForFormat(formatName) : null;
         const _fr   = _band ? FocalFrames.getFrame(layer.id, _band) : null;
-        if (_fr) {
-          _applySubjectFocal(formatName, layer, W, H, focusZone, mirrored, _fr, scaleMode);
-        } else {
-          _applySubject(formatName, layer, W, H, cfg, scaleCfg, mirrored, focusZone);
-        }
+        // UN SOLO CAMINO. El recorte entra como un parámetro más, no como un
+        // algoritmo alternativo: ver el reparto de papeles en _applySubject.
+        _applySubject(formatName, layer, W, H, cfg, scaleCfg, mirrored, focusZone, _fr);
 
       } else if (role === 'title_h' || role === 'title_v' || role === 'title') {
         // Si textZone es null, el formato no tiene zona de título (ej. FANART DEST.)
@@ -1667,11 +1855,28 @@ const AutoLayout = (() => {
     });
   }
 
-  function _applySubject(formatName, layer, W, H, cfg, scaleCfg, mirrored, focusZone) {
+  // `fr` (opcional) es el RECORTE FOCAL del sujeto para la banda de este formato.
+  //
+  // REPARTO DE PAPELES, que es lo que se había roto: el recorte manda en QUÉ se
+  // ve; el `fill` de cada formato manda en CUÁNTO y DÓNDE. Antes existía un
+  // segundo camino (_applySubjectFocal) que, en cuanto había recorte, tiraba por
+  // la borda el `fill` afinado formato a formato y hacía un cover genérico sobre
+  // la focusZone. Resultado medido con el mismo sujeto: AD PAUSE pasaba del
+  // 145 % al 48 %. No era un ajuste fino, era otro algoritmo.
+  //
+  // La fusión: el recorte ocupa el lugar que antes ocupaba el asset ENTERO.
+  // Sin recorte la referencia es {0,0,1,1} y la fórmula queda idéntica a la de
+  // siempre —cero regresión—; con recorte, lo enmarcado recibe el tamaño y el
+  // anclaje afinados del formato y lo que sobra se sale por los bordes. Así, un
+  // recorte de pecho para arriba sale de pecho para arriba también en un ultra
+  // wide, que era justo lo que el diseñador pedía.
+  function _applySubject(formatName, layer, W, H, cfg, scaleCfg, mirrored, focusZone, fr) {
     const nw = layer.naturalWidth  || 200;
     const nh = layer.naturalHeight || 200;
     const fz  = focusZone || cfg.focusZone;
     const ap  = cfg.anchorPoint;
+    // Referencia de TAMAÑO: el recorte focal si lo hay, si no el asset entero.
+    const ref = fr || { x: 0, y: 0, w: 1, h: 1 };
 
     // fill > 1 → más grande que la focusZone (CROP)
     // fill = 1 → llena exactamente el alto de la focusZone (FIT)
@@ -1685,14 +1890,16 @@ const AutoLayout = (() => {
     }
 
     const fzH   = H * fz.h;
-    const drawH = fzH * fill;
+    // La REFERENCIA ocupa fzH*fill de alto. Con ref.h = 1 (sin recorte) esto es
+    // exactamente `fzH * fill`, el cálculo de toda la vida.
+    const drawH = (fzH * fill) / (ref.h > 0 ? ref.h : 1);
     const drawW = (nw / nh) * drawH;
     const scaleX = (drawW / nw) * 100;
     const scaleY = (drawH / nh) * 100;
 
-    // Punto de anclaje en el asset
-    // Si hay contentBounds, usar el centro del contenido real en lugar del centro del bounding box
-    const cb = layer.contentBounds;
+    // Punto de anclaje en el asset. Se ancla lo ENMARCADO si hay recorte; si no,
+    // el contenido real (contentBounds), que es el comportamiento de siempre.
+    const cb = fr || layer.contentBounds;
     const contentCxInDraw = cb ? (cb.x + cb.w / 2) * drawW : drawW / 2;
     const contentCyInDraw = cb ? (cb.y + cb.h / 2) * drawH : drawH / 2;
 
@@ -1734,74 +1941,6 @@ const AutoLayout = (() => {
     _setParams(formatName, layer.id, {
       x: Math.round(x),
       y: Math.round(y),
-      scaleX: Math.round(scaleX * 10) / 10,
-      scaleY: Math.round(scaleY * 10) / 10,
-      rotation: 0,
-    });
-  }
-
-  // Colocación del sujeto a partir de un RECTÁNGULO FOCAL definido por el
-  // usuario (espacio normalizado de la imagen). Hace cover-fit del rect sobre
-  // la focusZone del formato (no el frame completo): en formatos con texto la
-  // focusZone es una sub-zona deliberada; en full-bleed ≈ {0,0,1,1}. Una regla.
-  //   crop = cover (max)  ·  fit = contain (min)
-  // No usa contentBounds ni heurísticas anchorEdge/fill: el encuadre del
-  // usuario manda. Convención de salida idéntica a _applySubject (x,y = offset
-  // del centro de la imagen respecto al centro del formato).
-  function _applySubjectFocal(formatName, layer, W, H, fz, mirrored, fr, scaleMode) {
-    const nw = layer.naturalWidth  || 200;
-    const nh = layer.naturalHeight || 200;
-
-    const fzWpx = W * fz.w;
-    const fzHpx = H * fz.h;
-    const frWpx = nw * fr.w;
-    const frHpx = nh * fr.h;
-    if (!(frWpx > 0) || !(frHpx > 0)) return;
-
-    const s = (scaleMode === 'fit')
-      ? Math.min(fzWpx / frWpx, fzHpx / frHpx)   // contain: se ve el rect entero
-      : Math.max(fzWpx / frWpx, fzHpx / frHpx);  // cover: el rect llena la zona
-
-    const scaleX = s * 100;
-    const scaleY = s * 100;
-    const drawW = nw * s;
-    const drawH = nh * s;
-
-    // Centro del rect focal dentro de la imagen dibujada (mirror voltea X).
-    const frCxNorm = mirrored ? (1 - (fr.x + fr.w / 2)) : (fr.x + fr.w / 2);
-    const frCyNorm = fr.y + fr.h / 2;
-    // Centro de la focusZone en px del formato (mirror voltea X, igual que _applySubject).
-    const zoneCx = W * (mirrored ? (1 - (fz.x + fz.w / 2)) : (fz.x + fz.w / 2));
-    const zoneCy = H * (fz.y + fz.h / 2);
-
-    // Colocar la imagen para que el centro del rect focal caiga en el centro de la zona.
-    const cx = zoneCx - frCxNorm * drawW + drawW / 2;
-    let   cy = zoneCy - frCyNorm * drawH + drawH / 2;
-
-    // MARGEN SUPERIOR MÍNIMO. Cuando el recorte focal es más alto que la pieza
-    // en proporción, la altura es la que manda y el recorte ENCAJA EXACTO: su
-    // borde superior cae en y=0 y el sujeto queda pegado al borde. Con un
-    // recorte de persona eso deja la cabeza tocando el filo.
-    //
-    // Se corrige BAJANDO la imagen, no reescalándola: reescalar tiraría por la
-    // borda la precisión del encuadre que el diseñador eligió a mano.
-    //
-    // Y es un MÍNIMO GARANTIZADO, no un desplazamiento fijo: donde ya sobra
-    // aire arriba no se toca nada. Aplicarlo siempre habría movido sin motivo
-    // los formatos que ya estaban bien.
-    //
-    // Un formato puede rebajarlo o anularlo con `margenSuperiorMin` (fracción
-    // del alto; 0 = sin mínimo). Hace falta donde el diseño pide la imagen
-    // CENTRADA de verdad y el alto dibujado casi llena la pieza: ahí la regla
-    // y la petición se contradicen, y manda la petición explícita del formato.
-    const _cfgMargen = FORMAT_CONFIG[formatName]?.margenSuperiorMin;
-    const margenMin = H * (_cfgMargen !== undefined ? _cfgMargen : MARGEN_SUPERIOR_MIN);
-    const bordeArriba = cy - drawH / 2;
-    if (bordeArriba < margenMin) cy += margenMin - bordeArriba;
-
-    _setParams(formatName, layer.id, {
-      x: Math.round(cx - W / 2),
-      y: Math.round(cy - H / 2),
       scaleX: Math.round(scaleX * 10) / 10,
       scaleY: Math.round(scaleY * 10) / 10,
       rotation: 0,
@@ -2689,7 +2828,7 @@ const AutoLayout = (() => {
       if (!fmtSize) return;
       const mirrored   = _mirrored[formatName] || false;
       const variantKey = _variant[formatName] || 'A';
-      const textZone   = cfg.variants?.[variantKey]?.textZone || cfg.textZone;
+      const textZone   = _resolverTextZone(formatName, cfg, variantKey);
       if (!textZone) return;
       _applyTitle(formatName, comp, fmtSize.w, fmtSize.h, cfg, mirrored, textZone);
     });

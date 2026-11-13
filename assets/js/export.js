@@ -8,7 +8,6 @@ const Export = (() => {
 
   const FORMAT_CONFIG = {
     'AD PAUSE':           { suffix: 'AD_PAUSE',                     type: 'jpg', maxMB: 0.1   },
-    'APPLE TV':           { suffix: 'APPLETV',                      type: 'jpg', maxMB: 1     },
     'FANART DEST.':       { suffix: 'FANART_DESTACADO',             type: 'jpg', maxMB: 1.5   },
     'MOD DEST 1':         { suffix: 'MOD_DESTACADO1',               type: 'jpg', maxMB: 1     },
     'MOD DEST 1 SIL':     { suffix: 'MOD_DESTACADO1_SIL',           type: 'png', maxMB: 1     },
