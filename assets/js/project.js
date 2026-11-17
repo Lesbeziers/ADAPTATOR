@@ -356,8 +356,13 @@ const Project = (() => {
   // `webkitdirectory`: así recibimos TODA la carpeta y podemos cargar el JSON
   // emparejando cada `srcFilename` con su binario en `imagenes/`.
   //
-  // Para abrir un ZIP sin descomprimir o un JSON autosuficiente, se ofrece
-  // un segundo botón ("Abrir archivo…") que llama a `openFile()`.
+  // Es la ÚNICA vía de apertura desde la interfaz: el botón Abrir
+  // (`btn-abrir` en ui.js) llama a `open()`, y el selector solo deja elegir
+  // carpetas, nunca un fichero suelto.
+  //
+  // `openFile()` (ZIP sin descomprimir o JSON autosuficiente) sigue exportado
+  // pero NINGÚN botón lo llama. Solo se alcanza por código, p. ej. desde un
+  // harness de pruebas.
 
   function open() {
     const input = document.createElement('input');
@@ -374,7 +379,8 @@ const Project = (() => {
     input.click();
   }
 
-  // Apertura alternativa: archivo único (.zip o .json autosuficiente)
+  // Apertura alternativa: archivo único (.zip o .json autosuficiente).
+  // Sin botón en la interfaz; ver el comentario de `open()`.
   function openFile() {
     const input = document.createElement('input');
     input.type   = 'file';
