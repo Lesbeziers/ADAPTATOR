@@ -61,6 +61,17 @@ const Export = (() => {
     'Slider-Mediano-Escritorio':          { suffix: 'slider-mediano-escritorio',          type: 'jpg', maxMB: 100 , web: true },
     'Cabecera-Slider-Mediano-Movil':      { suffix: 'cabecera-slider-mediano-movil',      type: 'jpg', maxMB: 100 , web: true },
     'Slider-Mediano-Movil':               { suffix: 'slider-mediano-movil',               type: 'jpg', maxMB: 100 , web: true },
+
+    // ── POLARIS ──
+    // Nombre provisional pactado con diseño (2026-11-20): contenido + nombre del
+    // safe con guiones normales, CONSERVANDO las mayúsculas (Celeste-Background-16x6.jpg).
+    // Por eso `web: true` (guiones) pero el sufijo no va en minúsculas como en COMERCIAL.
+    // Sin peso máximo. Tittle 1x1 en PNG con transparencia.
+    'Tittle 1x1':           { suffix: 'Tittle-1x1',           type: 'png', maxMB: 100, web: true },
+    'Background 16x6':      { suffix: 'Background-16x6',      type: 'jpg', maxMB: 100, web: true },
+    'Portrait 2x3':         { suffix: 'Portrait-2x3',         type: 'jpg', maxMB: 100, web: true },
+    'Landscape Art 16x9':   { suffix: 'Landscape-Art-16x9',   type: 'jpg', maxMB: 100, web: true },
+    'Small Background 7x5': { suffix: 'Small-Background-7x5', type: 'jpg', maxMB: 100, web: true },
   };
 
   // Formatos con capa de sistema 'mockup' real (no zona de seguridad).
@@ -838,9 +849,10 @@ const Export = (() => {
     // ve donde esté declarada en TITULO_FIJO (auto-layout.js), y ahí va clavada.
     // En cualquier otro formato no pinta nada. Tampoco se exporta: la web
     // compone el texto por su cuenta (sí sale en el MOCKUP).
-    if (layer.isComposicionComTituloH) {
+    // (Tittle 1x1 en POLARIS sigue la misma regla: varianteExclusivaDe, state.js.)
+    if (varianteExclusivaDe(layer)) {
       const _vc = (typeof Formats !== 'undefined' && Formats.getTextVariant) ? Formats.getTextVariant(formatName) : null;
-      if (_vc !== 'COM_H') return false;
+      if (_vc !== varianteExclusivaDe(layer)) return false;
       const fmtVisible = State.formatParams?.[formatName]?.[layer.id]?.visible;
       return fmtVisible !== undefined ? fmtVisible : true;
     }

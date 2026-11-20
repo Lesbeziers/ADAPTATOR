@@ -185,7 +185,27 @@ const AutoLayout = (() => {
 
     // ── OTROS ──────────────────────────────────────────────
     'XIAOMI BANNER':   { img: { scale: 31,   x:   -2, y:  105 } },   // 32:9
+
+    // ── POLARIS ────────────────────────────────────────────
+    // Medidos por el diseñador el 2026-11-20 sobre la _BIG de Celeste, que es la
+    // referencia con la que se hicieron las plantillas PSD de POLARIS. Sin `txt`:
+    // el título de estos formatos es la composición Tittle 1x1, que va en
+    // posición fija y bloqueada (TITTLE_1X1_POSICION), no por variante.
+    'Background 16x6':      { img: { scale: 86, x:   -2, y:    0 } },   // 3840x1440
+    'Portrait 2x3':         { img: { scale: 85, x: -716, y: -178 } },   // 1440x2160
+    'Landscape Art 16x9':   { img: { scale: 86, x:    0, y:    0 } },   // 3840x2160
+    'Small Background 7x5': { img: { scale: 45, x:    0, y:   82 } },   // 1512x1080
   };
+
+  // Formatos que recorre la maquetación: los de FORMAT_CONFIG, en su orden de
+  // siempre, y DETRÁS los que solo tienen colocación medida (BIG_LAYOUT) o
+  // título fijo (TITTLE_1X1_POSICION) pero aún no zonas: hoy, los de POLARIS.
+  // Sin esto el bucle no los visitaba nunca.
+  function _formatosAMaquetar() {
+    const extra = [...Object.keys(BIG_LAYOUT), ...Object.keys(TITTLE_1X1_POSICION)]
+      .filter((f, i, a) => !FORMAT_CONFIG[f] && a.indexOf(f) === i);
+    return [...Object.keys(FORMAT_CONFIG), ...extra];
+  }
 
   // Traduce una entrada de la tabla a los params que entiende el motor.
   function _bigParams(v) {
@@ -1668,7 +1688,16 @@ const AutoLayout = (() => {
   // ── MOTOR DE MAQUETACIÓN ──────────────────────────────────
   function applyToFormat(formatName, roles, layers) {
     const cfg = FORMAT_CONFIG[formatName];
-    if (!cfg) return;
+    // POLARIS: el título va en posición fija (TITTLE_1X1_POSICION). Va ANTES de
+    // la guarda de cfg porque estos formatos aún no tienen FORMAT_CONFIG: sin
+    // esto, asignar roles dejaba la composición sin colocar.
+    if (typeof Formats !== 'undefined' && Formats.getTextVariant(formatName) === 'TTL_1X1') {
+      const _ttl = State.layers.find(l => l.isComposicionTittle1x1);
+      if (_ttl) _colocarTittle1x1(formatName, _ttl);
+    }
+    // Sin FORMAT_CONFIG (POLARIS, de momento) no hay encaje automático, pero sí
+    // la colocación medida de la imagen BIG, si la hay.
+    if (!cfg) { _applyBigLayout(formatName, layers); return; }
 
     // PERFIL tiene lógica async especial con MediaPipe
     if (formatName === 'PERFIL') {
@@ -1792,9 +1821,8 @@ const AutoLayout = (() => {
           const candidates = [
             State.layers.find(l => l.isComposicion),       // composición MUX4 (vieja)
             State.layers.find(l => l.isComposicionMovil),  // composición MOVIL (vieja)
-            State.layers.find(l => l.isComposicionTextoH),
-            State.layers.find(l => l.isComposicionTextoV),
-            State.layers.find(l => l.isComposicionComTituloH), // título de COMERCIAL
+            // H, V, COM TITULO H, Tittle 1x1 (lista en COMPOSICIONES_TEXTO)
+            ...COMPOSICIONES_TEXTO.map(e => State.layers.find(l => l[e.flag])),
             State.layers.find(l => l.isTitleLayerH),       // imagen título cruda H
             State.layers.find(l => l.isTitleLayerV),       // imagen título cruda V
           ].filter(Boolean);
@@ -2487,19 +2515,14 @@ const AutoLayout = (() => {
         if (typeof ComposicionMovil  !== 'undefined') await ComposicionMovil.generate();
         // Generar TAMBIÉN las composiciones de texto H/V para que aparezcan en los
         // formatos receptores (199 PUBLI, etc.) sin tener que visitar el maestro.
-        if (typeof ComposicionTexto !== 'undefined') {
-          await ComposicionTexto.generate('TEXTO HORIZONTAL', 'COMPOSICIÓN TEXTO HORIZONTAL', 'isComposicionTextoH');
-          await ComposicionTexto.generate('TEXTO VERTICAL',   'COMPOSICIÓN TEXTO VERTICAL',   'isComposicionTextoV');
-          await ComposicionTexto.generate('COM TITULO H',    'COMPOSICIÓN COM TITULO H',    'isComposicionComTituloH');
-          await ComposicionTexto.generate('COM TITULO H',    'COMPOSICIÓN COM TITULO H',    'isComposicionComTituloH');
-        }
+        if (typeof ComposicionTexto !== 'undefined') await ComposicionTexto.generarTodas();
       }
 
       // Maquetación a todos los formatos + post-pasos. Se extrae a una
       // continuación para poder intercalar ANTES el encuadre focal del sujeto.
       const runLayoutLoop = () => {
         // Aplicar maquetación a todos los formatos configurados
-        Object.keys(FORMAT_CONFIG).forEach(formatName => {
+        _formatosAMaquetar().forEach(formatName => {
           applyToFormat(formatName, roles, layers);
         });
 
@@ -2585,10 +2608,7 @@ const AutoLayout = (() => {
       if (promotedTitle || _degradado) {
         if (typeof Composicion       !== 'undefined') await Composicion.generate();
         if (typeof ComposicionMovil  !== 'undefined') await ComposicionMovil.generate();
-        if (typeof ComposicionTexto  !== 'undefined') {
-          await ComposicionTexto.generate('TEXTO HORIZONTAL', 'COMPOSICIÓN TEXTO HORIZONTAL', 'isComposicionTextoH');
-          await ComposicionTexto.generate('TEXTO VERTICAL',   'COMPOSICIÓN TEXTO VERTICAL',   'isComposicionTextoV');
-        }
+        if (typeof ComposicionTexto  !== 'undefined') await ComposicionTexto.generarTodas();
       }
 
       // Re-aplicar maquetación.
@@ -2607,7 +2627,7 @@ const AutoLayout = (() => {
       );
       const layersToApply = promotedTitle ? allImageLayers : newLayers;
       const runLayoutLoop = () => {
-        Object.keys(FORMAT_CONFIG).forEach(formatName => {
+        _formatosAMaquetar().forEach(formatName => {
           applyToFormat(formatName, State.layerRoles, layersToApply);
         });
 
@@ -2821,6 +2841,8 @@ const AutoLayout = (() => {
       // Respetar el ajuste manual del diseñador: si este formato tiene la
       // composición bloqueada (titleManual), la edición del texto maestro NO la
       // re-encaja. Solo el botón AUTO (resetFormat) suelta el candado.
+      // POLARIS: Tittle 1x1 va en posición FIJA, no por zona, y sin candado manual.
+      if (variant === 'TTL_1X1') { _colocarTittle1x1(formatName, comp); return; }
       if (State.formatParams?.[formatName]?.[comp.id]?.titleManual) return;
       const cfg = FORMAT_CONFIG[formatName];
       if (!cfg) return;
@@ -2832,6 +2854,56 @@ const AutoLayout = (() => {
       if (!textZone) return;
       _applyTitle(formatName, comp, fmtSize.w, fmtSize.h, cfg, mirrored, textZone);
     });
+  }
+
+  // ── TITTLE 1x1 EN POLARIS: POSICIÓN FIJA ─────────────────────────────────
+  //
+  // En POLARIS la composición Tittle 1x1 no se encaja en una zona: va en una
+  // posición y escala FIJAS por formato, que da el diseñador. Mismo lenguaje
+  // que BIG_LAYOUT y que el panel de coordenadas: escala en % del tamaño
+  // natural, x/y en px desde el CENTRO del formato.
+  //
+  // Aquí SÍ vale guardar la escala tal cual (y no despejar una zona, como pide
+  // CLAUDE.md para los assets): la composición siempre mide 2160x2160, sea cual
+  // sea el título, así que el mismo % da siempre el mismo tamaño.
+  //
+  // Valores del DISEÑADOR (2026-11-20), colocados por él sobre los safes y
+  // leídos del panel de coordenadas.
+  //
+  // La capa va BLOQUEADA, como un mockup: no se puede arrastrar, ni mover con
+  // las flechas, ni tocar en el panel Transformar, y el candado no se abre (ver
+  // esPosicionFija, que es lo que consulta Layers.getLocked). Por eso aquí no
+  // se mira `titleManual`: en estos formatos no puede haber ajuste manual.
+  const TITTLE_1X1_POSICION = {
+    'Background 16x6':      { scale: 61, x: -1070, y:  -1 },
+    'Portrait 2x3':         { scale: 55, x:     2, y: 393 },
+    'Landscape Art 16x9':   { scale: 74, x:  -927, y:   8 },
+    'Small Background 7x5': { scale: 33, x:  -239, y:   9 },
+  };
+
+  // ¿Esta capa va clavada en este formato y no se puede mover?
+  function esPosicionFija(formatName, layer) {
+    return !!(layer && layer.isComposicionTittle1x1 && TITTLE_1X1_POSICION[formatName]);
+  }
+
+  // Re-estampa las posiciones fijas. Se llama al abrir un proyecto: uno guardado
+  // con otros valores (p. ej. los provisionales del primer día) queda corregido.
+  function aplicarPosicionesFijas() {
+    const comp = State.layers.find(l => l.isComposicionTittle1x1);
+    if (!comp) return;
+    Object.keys(TITTLE_1X1_POSICION).forEach(f => _colocarTittle1x1(f, comp));
+  }
+
+  function _colocarTittle1x1(formatName, comp) {
+    const pos = TITTLE_1X1_POSICION[formatName];
+    if (!pos) return;
+    if (!State.formatParams[formatName]) State.formatParams[formatName] = {};
+    const prev = State.formatParams[formatName][comp.id] || {};
+    State.formatParams[formatName][comp.id] = {
+      ...prev,
+      scaleX: pos.scale, scaleY: pos.scale, rotation: 0, x: pos.x, y: pos.y,
+      visible: prev.visible !== undefined ? prev.visible : true,
+    };
   }
 
   // ── TÍTULO DE REFERENCIA FIJO (se ve, no se toca, no se exporta) ──────────
@@ -2934,6 +3006,7 @@ const AutoLayout = (() => {
   }
 
   return {
+    esPosicionFija, aplicarPosicionesFijas,
     detectRole, onFirstImport, onAdditionalImport, resetFormat,
     toggleScaleMode, toggleMirror, setVariant, getVariant, getVariants,
     getScaleMode, getMirrored, hasConfig, resetSession,

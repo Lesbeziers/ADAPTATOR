@@ -1,6 +1,6 @@
 # Adaptator
 
-Herramienta interna de Movistar+ que adapta grafismo audiovisual a ~49 formatos de
+Herramienta interna de Movistar+ que adapta grafismo audiovisual a ~54 formatos de
 entrega. El diseñador aporta los assets, la herramienta los automaquetea formato a
 formato y exporta. Es **determinista a propósito**: siempre deja margen a la
 intervención humana, nunca intenta adivinar.
@@ -68,7 +68,7 @@ A/B/C/D. Validada formato a formato con los diseñadores.
 con valores medidos a mano formato a formato en la tabla `BIG_LAYOUT`
 (`{ img: {scale, x, y} }`). Un formato ausente de la tabla cae a ajuste automático.
 En `_BIG` los títulos **van siempre a la izquierda**, reaprovechando las zonas ya
-afinadas de `_TRAD`. Tabla completa: 35 de 35.
+afinadas de `_TRAD`. Tabla completa: 39 de 39 (35 + los 4 de POLARIS).
 
 Asignar `imagen_big` en un proyecto ya maquetado `_TRAD` dispara un aviso, porque los
 dos sistemas se anulan y el error era fácil de cometer (confundir IMAGEN BIG con
@@ -135,6 +135,10 @@ y el síntoma aparece en un solo formato, el único donde los dos valores difer�
 te encuentras repitiendo una lista, **resuélvela en un único sitio** (así nació
 `_resolverTextZone`, que unificó la elección de `textZone` entre `applyToFormat` y
 `repositionTextComp`).
+
+Las composiciones de texto que hornea un lienzo maestro (TEXTO H/V, COM TITULO H,
+Tittle 1x1) viven en `COMPOSICIONES_TEXTO` (`state.js`). Añadir una es añadir una
+entrada ahí, no buscar los doce sitios donde antes se enumeraban.
 
 ## Cómo trabajar aquí
 

@@ -251,9 +251,10 @@ var VerTodas = (() => {
     // ve donde esté declarada en TITULO_FIJO (auto-layout.js), y ahí va clavada.
     // En cualquier otro formato no pinta nada. Tampoco se exporta: la web
     // compone el texto por su cuenta (sí sale en el MOCKUP).
-    if (layer.isComposicionComTituloH) {
+    // (Tittle 1x1 en POLARIS sigue la misma regla: varianteExclusivaDe, state.js.)
+    if (varianteExclusivaDe(layer)) {
       const _vc = (typeof Formats !== 'undefined' && Formats.getTextVariant) ? Formats.getTextVariant(formatName) : null;
-      if (_vc !== 'COM_H') return false;
+      if (_vc !== varianteExclusivaDe(layer)) return false;
       const fmtVisible = State.formatParams?.[formatName]?.[layer.id]?.visible;
       return fmtVisible !== undefined ? fmtVisible : true;
     }

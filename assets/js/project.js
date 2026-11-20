@@ -6,6 +6,15 @@ const Project = (() => {
 
   const VERSION = 2;
 
+  // Todas las composiciones auto-generadas con su nombre oficial: las dos
+  // propias (MUX4 y MOVIL) más las de COMPOSICIONES_TEXTO (state.js). Una sola
+  // lista para guardar, sanear y pre-insertar: antes eran tres copias.
+  const _COMPS_META = [
+    { flag: 'isComposicion',       name: 'COMPOSICIÓN TÍTULO' },
+    { flag: 'isComposicionMovil',  name: 'COMPOSICIÓN MOVIL TEXTO' },
+    ...COMPOSICIONES_TEXTO.map(e => ({ flag: e.flag, name: e.nombre })),
+  ];
+
   // ── BOTONES ───────────────────────────────────────────────
   // Los listeners de los botones reales (#btn-abrir, #btn-guardar) viven
   // en ui.js y llaman a Project.open() / Project.save() vía la API expuesta.
@@ -155,13 +164,8 @@ const Project = (() => {
       if (!c) return null;
       return { id: c.id, params: _extractCompParams(c.id) };
     };
-    const composiciones = {
-      isComposicion:        _saveComp('isComposicion'),
-      isComposicionMovil:   _saveComp('isComposicionMovil'),
-      isComposicionTextoH:  _saveComp('isComposicionTextoH'),
-      isComposicionTextoV:  _saveComp('isComposicionTextoV'),
-      isComposicionComTituloH: _saveComp('isComposicionComTituloH'),
-    };
+    const composiciones = {};
+    _COMPS_META.forEach(m => { composiciones[m.flag] = _saveComp(m.flag); });
 
     // Preservar orden exacto, excluir TODAS las capas auto-generadas:
     // - composiciones horneadas (MUX4, Movil, Amazon, TextoH, TextoV) — se regeneran
@@ -629,13 +633,7 @@ const Project = (() => {
     // composición por el bug de duplicado (p. ej. una "sombra" con isComposicionTextoH).
     // Si el flag está pero el nombre NO es el oficial → limpiar el flag para
     // que la capa sobreviva como imagen normal.
-    const _OFFICIAL_COMP_NAMES = {
-      isComposicion:       'COMPOSICIÓN TÍTULO',
-      isComposicionMovil:  'COMPOSICIÓN MOVIL TEXTO',
-      isComposicionTextoH: 'COMPOSICIÓN TEXTO HORIZONTAL',
-      isComposicionTextoV: 'COMPOSICIÓN TEXTO VERTICAL',
-      isComposicionComTituloH: 'COMPOSICIÓN COM TITULO H',
-    };
+    const _OFFICIAL_COMP_NAMES = Object.fromEntries(_COMPS_META.map(m => [m.flag, m.name]));
     (data.layers || []).forEach(l => {
       Object.entries(_OFFICIAL_COMP_NAMES).forEach(([flag, officialName]) => {
         if (l[flag] && l.name !== officialName) delete l[flag];
@@ -722,13 +720,6 @@ const Project = (() => {
     // Pre-insertar TODAS las composiciones con sus IDs guardados, para que al
     // regenerarse el sistema encuentre la capa existente y no genere un ID nuevo
     // que dejaría huérfanos los formatParams.
-    const _COMPS_META = [
-      { flag: 'isComposicion',       name: 'COMPOSICIÓN TÍTULO' },
-      { flag: 'isComposicionMovil',  name: 'COMPOSICIÓN MOVIL TEXTO' },
-      { flag: 'isComposicionTextoH', name: 'COMPOSICIÓN TEXTO HORIZONTAL' },
-      { flag: 'isComposicionTextoV', name: 'COMPOSICIÓN TEXTO VERTICAL' },
-      { flag: 'isComposicionComTituloH', name: 'COMPOSICIÓN COM TITULO H' },
-    ];
     const _preInsertComp = (flag, name, id, params) => {
       if (!id) return;
       const comp = {
@@ -765,15 +756,27 @@ const Project = (() => {
     Promise.all([...logoPromises, ...otherImgPromises]).then(() => {
       // Re-inicializar capas auto-generadas que no se guardan en el JSON (marcas, etc.)
       if (typeof Canvas !== 'undefined') Canvas.reinitAutoLayers();
+      // Encajar el título en Tittle 1x1 si el proyecto es anterior a ese lienzo
+      // y no trae posición para él. Solo rellena ese hueco y va ANTES de
+      // hornear, para que la composición de POLARIS salga ya con el título
+      // encajado.
+      //
+      // OJO, a propósito SOLO Tittle 1x1: con los proyectos anteriores a COM
+      // TITULO H pasa lo mismo (el título queda al 100 % sin encajar), pero
+      // rellenarlo cambiaría lo que exportan proyectos ya existentes en
+      // COMERCIAL. Medido el 2026-11-20 con EL SER QUERIDO. Es una decisión
+      // pendiente del diseñador, no se cambia de rebote.
+      if (typeof Layers !== 'undefined' && Layers.applyTitleFitZones) {
+        State.layers.filter(l => l.isTitleLayer)
+          .forEach(l => Layers.applyTitleFitZones(l, { soloEnFaltantes: ['Tittle 1x1'] }));
+      }
       const tasks = [];
       if (typeof Composicion       !== 'undefined') tasks.push(Composicion.generate());
       if (typeof ComposicionMovil  !== 'undefined') tasks.push(ComposicionMovil.generate());
-      if (typeof ComposicionTexto  !== 'undefined') {
-        tasks.push(ComposicionTexto.generate('TEXTO HORIZONTAL', 'COMPOSICIÓN TEXTO HORIZONTAL', 'isComposicionTextoH'));
-        tasks.push(ComposicionTexto.generate('TEXTO VERTICAL',   'COMPOSICIÓN TEXTO VERTICAL',   'isComposicionTextoV'));
-        tasks.push(ComposicionTexto.generate('COM TITULO H',    'COMPOSICIÓN COM TITULO H',    'isComposicionComTituloH'));
-      }
+      if (typeof ComposicionTexto  !== 'undefined') tasks.push(ComposicionTexto.generarTodas());
       Promise.all(tasks).then(() => {
+        // Posiciones fijas (Tittle 1x1 en POLARIS): mandan sobre lo guardado.
+        if (typeof AutoLayout !== 'undefined' && AutoLayout.aplicarPosicionesFijas) AutoLayout.aplicarPosicionesFijas();
         if (typeof Canvas !== 'undefined') Canvas.render();
         if (typeof Layers !== 'undefined') Layers.render();
       });

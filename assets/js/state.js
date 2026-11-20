@@ -18,6 +18,7 @@
 const TEXT_HOST_FORMATS = [
   'MUX4 TXT', 'MOVIL TXT', 'TEXTO HORIZONTAL', 'TEXTO VERTICAL',
   'COM TITULO H',
+  'Tittle 1x1',
   'TÍTULO FICHA',
 ];
 
@@ -26,14 +27,14 @@ const TEXT_HOST_FORMATS = [
 // queda fuera: no se le añaden capas de estas.
 const TEXT_TOOL_FORMATS = [
   'MUX4 TXT', 'MOVIL TXT', 'TEXTO HORIZONTAL', 'TEXTO VERTICAL',
-  'COM TITULO H',
+  'COM TITULO H', 'Tittle 1x1',
 ];
 
 // LOS 5 — los maestros de texto: lienzos donde se edita el título. Se muestran
 // a doble ancho y no marcan el candado manual (no son receptores).
 const TEXT_MASTER_FORMATS = [
   'MUX4 TXT', 'MOVIL TXT', 'TEXTO HORIZONTAL', 'TEXTO VERTICAL',
-  'COM TITULO H',
+  'COM TITULO H', 'Tittle 1x1',
 ];
 
 // LOS 4 — de esos, los que llevan BLOQUE DE TEXTO: maquetación automática por
@@ -71,9 +72,37 @@ const COMPOSICION_FLAGS = [
   'isComposicionTextoH',    // TEXTO HORIZONTAL
   'isComposicionTextoV',    // TEXTO VERTICAL
   'isComposicionComTituloH',// COM TITULO H
+  'isComposicionTittle1x1', // Tittle 1x1 (POLARIS)
 ];
 function esComposicionAuto(l) {
   return !!l && COMPOSICION_FLAGS.some(f => l[f]);
+}
+
+// ── COMPOSICIONES DE TEXTO GENÉRICAS ────────────────────────
+// Las que hornea ComposicionTexto.generate a partir de un lienzo maestro. Cada
+// entrada dice qué lienzo la produce, con qué nombre y bandera nace la capa, y
+// qué VARIANTE de texto (el lápiz) la elige en los formatos receptores.
+//
+// Antes estas cuatro líneas se escribían a mano en una docena de sitios
+// (regenerar al salir del maestro, al importar el título, al abrir un
+// proyecto…) y ya se habían desincronizado: en uno COM TITULO H se generaba
+// dos veces y en otro ninguna. Añadir una composición nueva es añadir una
+// entrada aquí.
+//
+// `exclusiva`: la capa solo existe donde la variante del formato es
+// exactamente la suya. Las H/V no lo son porque además las gobierna
+// TITULO_FIJO (auto-layout.js).
+const COMPOSICIONES_TEXTO = [
+  { variante: 'H',       maestro: 'TEXTO HORIZONTAL', nombre: 'COMPOSICIÓN TEXTO HORIZONTAL', flag: 'isComposicionTextoH' },
+  { variante: 'V',       maestro: 'TEXTO VERTICAL',   nombre: 'COMPOSICIÓN TEXTO VERTICAL',   flag: 'isComposicionTextoV' },
+  { variante: 'COM_H',   maestro: 'COM TITULO H',     nombre: 'COMPOSICIÓN COM TITULO H',     flag: 'isComposicionComTituloH', exclusiva: true },
+  { variante: 'TTL_1X1', maestro: 'Tittle 1x1',       nombre: 'COMPOSICIÓN TITTLE 1x1',       flag: 'isComposicionTittle1x1',  exclusiva: true },
+];
+// Variante que exige una composición exclusiva para verse, o null si la capa
+// no es una de ellas.
+function varianteExclusivaDe(l) {
+  const e = l && COMPOSICIONES_TEXTO.find(c => c.exclusiva && l[c.flag]);
+  return e ? e.variante : null;
 }
 
 const State = {
@@ -144,6 +173,9 @@ const State = {
     // el de exportación, y se entrega con el nombre 'cabecera-slider-tt'.
     // Ese "formato" no existe como pieza: ES este título, y estaba duplicado.
     'COM TITULO H':     { w: 1156, h: 348,  maxMB: 0.6  },
+    // Tittle 1x1 — título de POLARIS. Lienzo maestro: su composición viaja a
+    // los cuatro formatos de POLARIS. Tamaño = el del safe que pasó diseño.
+    'Tittle 1x1':       { w: 2160, h: 2160, maxMB: 100  },
     'WEB PUBLI':        { w: 2000, h: 465,  maxMB: 1, displayContext: { w: 1920, h: 850, contentX: 26, contentY: 115, contentW: 1868, contentH: 434 } },
     'WOW PUBLI':        { w: 1280, h: 258,  maxMB: 0.25 },
     'TÍTULO FICHA':     { w: 2172, h: 300,  maxMB: 0.6  },
@@ -182,6 +214,13 @@ const State = {
     'Slider-Mediano-Escritorio':          { w: 3840, h: 1200, maxMB: 100 },
     'Cabecera-Slider-Mediano-Movil':      { w: 1536, h: 1536, maxMB: 100 },
     'Slider-Mediano-Movil':               { w: 1536, h: 1536, maxMB: 100 },
+
+    // ── POLARIS (interfaz del deco 2027) ───────────────────
+    // Tamaños = los de los safes que pasó diseño (2026-11-20). Sin peso máximo.
+    'Background 16x6':      { w: 3840, h: 1440, maxMB: 100 },
+    'Portrait 2x3':         { w: 1440, h: 2160, maxMB: 100 },
+    'Landscape Art 16x9':   { w: 3840, h: 2160, maxMB: 100 },
+    'Small Background 7x5': { w: 1512, h: 1080, maxMB: 100 },
   },
 
   // ── MAQUETACIÓN AUTOMÁTICA ───────────────────────────────
@@ -226,6 +265,7 @@ const State = {
     'TEXTO HORIZONTAL':  [ { key: 'mockup', label: 'ZONA DE SEGURIDAD', src: 'assets/img/checkers/MUX4_TXT_Check.png' } ],
     // COM TITULO H va SIN zona de seguridad: el asset es el título a pelo.
     'COM TITULO H':      [],
+    'Tittle 1x1':        [ { key: 'mockup', label: 'ZONA DE SEGURIDAD', src: 'assets/img/checkers/Tittle_1x1_SAFE.png' } ],
     'TEXTO VERTICAL':    [ { key: 'mockup', label: 'ZONA DE SEGURIDAD', src: 'assets/img/checkers/SMARTPHONE_MUX_TXT_Check.png' } ],
     'WEB PUBLI': [
       { key: 'mockup',   label: 'MOCKUP',             src: 'assets/img/checkers/WEB_MOCKUP.png' },
@@ -288,6 +328,12 @@ const State = {
     'Slider-Mediano-Escritorio':          [ { key: 'mockup', label: 'ZONA DE SEGURIDAD', src: 'assets/img/checkers/SF_Slider_Mediano_Escritorio.png' } ],
     'Cabecera-Slider-Mediano-Movil':      [ { key: 'mockup', label: 'ZONA DE SEGURIDAD', src: 'assets/img/checkers/SF_Cabecera_Slider_Mediano_Movil.png' } ],
     'Slider-Mediano-Movil':               [ { key: 'mockup', label: 'ZONA DE SEGURIDAD', src: 'assets/img/checkers/SF_Slider_Mediano_Movil.png' } ],
+
+    // ── POLARIS ──
+    'Background 16x6':      [ { key: 'mockup', label: 'ZONA DE SEGURIDAD', src: 'assets/img/checkers/Background_16x6_SAFE.png' } ],
+    'Portrait 2x3':         [ { key: 'mockup', label: 'ZONA DE SEGURIDAD', src: 'assets/img/checkers/Portrait_2x3_SAFE.png' } ],
+    'Landscape Art 16x9':   [ { key: 'mockup', label: 'ZONA DE SEGURIDAD', src: 'assets/img/checkers/Landscape_Art_16x9_SAFE.png' } ],
+    'Small Background 7x5': [ { key: 'mockup', label: 'ZONA DE SEGURIDAD', src: 'assets/img/checkers/Small_Background_7x5_SAFE.png' } ],
   },
 
   // ── MODALIDADES Y FORMATOS ─────────────────────────────────
@@ -298,7 +344,7 @@ const State = {
       label: 'Textos',
       formats: [
         'TEXTO HORIZONTAL', 'TEXTO VERTICAL', 'MUX4 TXT', 'MOVIL TXT',
-        'COM TITULO H'
+        'COM TITULO H', 'Tittle 1x1'
       ]
     },
     {
@@ -340,6 +386,16 @@ const State = {
         'Cabecera-Slider-Escritorio', 'Cabecera-Slider-Movil',
         'Cabecera-Slider-Mediano-Escritorio', 'Slider-Mediano-Escritorio',
         'Cabecera-Slider-Mediano-Movil', 'Slider-Mediano-Movil'
+      ]
+    },
+    {
+      // El id NO debe cambiar: se guarda en los proyectos (activeModality).
+      // El nombre visible sí puede: puede acabar llamándose BOB.
+      id: 'polaris',
+      label: 'Polaris',
+      formats: [
+        'Background 16x6', 'Portrait 2x3',
+        'Landscape Art 16x9', 'Small Background 7x5'
       ]
     },
     {

@@ -363,13 +363,24 @@ const Layers = (() => {
     // título se apoya en la base del documento. Por eso la zona es el lienzo
     // entero: el aire que sobre queda arriba y a la derecha, no repartido.
     'COM TITULO H':     { x: 0, y: 0, w: 1, h: 1, alignLeft: true, alignBottom: true, byPixels: true },
+    // Tittle 1x1 (POLARIS) — encaje "lo primero que se alcance" dentro del safe,
+    // CENTRADO. Safe medido en Tittle_1x1_SAFE.png: 40 px de margen en los cuatro
+    // lados del lienzo de 2160 → caja útil de 2080x2080. Por píxeles visibles,
+    // para que el aire transparente del PNG del título no cuente.
+    'Tittle 1x1':       { x: 40 / 2160, y: 40 / 2160, w: 2080 / 2160, h: 2080 / 2160, byPixels: true },
   };
 
-  function _applyTitleFitZones(layer) {
+  // `soloEnFaltantes`: lista de lienzos donde encajar el título SOLO si aún no
+  // tiene posición. Lo usa la apertura de proyectos: un proyecto guardado antes
+  // de existir un lienzo no trae posición para él, y el título aparecería al
+  // 100 % sin encajar. Lo que ya estaba guardado no se toca, y los demás
+  // formatos tampoco.
+  function _applyTitleFitZones(layer, { soloEnFaltantes = null } = {}) {
     const defaultParams = { scaleX: 100, scaleY: 100, rotation: 0, x: 0, y: 0, visible: true };
 
     Object.keys(State.formatSizes || {}).forEach(fid => {
       if (!State.formatParams[fid]) State.formatParams[fid] = {};
+      if (soloEnFaltantes && (!soloEnFaltantes.includes(fid) || State.formatParams[fid][layer.id])) return;
       const fitZone = TITLE_FIT_ZONES[fid];
       if (fitZone && layer.naturalWidth && layer.naturalHeight) {
         const W = State.formatSizes[fid].w;
@@ -488,12 +499,9 @@ const Layers = (() => {
         if (typeof Canvas  !== 'undefined') Canvas.render();
         if (typeof Layers  !== 'undefined') _render();
       };
-      ComposicionTexto.generate('TEXTO HORIZONTAL', 'COMPOSICIÓN TEXTO HORIZONTAL', 'isComposicionTextoH')
-        .then(() => _tras(State.layers.find(l => l.isComposicionTextoH), 'H'));
-      ComposicionTexto.generate('TEXTO VERTICAL', 'COMPOSICIÓN TEXTO VERTICAL', 'isComposicionTextoV')
-        .then(() => _tras(State.layers.find(l => l.isComposicionTextoV), 'V'));
-      ComposicionTexto.generate('COM TITULO H', 'COMPOSICIÓN COM TITULO H', 'isComposicionComTituloH')
-        .then(() => _tras(State.layers.find(l => l.isComposicionComTituloH), 'COM_H'));
+      COMPOSICIONES_TEXTO.forEach(e => {
+        ComposicionTexto.generar(e).then(() => _tras(State.layers.find(l => l[e.flag]), e.variante));
+      });
     }
   }
 
@@ -1027,7 +1035,15 @@ const Layers = (() => {
   function _getLocked(layerId) {
     const fid = State.activeFormat;
     if (!fid) return false;
+    // Bloqueo FIJO (como un mockup): capas clavadas por diseño en este formato.
+    // Va aquí porque todo lo que impide mover —arrastre, selección, flechas,
+    // panel Transformar— pregunta a esta función.
+    if (_esFija(layerId, fid)) return true;
     return !!State.formatParams?.[fid]?.[layerId]?.locked;
+  }
+  function _esFija(layerId, fid = State.activeFormat) {
+    return typeof AutoLayout !== 'undefined' && AutoLayout.esPosicionFija
+      && AutoLayout.esPosicionFija(fid, State.layers.find(l => l.id === layerId));
   }
 
   function _setLocked(layerId, val) {
@@ -1484,7 +1500,7 @@ const Layers = (() => {
   function _openTextVariantMenu(anchorEl, formatName) {
     document.querySelectorAll('.text-variant-menu').forEach(m => m.remove());
     if (typeof Formats === 'undefined') return;
-    const opts = Formats.getTextVariantOptions();
+    const opts = Formats.getTextVariantOptions(formatName);
     const cur  = Formats.getTextVariant(formatName);
     const menu = document.createElement('div');
     menu.className = 'text-variant-menu';
@@ -1512,11 +1528,13 @@ const Layers = (() => {
     // Rol FANART: el fanart solo en formatos FANART; subject/fondo ocultos en FANART si hay fanart
     if (typeof Formats !== 'undefined' && Formats.fanartRoleVisibility &&
         Formats.fanartRoleVisibility(layer.id, State.activeFormat) === false) return null;
-    // COMPOSICIÓN COM TITULO H: se lista donde esté declarada como título fijo.
-    if (layer.isComposicionComTituloH) {
+    // Composiciones EXCLUSIVAS (COM TITULO H, Tittle 1x1): se listan solo
+    // donde la variante del formato es exactamente la suya.
+    const _vx = varianteExclusivaDe(layer);
+    if (_vx) {
       const _vc = (typeof Formats !== 'undefined' && Formats.getTextVariant)
         ? Formats.getTextVariant(State.activeFormat) : null;
-      if (_vc !== 'COM_H') return null;
+      if (_vc !== _vx) return null;
     }
     // Donde hay TÍTULO FIJO, la composición H/V normal NO se pinta: el título
     // de ese formato es la composición clavada, y si no saldrían los dos.
@@ -1952,12 +1970,13 @@ const Layers = (() => {
     const _updateLockBtn = () => {
       const l = _locked();
       lockBtn.className = 'layer-lock-btn' + (l ? ' locked' : '');
-      lockBtn.dataset.tooltip = l ? 'Desbloquear capa' : 'Bloquear capa';
+      lockBtn.dataset.tooltip = _esFija(layer.id) ? 'Posición fija' : (l ? 'Desbloquear capa' : 'Bloquear capa');
       lockBtn.innerHTML = l ? _svgLocked : _svgUnlocked;
     };
     _updateLockBtn();
     lockBtn.addEventListener('click', e => {
       e.stopPropagation();
+      if (_esFija(layer.id)) return;   // el candado fijo no se abre
       if (typeof History !== 'undefined') History.push();
       _setLocked(layer.id, !_locked());
       _updateLockBtn();
