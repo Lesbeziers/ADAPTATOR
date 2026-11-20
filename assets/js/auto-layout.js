@@ -1668,6 +1668,13 @@ const AutoLayout = (() => {
   // ── MOTOR DE MAQUETACIÓN ──────────────────────────────────
   function applyToFormat(formatName, roles, layers) {
     const cfg = FORMAT_CONFIG[formatName];
+    // POLARIS: el título va en posición fija (TITTLE_1X1_POSICION). Va ANTES de
+    // la guarda de cfg porque estos formatos aún no tienen FORMAT_CONFIG: sin
+    // esto, asignar roles dejaba la composición sin colocar.
+    if (typeof Formats !== 'undefined' && Formats.getTextVariant(formatName) === 'TTL_1X1') {
+      const _ttl = State.layers.find(l => l.isComposicionTittle1x1);
+      if (_ttl && !State.formatParams?.[formatName]?.[_ttl.id]?.titleManual) _colocarTittle1x1(formatName, _ttl);
+    }
     if (!cfg) return;
 
     // PERFIL tiene lógica async especial con MediaPipe
@@ -1792,9 +1799,8 @@ const AutoLayout = (() => {
           const candidates = [
             State.layers.find(l => l.isComposicion),       // composición MUX4 (vieja)
             State.layers.find(l => l.isComposicionMovil),  // composición MOVIL (vieja)
-            State.layers.find(l => l.isComposicionTextoH),
-            State.layers.find(l => l.isComposicionTextoV),
-            State.layers.find(l => l.isComposicionComTituloH), // título de COMERCIAL
+            // H, V, COM TITULO H, Tittle 1x1 (lista en COMPOSICIONES_TEXTO)
+            ...COMPOSICIONES_TEXTO.map(e => State.layers.find(l => l[e.flag])),
             State.layers.find(l => l.isTitleLayerH),       // imagen título cruda H
             State.layers.find(l => l.isTitleLayerV),       // imagen título cruda V
           ].filter(Boolean);
@@ -2487,12 +2493,7 @@ const AutoLayout = (() => {
         if (typeof ComposicionMovil  !== 'undefined') await ComposicionMovil.generate();
         // Generar TAMBIÉN las composiciones de texto H/V para que aparezcan en los
         // formatos receptores (199 PUBLI, etc.) sin tener que visitar el maestro.
-        if (typeof ComposicionTexto !== 'undefined') {
-          await ComposicionTexto.generate('TEXTO HORIZONTAL', 'COMPOSICIÓN TEXTO HORIZONTAL', 'isComposicionTextoH');
-          await ComposicionTexto.generate('TEXTO VERTICAL',   'COMPOSICIÓN TEXTO VERTICAL',   'isComposicionTextoV');
-          await ComposicionTexto.generate('COM TITULO H',    'COMPOSICIÓN COM TITULO H',    'isComposicionComTituloH');
-          await ComposicionTexto.generate('COM TITULO H',    'COMPOSICIÓN COM TITULO H',    'isComposicionComTituloH');
-        }
+        if (typeof ComposicionTexto !== 'undefined') await ComposicionTexto.generarTodas();
       }
 
       // Maquetación a todos los formatos + post-pasos. Se extrae a una
@@ -2585,10 +2586,7 @@ const AutoLayout = (() => {
       if (promotedTitle || _degradado) {
         if (typeof Composicion       !== 'undefined') await Composicion.generate();
         if (typeof ComposicionMovil  !== 'undefined') await ComposicionMovil.generate();
-        if (typeof ComposicionTexto  !== 'undefined') {
-          await ComposicionTexto.generate('TEXTO HORIZONTAL', 'COMPOSICIÓN TEXTO HORIZONTAL', 'isComposicionTextoH');
-          await ComposicionTexto.generate('TEXTO VERTICAL',   'COMPOSICIÓN TEXTO VERTICAL',   'isComposicionTextoV');
-        }
+        if (typeof ComposicionTexto  !== 'undefined') await ComposicionTexto.generarTodas();
       }
 
       // Re-aplicar maquetación.
@@ -2822,6 +2820,8 @@ const AutoLayout = (() => {
       // composición bloqueada (titleManual), la edición del texto maestro NO la
       // re-encaja. Solo el botón AUTO (resetFormat) suelta el candado.
       if (State.formatParams?.[formatName]?.[comp.id]?.titleManual) return;
+      // POLARIS: Tittle 1x1 va en posición FIJA, no por zona.
+      if (variant === 'TTL_1X1') { _colocarTittle1x1(formatName, comp); return; }
       const cfg = FORMAT_CONFIG[formatName];
       if (!cfg) return;
       const fmtSize = State.formatSizes[formatName];
@@ -2832,6 +2832,39 @@ const AutoLayout = (() => {
       if (!textZone) return;
       _applyTitle(formatName, comp, fmtSize.w, fmtSize.h, cfg, mirrored, textZone);
     });
+  }
+
+  // ── TITTLE 1x1 EN POLARIS: POSICIÓN FIJA ─────────────────────────────────
+  //
+  // En POLARIS la composición Tittle 1x1 no se encaja en una zona: va en una
+  // posición y escala FIJAS por formato, que da el diseñador. Mismo lenguaje
+  // que BIG_LAYOUT y que el panel de coordenadas: escala en % del tamaño
+  // natural, x/y en px desde el CENTRO del formato.
+  //
+  // Aquí SÍ vale guardar la escala tal cual (y no despejar una zona, como pide
+  // CLAUDE.md para los assets): la composición siempre mide 2160x2160, sea cual
+  // sea el título, así que el mismo % da siempre el mismo tamaño.
+  //
+  // ⚠️ VALORES PROVISIONALES DE PARTIDA (2026-11-20), puestos sin medir para que
+  // el diseñador la recoloque y la escale formato a formato. Se sustituyen por
+  // los suyos cuando los pase. No son una decisión de diseño.
+  const TITTLE_1X1_POSICION = {
+    'Background 16x6':      { scale: 50, x: -1200, y:   0 },
+    'Portrait 2x3':         { scale: 50, x:     0, y: 500 },
+    'Landscape Art 16x9':   { scale: 50, x: -1200, y:   0 },
+    'Small Background 7x5': { scale: 30, x:  -350, y:   0 },
+  };
+
+  function _colocarTittle1x1(formatName, comp) {
+    const pos = TITTLE_1X1_POSICION[formatName];
+    if (!pos) return;
+    if (!State.formatParams[formatName]) State.formatParams[formatName] = {};
+    const prev = State.formatParams[formatName][comp.id] || {};
+    State.formatParams[formatName][comp.id] = {
+      ...prev,
+      scaleX: pos.scale, scaleY: pos.scale, rotation: 0, x: pos.x, y: pos.y,
+      visible: prev.visible !== undefined ? prev.visible : true,
+    };
   }
 
   // ── TÍTULO DE REFERENCIA FIJO (se ve, no se toca, no se exporta) ──────────

@@ -1,6 +1,6 @@
 # Adaptator
 
-Herramienta interna de Movistar+ que adapta grafismo audiovisual a ~49 formatos de
+Herramienta interna de Movistar+ que adapta grafismo audiovisual a ~54 formatos de
 entrega. El diseñador aporta los assets, la herramienta los automaquetea formato a
 formato y exporta. Es **determinista a propósito**: siempre deja margen a la
 intervención humana, nunca intenta adivinar.
@@ -135,6 +135,10 @@ y el síntoma aparece en un solo formato, el único donde los dos valores difer�
 te encuentras repitiendo una lista, **resuélvela en un único sitio** (así nació
 `_resolverTextZone`, que unificó la elección de `textZone` entre `applyToFormat` y
 `repositionTextComp`).
+
+Las composiciones de texto que hornea un lienzo maestro (TEXTO H/V, COM TITULO H,
+Tittle 1x1) viven en `COMPOSICIONES_TEXTO` (`state.js`). Añadir una es añadir una
+entrada ahí, no buscar los doce sitios donde antes se enumeraban.
 
 ## Cómo trabajar aquí
 

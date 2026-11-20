@@ -1235,13 +1235,14 @@ const Canvas = (() => {
       // COMPOSICIÓN COM TITULO H: no se enruta por variante como las H/V. Solo se
       // ve donde esté declarada en TITULO_FIJO (auto-layout.js), y ahí va clavada.
       // En cualquier otro formato no pinta nada.
-      } else if (layer.isComposicionComTituloH) {
+      // Lo mismo vale para Tittle 1x1 en POLARIS: ver varianteExclusivaDe (state.js).
+      } else if (varianteExclusivaDe(layer)) {
         // Enrutado por variante, igual que las H/V. Donde además esté declarada
         // en TITULO_FIJO (los Slider, que entregan el título aparte) se pinta
         // clavada y no se exporta; eso lo resuelven _applyParams y _isLayerVisible.
         const _vc = (typeof Formats !== 'undefined' && Formats.getTextVariant)
           ? Formats.getTextVariant(State.activeFormat) : null;
-        isVisible = _vc === 'COM_H';
+        isVisible = _vc === varianteExclusivaDe(layer);
         if (isVisible) {
           const fmtVisible = State.formatParams?.[State.activeFormat]?.[layer.id]?.visible;
           isVisible = fmtVisible !== undefined ? fmtVisible : true;
@@ -1554,19 +1555,10 @@ const Canvas = (() => {
     if (State.activeFormat === 'MOVIL TXT' && typeof ComposicionMovil !== 'undefined') {
       ComposicionMovil.generate();
     }
-    // Composiciones H/V: regenerar en vivo mientras se edita su formato maestro
-    if (State.activeFormat === 'TEXTO HORIZONTAL' && typeof ComposicionTexto !== 'undefined') {
-      ComposicionTexto.generate('TEXTO HORIZONTAL', 'COMPOSICIÓN TEXTO HORIZONTAL', 'isComposicionTextoH')
-        .then(() => { const c = State.layers.find(l => l.isComposicionTextoH); if (c && typeof AutoLayout !== 'undefined') AutoLayout.repositionTextComp(c, 'H'); });
-    }
-    if (State.activeFormat === 'COM TITULO H' && typeof ComposicionTexto !== 'undefined') {
-      ComposicionTexto.generate('COM TITULO H', 'COMPOSICIÓN COM TITULO H', 'isComposicionComTituloH')
-        .then(() => { const c = State.layers.find(l => l.isComposicionComTituloH); if (c && typeof AutoLayout !== 'undefined') AutoLayout.repositionTextComp(c, 'COM_H'); });
-    }
-    if (State.activeFormat === 'TEXTO VERTICAL' && typeof ComposicionTexto !== 'undefined') {
-      ComposicionTexto.generate('TEXTO VERTICAL', 'COMPOSICIÓN TEXTO VERTICAL', 'isComposicionTextoV')
-        .then(() => { const c = State.layers.find(l => l.isComposicionTextoV); if (c && typeof AutoLayout !== 'undefined') AutoLayout.repositionTextComp(c, 'V'); });
-    }
+    // Composiciones de texto (H, V, COM TITULO H, Tittle 1x1): regenerar en
+    // vivo mientras se edita su lienzo maestro. Lista en COMPOSICIONES_TEXTO.
+    const _ctVivo = typeof ComposicionTexto !== 'undefined' ? ComposicionTexto.deMaestro(State.activeFormat) : null;
+    if (_ctVivo) ComposicionTexto.regenerar(_ctVivo);
     if (State.activeFormat === 'MOVIL MUX FONDO' && typeof ComposicionMovil !== 'undefined') {
       if (!State.layers.find(l => l.isComposicionMovil)) ComposicionMovil.generate();
     }

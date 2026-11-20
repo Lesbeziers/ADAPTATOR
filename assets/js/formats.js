@@ -106,6 +106,14 @@ const Formats = (() => {
     'Slider-Mediano-Escritorio':          'SLID. MED. ESCRIT.',
     'Cabecera-Slider-Mediano-Movil':      'CAB. SLID. MED. MOVIL',
     'Slider-Mediano-Movil':               'SLID. MED. MOVIL',
+
+    // ── POLARIS ──────────────────────────────────────────────
+    // "Tittle" con doble t A PROPÓSITO: así viene en la especificación.
+    'Tittle 1x1':           'TITTLE 1x1',
+    'Background 16x6':      'BACKGROUND 16x6',
+    'Portrait 2x3':         'PORTRAIT 2x3',
+    'Landscape Art 16x9':   'LANDSCAPE ART 16x9',
+    'Small Background 7x5': 'SMALL BACKGROUND 7x5',
   };
   function displayLabel(name) { return DISPLAY_LABELS[name] || name; }
 
@@ -117,7 +125,7 @@ const Formats = (() => {
   // Caben de sobra: medido con la fuente real (Apercu Movistar 10px bold), un
   // botón ancho deja 141 px útiles y la etiqueta más larga
   // ("CAB. SLID. MED. ESCRIT.") necesita 117 px.
-  const WIDE_MODALITIES = ['comercial'];
+  const WIDE_MODALITIES = ['comercial', 'polaris'];
 
   // ── MODO IMAGEN BIG ───────────────────────────────────────
   // Hay formatos que NO se pueden producir a partir de una creatividad plana,
@@ -249,44 +257,19 @@ const Formats = (() => {
       if (typeof ComposicionMovil !== 'undefined') ComposicionMovil.generate();
     }
 
-    // Al salir de AMAZON LOGO, generar la composición Amazon
-    // Al salir de TEXTO HORIZONTAL, generar su composición y reposicionarla en los formatos H
-    if (previous === 'TEXTO HORIZONTAL' && formatName !== 'TEXTO HORIZONTAL') {
-      if (typeof ComposicionTexto !== 'undefined') {
-        ComposicionTexto.generate('TEXTO HORIZONTAL', 'COMPOSICIÓN TEXTO HORIZONTAL', 'isComposicionTextoH').then(() => {
-          const comp = State.layers.find(l => l.isComposicionTextoH);
-          if (comp && typeof AutoLayout !== 'undefined') AutoLayout.repositionTextComp(comp, 'H');
-          if (typeof Canvas !== 'undefined') Canvas.render();
-        });
-      }
-    }
-
-    // Al salir de COM TITULO H, generar su composición Y RE-ENCAJARLA en los
-    // formatos que la usan. Lo segundo es imprescindible: si el diseñador
-    // encoge el título o lo mueve dentro del maestro, el lienzo sigue midiendo
-    // 1156x348 y la CAJA en el formato receptor no cambia — pero el píxel sí se
-    // ha movido dentro de ella, así que el título aparecería desplazado.
-    // (Antes no se reposicionaba porque este título iba CLAVADO en su único
-    //  formato; desde que se maqueta por zona, hay que re-encajar como las H/V.)
-    if (previous === 'COM TITULO H' && formatName !== 'COM TITULO H') {
-      if (typeof ComposicionTexto !== 'undefined') {
-        ComposicionTexto.generate('COM TITULO H', 'COMPOSICIÓN COM TITULO H', 'isComposicionComTituloH').then(() => {
-          const comp = State.layers.find(l => l.isComposicionComTituloH);
-          if (comp && typeof AutoLayout !== 'undefined') AutoLayout.repositionTextComp(comp, 'COM_H');
-          if (typeof Canvas !== 'undefined') Canvas.render();
-        });
-      }
-    }
-
-    // Al salir de TEXTO VERTICAL, generar su composición y reposicionarla en los formatos V
-    if (previous === 'TEXTO VERTICAL' && formatName !== 'TEXTO VERTICAL') {
-      if (typeof ComposicionTexto !== 'undefined') {
-        ComposicionTexto.generate('TEXTO VERTICAL', 'COMPOSICIÓN TEXTO VERTICAL', 'isComposicionTextoV').then(() => {
-          const comp = State.layers.find(l => l.isComposicionTextoV);
-          if (comp && typeof AutoLayout !== 'undefined') AutoLayout.repositionTextComp(comp, 'V');
-          if (typeof Canvas !== 'undefined') Canvas.render();
-        });
-      }
+    // Al salir de un lienzo de composición de texto (TEXTO HORIZONTAL, TEXTO
+    // VERTICAL, COM TITULO H, Tittle 1x1…), hornear su composición Y
+    // RE-ENCAJARLA en los formatos que la usan. Lo segundo es imprescindible:
+    // si el diseñador encoge el título o lo mueve dentro del maestro, el lienzo
+    // sigue midiendo lo mismo y la CAJA en el formato receptor no cambia — pero
+    // el píxel sí se ha movido dentro de ella, así que el título aparecería
+    // desplazado. La lista de lienzos vive en COMPOSICIONES_TEXTO (state.js).
+    const _compSaliente = (typeof ComposicionTexto !== 'undefined' && previous !== formatName)
+      ? ComposicionTexto.deMaestro(previous) : null;
+    if (_compSaliente) {
+      ComposicionTexto.regenerar(_compSaliente).then(() => {
+        if (typeof Canvas !== 'undefined') Canvas.render();
+      });
     }
 
     if (typeof Canvas !== 'undefined') Canvas.render();
@@ -613,6 +596,7 @@ const Formats = (() => {
   // Defaults por orientación. El lapicero escribe overrides en State.formatTextVariant.
   // Formatos que muestran la IMAGEN DE TÍTULO CRUDA por defecto (en vez de composición):
   const TEXT_VARIANT_TITLE_H_DEFAULT = [
+    'Tittle 1x1',
     'CARÁTULA H', 'CARTEL COM. H', 'XIAOMI BANNER',
     'DEST. DOBLE 1', 'DEST. DOBLE 1 SIL', 'DEST. DOBLE 2', 'DEST. DOBLE 2 SIL', 'MOD N SIL',
   ];
@@ -633,6 +617,11 @@ const Formats = (() => {
     'Carrusel-Vertical', 'Carrusel-Horizontal',
     'Cabecera-Slider-Escritorio', 'Cabecera-Slider-Movil',
   ];
+  // Lienzos maestros que SÍ eligen variante: en vez de un título fijo, el
+  // diseñador escoge con el lápiz cuál de los dos títulos crudos (H o V)
+  // alimenta el lienzo. Tittle 1x1 parte del horizontal.
+  const HOSTS_CON_TITULO_ELEGIBLE = ['Tittle 1x1'];
+
   // Formatos que NO reciben texto (sin variante): la familia FANART/BG, más
   // TODOS los anfitriones — en un lienzo de composición no se elige variante,
   // porque el lienzo ES la composición.
@@ -640,17 +629,24 @@ const Formats = (() => {
   // Y los dos Mediano Escritorio, que son de otra naturaleza: sí son piezas,
   // pero el diseñador decidió que NO llevan título de ninguna clase.
   // Sin variante, la composición no se pinta en el lienzo (canvas.js pide
-  // _vc === 'COM_H') ni se exporta (_isLayerVisible, misma condición). No es
+  // que la variante sea la suya, ver varianteExclusivaDe) ni se exporta (_isLayerVisible, misma condición). No es
   // "apagar el ojo de la capa": es que ahí no existe.
   const TEXT_VARIANT_NONE = ['FANART', 'FANART MÓVIL', 'FANART DEST.', 'FANART MOD N', 'MOD N', 'PERFIL',
                              'MUX4 FONDO', 'MOVIL MUX FONDO',
                              'Cabecera-Slider-Mediano-Escritorio', 'Slider-Mediano-Escritorio',
                              'Cabecera-Slider-Mediano-Movil', 'Slider-Mediano-Movil',
-                             ...TEXT_HOST_FORMATS];
+                             ...TEXT_HOST_FORMATS.filter(f => !HOSTS_CON_TITULO_ELEGIBLE.includes(f))];
+
+  // POLARIS lleva la composición Tittle 1x1. Se lee de la propia modalidad, no
+  // de una lista copiada aquí.
+  function _esPolaris(fid) {
+    return !!State.modalities.find(m => m.id === 'polaris')?.formats.includes(fid);
+  }
 
   function _defaultTextVariant(fid) {
     if (TEXT_VARIANT_NONE.includes(fid)) return null;
     if (TEXT_VARIANT_COM_H_DEFAULT.includes(fid)) return 'COM_H';
+    if (_esPolaris(fid)) return 'TTL_1X1';
     if (TEXT_VARIANT_TITLE_H_DEFAULT.includes(fid)) return 'TITLE_H';
     if (TEXT_VARIANT_TITLE_V_DEFAULT.includes(fid)) return 'TITLE_V';
     return TEXT_VARIANT_V_DEFAULT.includes(fid) ? 'V' : 'H';
@@ -664,6 +660,7 @@ const Formats = (() => {
     { value: 'MUX4',    label: 'MUX4 TEXT',            flag: 'isComposicion'       },
     { value: 'MOVIL',   label: 'Smartphone TEXT',      flag: 'isComposicionMovil'  },
     { value: 'COM_H',   label: 'COM. TÍTULO H',        flag: 'isComposicionComTituloH' },
+    { value: 'TTL_1X1', label: 'TITTLE 1x1',           flag: 'isComposicionTittle1x1' },
     { value: 'TITLE_H', label: 'TÍTULO ORIGINAL HOR',  flag: 'isTitleLayerH'       },
     { value: 'TITLE_V', label: 'TÍTULO ORIGINAL VER',  flag: 'isTitleLayerV'       },
   ];
@@ -679,7 +676,14 @@ const Formats = (() => {
     return _defaultTextVariant(fid);
   }
 
-  function getTextVariantOptions() { return TEXT_VARIANT_OPTIONS; }
+  // En un lienzo que elige su título solo tienen sentido los dos títulos
+  // crudos: meter ahí una composición sería hornear una composición dentro de otra.
+  function getTextVariantOptions(fid) {
+    if (HOSTS_CON_TITULO_ELEGIBLE.includes(fid)) {
+      return TEXT_VARIANT_OPTIONS.filter(o => o.value === 'TITLE_H' || o.value === 'TITLE_V');
+    }
+    return TEXT_VARIANT_OPTIONS;
+  }
 
   function setTextVariant(fid, variant) {
     if (typeof History !== 'undefined') History.push();
@@ -722,6 +726,15 @@ const Formats = (() => {
       }
       if (typeof Canvas !== 'undefined') Canvas.render();
       if (typeof Layers !== 'undefined') Layers.render();
+      // Si este formato es un LIENZO que elige su título (Tittle 1x1), cambiar
+      // de título cambia lo que se hornea: re-hornear su composición para que
+      // los receptores (POLARIS) no se queden con el título anterior.
+      const _ctMaestro = typeof ComposicionTexto !== 'undefined' ? ComposicionTexto.deMaestro(fid) : null;
+      if (_ctMaestro) {
+        ComposicionTexto.regenerar(_ctMaestro).then(() => {
+          if (typeof Canvas !== 'undefined') Canvas.render();
+        });
+      }
     };
 
     // Si la composición elegida aún no existe (sin contenido), generarla VACÍA para que su
@@ -729,16 +742,13 @@ const Formats = (() => {
     const exists = opt && State.layers.find(l => l[opt.flag]);
     if (opt && !exists) {
       let p = null;
-      if (variant === 'H' && typeof ComposicionTexto !== 'undefined')
-        p = ComposicionTexto.generate('TEXTO HORIZONTAL', 'COMPOSICIÓN TEXTO HORIZONTAL', 'isComposicionTextoH');
-      else if (variant === 'V' && typeof ComposicionTexto !== 'undefined')
-        p = ComposicionTexto.generate('TEXTO VERTICAL', 'COMPOSICIÓN TEXTO VERTICAL', 'isComposicionTextoV');
+      const _ct = typeof ComposicionTexto !== 'undefined' ? ComposicionTexto.deVariante(variant) : null;
+      if (_ct)
+        p = ComposicionTexto.generar(_ct);
       else if (variant === 'MUX4' && typeof Composicion !== 'undefined')
         p = Composicion.generate();
       else if (variant === 'MOVIL' && typeof ComposicionMovil !== 'undefined')
         p = ComposicionMovil.generate();
-      else if (variant === 'COM_H' && typeof ComposicionTexto !== 'undefined')
-        p = ComposicionTexto.generate('COM TITULO H', 'COMPOSICIÓN COM TITULO H', 'isComposicionComTituloH');
       if (p && typeof p.then === 'function') { p.then(_finish); return; }
     }
     _finish();

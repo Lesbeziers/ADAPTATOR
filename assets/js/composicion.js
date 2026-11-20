@@ -408,7 +408,31 @@ const Composicion = (() => {
     ctx.closePath();
   }
 
-  return { generate };
+  // ── Atajos sobre COMPOSICIONES_TEXTO (state.js) ─────────────
+  // Para que ningún sitio vuelva a enumerar a mano las composiciones.
+  function deMaestro(fid)  { return COMPOSICIONES_TEXTO.find(e => e.maestro  === fid) || null; }
+  function deVariante(v)   { return COMPOSICIONES_TEXTO.find(e => e.variante === v)   || null; }
+
+  // Hornea la composición de una entrada, SIN recolocarla en los receptores.
+  function generar(e) { return generate(e.maestro, e.nombre, e.flag); }
+
+  // Hornea y RE-ENCAJA en los formatos que la usan. Lo segundo hace falta
+  // cuando el título se ha movido dentro del maestro: el lienzo mide lo mismo,
+  // la caja en el receptor no cambia, pero el píxel sí se ha movido.
+  async function regenerar(e) {
+    await generar(e);
+    const comp = State.layers.find(l => l[e.flag]);
+    if (comp && typeof AutoLayout !== 'undefined' && AutoLayout.repositionTextComp) {
+      AutoLayout.repositionTextComp(comp, e.variante);
+    }
+    return comp;
+  }
+
+  // Todas, sin recolocar (al abrir un proyecto o asignar roles: las posiciones
+  // vienen guardadas o las pone la maquetación que sigue).
+  function generarTodas() { return Promise.all(COMPOSICIONES_TEXTO.map(generar)); }
+
+  return { generate, deMaestro, deVariante, generar, regenerar, generarTodas };
 })();
 
 // ============================================================
@@ -734,7 +758,31 @@ const ComposicionMovil = (() => {
     ctx.closePath();
   }
 
-  return { generate };
+  // ── Atajos sobre COMPOSICIONES_TEXTO (state.js) ─────────────
+  // Para que ningún sitio vuelva a enumerar a mano las composiciones.
+  function deMaestro(fid)  { return COMPOSICIONES_TEXTO.find(e => e.maestro  === fid) || null; }
+  function deVariante(v)   { return COMPOSICIONES_TEXTO.find(e => e.variante === v)   || null; }
+
+  // Hornea la composición de una entrada, SIN recolocarla en los receptores.
+  function generar(e) { return generate(e.maestro, e.nombre, e.flag); }
+
+  // Hornea y RE-ENCAJA en los formatos que la usan. Lo segundo hace falta
+  // cuando el título se ha movido dentro del maestro: el lienzo mide lo mismo,
+  // la caja en el receptor no cambia, pero el píxel sí se ha movido.
+  async function regenerar(e) {
+    await generar(e);
+    const comp = State.layers.find(l => l[e.flag]);
+    if (comp && typeof AutoLayout !== 'undefined' && AutoLayout.repositionTextComp) {
+      AutoLayout.repositionTextComp(comp, e.variante);
+    }
+    return comp;
+  }
+
+  // Todas, sin recolocar (al abrir un proyecto o asignar roles: las posiciones
+  // vienen guardadas o las pone la maquetación que sigue).
+  function generarTodas() { return Promise.all(COMPOSICIONES_TEXTO.map(generar)); }
+
+  return { generate, deMaestro, deVariante, generar, regenerar, generarTodas };
 })();
 
 // ============================================================
@@ -1112,5 +1160,29 @@ const ComposicionTexto = (() => {
     ctx.closePath();
   }
 
-  return { generate };
+  // ── Atajos sobre COMPOSICIONES_TEXTO (state.js) ─────────────
+  // Para que ningún sitio vuelva a enumerar a mano las composiciones.
+  function deMaestro(fid)  { return COMPOSICIONES_TEXTO.find(e => e.maestro  === fid) || null; }
+  function deVariante(v)   { return COMPOSICIONES_TEXTO.find(e => e.variante === v)   || null; }
+
+  // Hornea la composición de una entrada, SIN recolocarla en los receptores.
+  function generar(e) { return generate(e.maestro, e.nombre, e.flag); }
+
+  // Hornea y RE-ENCAJA en los formatos que la usan. Lo segundo hace falta
+  // cuando el título se ha movido dentro del maestro: el lienzo mide lo mismo,
+  // la caja en el receptor no cambia, pero el píxel sí se ha movido.
+  async function regenerar(e) {
+    await generar(e);
+    const comp = State.layers.find(l => l[e.flag]);
+    if (comp && typeof AutoLayout !== 'undefined' && AutoLayout.repositionTextComp) {
+      AutoLayout.repositionTextComp(comp, e.variante);
+    }
+    return comp;
+  }
+
+  // Todas, sin recolocar (al abrir un proyecto o asignar roles: las posiciones
+  // vienen guardadas o las pone la maquetación que sigue).
+  function generarTodas() { return Promise.all(COMPOSICIONES_TEXTO.map(generar)); }
+
+  return { generate, deMaestro, deVariante, generar, regenerar, generarTodas };
 })();
