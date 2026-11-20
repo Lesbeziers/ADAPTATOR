@@ -1035,7 +1035,15 @@ const Layers = (() => {
   function _getLocked(layerId) {
     const fid = State.activeFormat;
     if (!fid) return false;
+    // Bloqueo FIJO (como un mockup): capas clavadas por diseño en este formato.
+    // Va aquí porque todo lo que impide mover —arrastre, selección, flechas,
+    // panel Transformar— pregunta a esta función.
+    if (_esFija(layerId, fid)) return true;
     return !!State.formatParams?.[fid]?.[layerId]?.locked;
+  }
+  function _esFija(layerId, fid = State.activeFormat) {
+    return typeof AutoLayout !== 'undefined' && AutoLayout.esPosicionFija
+      && AutoLayout.esPosicionFija(fid, State.layers.find(l => l.id === layerId));
   }
 
   function _setLocked(layerId, val) {
@@ -1962,12 +1970,13 @@ const Layers = (() => {
     const _updateLockBtn = () => {
       const l = _locked();
       lockBtn.className = 'layer-lock-btn' + (l ? ' locked' : '');
-      lockBtn.dataset.tooltip = l ? 'Desbloquear capa' : 'Bloquear capa';
+      lockBtn.dataset.tooltip = _esFija(layer.id) ? 'Posición fija' : (l ? 'Desbloquear capa' : 'Bloquear capa');
       lockBtn.innerHTML = l ? _svgLocked : _svgUnlocked;
     };
     _updateLockBtn();
     lockBtn.addEventListener('click', e => {
       e.stopPropagation();
+      if (_esFija(layer.id)) return;   // el candado fijo no se abre
       if (typeof History !== 'undefined') History.push();
       _setLocked(layer.id, !_locked());
       _updateLockBtn();

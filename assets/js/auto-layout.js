@@ -1673,7 +1673,7 @@ const AutoLayout = (() => {
     // esto, asignar roles dejaba la composición sin colocar.
     if (typeof Formats !== 'undefined' && Formats.getTextVariant(formatName) === 'TTL_1X1') {
       const _ttl = State.layers.find(l => l.isComposicionTittle1x1);
-      if (_ttl && !State.formatParams?.[formatName]?.[_ttl.id]?.titleManual) _colocarTittle1x1(formatName, _ttl);
+      if (_ttl) _colocarTittle1x1(formatName, _ttl);
     }
     if (!cfg) return;
 
@@ -2819,9 +2819,9 @@ const AutoLayout = (() => {
       // Respetar el ajuste manual del diseñador: si este formato tiene la
       // composición bloqueada (titleManual), la edición del texto maestro NO la
       // re-encaja. Solo el botón AUTO (resetFormat) suelta el candado.
-      if (State.formatParams?.[formatName]?.[comp.id]?.titleManual) return;
-      // POLARIS: Tittle 1x1 va en posición FIJA, no por zona.
+      // POLARIS: Tittle 1x1 va en posición FIJA, no por zona, y sin candado manual.
       if (variant === 'TTL_1X1') { _colocarTittle1x1(formatName, comp); return; }
+      if (State.formatParams?.[formatName]?.[comp.id]?.titleManual) return;
       const cfg = FORMAT_CONFIG[formatName];
       if (!cfg) return;
       const fmtSize = State.formatSizes[formatName];
@@ -2845,15 +2845,32 @@ const AutoLayout = (() => {
   // CLAUDE.md para los assets): la composición siempre mide 2160x2160, sea cual
   // sea el título, así que el mismo % da siempre el mismo tamaño.
   //
-  // ⚠️ VALORES PROVISIONALES DE PARTIDA (2026-11-20), puestos sin medir para que
-  // el diseñador la recoloque y la escale formato a formato. Se sustituyen por
-  // los suyos cuando los pase. No son una decisión de diseño.
+  // Valores del DISEÑADOR (2026-11-20), colocados por él sobre los safes y
+  // leídos del panel de coordenadas.
+  //
+  // La capa va BLOQUEADA, como un mockup: no se puede arrastrar, ni mover con
+  // las flechas, ni tocar en el panel Transformar, y el candado no se abre (ver
+  // esPosicionFija, que es lo que consulta Layers.getLocked). Por eso aquí no
+  // se mira `titleManual`: en estos formatos no puede haber ajuste manual.
   const TITTLE_1X1_POSICION = {
-    'Background 16x6':      { scale: 50, x: -1200, y:   0 },
-    'Portrait 2x3':         { scale: 50, x:     0, y: 500 },
-    'Landscape Art 16x9':   { scale: 50, x: -1200, y:   0 },
-    'Small Background 7x5': { scale: 30, x:  -350, y:   0 },
+    'Background 16x6':      { scale: 61, x: -1070, y:  -1 },
+    'Portrait 2x3':         { scale: 55, x:     2, y: 393 },
+    'Landscape Art 16x9':   { scale: 74, x:  -927, y:   8 },
+    'Small Background 7x5': { scale: 33, x:  -239, y:   9 },
   };
+
+  // ¿Esta capa va clavada en este formato y no se puede mover?
+  function esPosicionFija(formatName, layer) {
+    return !!(layer && layer.isComposicionTittle1x1 && TITTLE_1X1_POSICION[formatName]);
+  }
+
+  // Re-estampa las posiciones fijas. Se llama al abrir un proyecto: uno guardado
+  // con otros valores (p. ej. los provisionales del primer día) queda corregido.
+  function aplicarPosicionesFijas() {
+    const comp = State.layers.find(l => l.isComposicionTittle1x1);
+    if (!comp) return;
+    Object.keys(TITTLE_1X1_POSICION).forEach(f => _colocarTittle1x1(f, comp));
+  }
 
   function _colocarTittle1x1(formatName, comp) {
     const pos = TITTLE_1X1_POSICION[formatName];
@@ -2967,6 +2984,7 @@ const AutoLayout = (() => {
   }
 
   return {
+    esPosicionFija, aplicarPosicionesFijas,
     detectRole, onFirstImport, onAdditionalImport, resetFormat,
     toggleScaleMode, toggleMirror, setVariant, getVariant, getVariants,
     getScaleMode, getMirrored, hasConfig, resetSession,

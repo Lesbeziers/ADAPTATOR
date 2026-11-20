@@ -775,6 +775,8 @@ const Project = (() => {
       if (typeof ComposicionMovil  !== 'undefined') tasks.push(ComposicionMovil.generate());
       if (typeof ComposicionTexto  !== 'undefined') tasks.push(ComposicionTexto.generarTodas());
       Promise.all(tasks).then(() => {
+        // Posiciones fijas (Tittle 1x1 en POLARIS): mandan sobre lo guardado.
+        if (typeof AutoLayout !== 'undefined' && AutoLayout.aplicarPosicionesFijas) AutoLayout.aplicarPosicionesFijas();
         if (typeof Canvas !== 'undefined') Canvas.render();
         if (typeof Layers !== 'undefined') Layers.render();
       });

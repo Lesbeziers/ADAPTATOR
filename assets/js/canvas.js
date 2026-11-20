@@ -2244,6 +2244,7 @@ const Canvas = (() => {
           document.activeElement.tagName === 'TEXTAREA') return;
 
       const selLayer = State.layers.find(l => l.id === State.selectedLayerId);
+      if (selLayer && typeof Layers !== 'undefined' && Layers.getLocked(selLayer.id)) return;
       if (selLayer?.isComposicion && State.activeFormat === 'MUX4 FONDO') return;
       if (selLayer?.isComposicionMovil && State.activeFormat === 'MOVIL MUX FONDO') return;
       if (selLayer?.isMolduraFanart && State.activeFormat === 'FANART MOD N') return;
