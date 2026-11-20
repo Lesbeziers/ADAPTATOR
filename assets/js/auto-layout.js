@@ -185,7 +185,27 @@ const AutoLayout = (() => {
 
     // ── OTROS ──────────────────────────────────────────────
     'XIAOMI BANNER':   { img: { scale: 31,   x:   -2, y:  105 } },   // 32:9
+
+    // ── POLARIS ────────────────────────────────────────────
+    // Medidos por el diseñador el 2026-11-20 sobre la _BIG de Celeste, que es la
+    // referencia con la que se hicieron las plantillas PSD de POLARIS. Sin `txt`:
+    // el título de estos formatos es la composición Tittle 1x1, que va en
+    // posición fija y bloqueada (TITTLE_1X1_POSICION), no por variante.
+    'Background 16x6':      { img: { scale: 86, x:   -2, y:    0 } },   // 3840x1440
+    'Portrait 2x3':         { img: { scale: 85, x: -716, y: -178 } },   // 1440x2160
+    'Landscape Art 16x9':   { img: { scale: 86, x:    0, y:    0 } },   // 3840x2160
+    'Small Background 7x5': { img: { scale: 45, x:    0, y:   82 } },   // 1512x1080
   };
+
+  // Formatos que recorre la maquetación: los de FORMAT_CONFIG, en su orden de
+  // siempre, y DETRÁS los que solo tienen colocación medida (BIG_LAYOUT) o
+  // título fijo (TITTLE_1X1_POSICION) pero aún no zonas: hoy, los de POLARIS.
+  // Sin esto el bucle no los visitaba nunca.
+  function _formatosAMaquetar() {
+    const extra = [...Object.keys(BIG_LAYOUT), ...Object.keys(TITTLE_1X1_POSICION)]
+      .filter((f, i, a) => !FORMAT_CONFIG[f] && a.indexOf(f) === i);
+    return [...Object.keys(FORMAT_CONFIG), ...extra];
+  }
 
   // Traduce una entrada de la tabla a los params que entiende el motor.
   function _bigParams(v) {
@@ -1675,7 +1695,9 @@ const AutoLayout = (() => {
       const _ttl = State.layers.find(l => l.isComposicionTittle1x1);
       if (_ttl) _colocarTittle1x1(formatName, _ttl);
     }
-    if (!cfg) return;
+    // Sin FORMAT_CONFIG (POLARIS, de momento) no hay encaje automático, pero sí
+    // la colocación medida de la imagen BIG, si la hay.
+    if (!cfg) { _applyBigLayout(formatName, layers); return; }
 
     // PERFIL tiene lógica async especial con MediaPipe
     if (formatName === 'PERFIL') {
@@ -2500,7 +2522,7 @@ const AutoLayout = (() => {
       // continuación para poder intercalar ANTES el encuadre focal del sujeto.
       const runLayoutLoop = () => {
         // Aplicar maquetación a todos los formatos configurados
-        Object.keys(FORMAT_CONFIG).forEach(formatName => {
+        _formatosAMaquetar().forEach(formatName => {
           applyToFormat(formatName, roles, layers);
         });
 
@@ -2605,7 +2627,7 @@ const AutoLayout = (() => {
       );
       const layersToApply = promotedTitle ? allImageLayers : newLayers;
       const runLayoutLoop = () => {
-        Object.keys(FORMAT_CONFIG).forEach(formatName => {
+        _formatosAMaquetar().forEach(formatName => {
           applyToFormat(formatName, State.layerRoles, layersToApply);
         });
 
